@@ -1,61 +1,32 @@
 {
   "metadata": {
-    "agency_name": "Sunny Homes Real Estate",
-    "contact_url": "https://sunnyhomes.com/contact"
+    "agency_name": "Omsoft ACE",
+    "contact_url": "https://omsoftace.com/contact"
   },
   "topics": [
     {
       "topic": "greeting",
-      "examples": ["pozdravljeni", "zdravo", "dober dan"],
+      "intent": "greeting",
+      "examples": ["hello", "hi", "what is this?", "who are you?"],
       "responses": [
-        "Pozdravljeni! 👋 Kako vam lahko pomagam pri iskanju sanjske nepremičnine?",
-        "Zdravo! Imate v mislih stanovanje, hišo ali vilo?"
+        "Hey there 👋 I’m ACE — the AI-powered sales engine that replaces boring landing pages with smart chat. Want a quick demo?"
       ]
     },
     {
-      "topic": "apartma",
-      "examples": ["povej mi o apartmaju", "imaš kakšen apartma?", "kakšen je apartma?"],
+      "topic": "product_overview",
+      "intent": "kaj_je_ace",
+      "examples": ["what is ACE?", "how does this work?", "tell me about ACE", "what do you do?"],
       "responses": [
-        "Naš apartma v središču Ljubljane ima 2 spalnici, 1 kopalnico, balkon ter pogled na grad. Cena: 285.000 €.",
-        "Gre za moderen apartma velikosti 72 m², z odličnimi povezavami do javnega prevoza in parkirnim mestom."
+        "Omsoft ACE replaces static landing pages with intelligent, adaptive chat experiences that boost conversion and capture rich lead data."
       ]
     },
     {
-      "topic": "vila",
-      "examples": ["imaš kakšno vilo?", "povej mi o vili", "vila z bazenom?"],
+      "topic": "pricing",
+      "intent": "cena",
+      "examples": ["how much does it cost?", "what's the price?", "pricing?", "cost?"],
       "responses": [
-        "Vila se nahaja v Rožni dolini. Ima 4 spalnice, velik vrt in ogrevan bazen. Cena: 980.000 €.",
-        "Ta prestižna vila ima savno, vinsko klet in 2 garažni mesti. Primerna za družinsko življenje v mirnem okolju."
-      ]
-    },
-    {
-      "topic": "hisa",
-      "examples": ["kakšne hiše imate?", "hiša v okolici", "imaš hišo z vrtom?"],
-      "responses": [
-        "Ponujamo prostorno hišo v Mostah z 3 spalnicami in velikim vrtom. Cena: 450.000 €.",
-        "Hiša v Šiški z novo fasado in sončno teraso. Primerna za družine."
-      ]
-    },
-    {
-      "topic": "booking",
-      "examples": ["lahko rezerviram", "kako lahko pridem na ogled", "želim si termin"],
-      "responses": [
-        "Za ogled se lahko naročite tukaj: https://sunnyhomes.com/contact ali mi povejte, kdaj vam ustreza.",
-        "Seveda! Lahko se dogovorimo za ogled naslednji teden – kateri dan vam ustreza?"
-      ]
-    },
-    {
-      "topic": "followup",
-      "examples": ["povej mi več o njej", "kaj še ima?", "kakšna je notranjost?"],
-      "responses": [
-        "Gre za nepremičnino z izjemno notranjostjo in odprtim tlorisom. Ali vas zanimajo tlorisi ali dodatne fotografije?",
-        "V notranjosti je kombinacija sodobnega dizajna in naravnih materialov. Ali želite več podatkov o energijski učinkovitosti?"
+        "Cena je odvisna od tipa uporabe, obsega obiska in stopnje podpore. Ce zelite tocno ponudbo, lahko ACE poveze z Maksem."
       ]
     }
-  ],
-  "listings": {
-    "apartma": { "image": "apartma.png" },
-    "vila": { "image": "vila.png" },
-    "hisa": { "image": "hisa.png" }
-  }
+  ]
 }

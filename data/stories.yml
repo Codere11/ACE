@@ -1,0 +1,182 @@
+version: "3.1"
+
+nlu:
+- intent: kako_deluje
+  examples: |
+    - Kako to deluje?
+    - Kako ACE deluje?
+    - Kako poteka pogovor s tem chatbotom?
+
+- intent: cena
+  examples: |
+    - Koliko to stane?
+    - Kakšna je cena?
+    - Ali je to drago?
+
+- intent: brezplacen_preizkus
+  examples: |
+    - A imate brezplačen preizkus?
+    - Lahko testiram sistem brezplačno?
+    - Imate demo verzijo?
+
+- intent: integracija_wordpress
+  examples: |
+    - Lahko to dam na WordPress?
+    - Se da vgraditi v WordPress?
+    - Kako to vgradim na svojo spletno stran?
+
+- intent: use_case_apartma
+  examples: |
+    - Kako bi to delovalo za apartmaje?
+    - A se to da uporabljat za najem apartmajev?
+    - Imam turistično nastanitev, ali mi koristi?
+
+- intent: kaj_je_ace
+  examples: |
+    - Kaj sploh je ACE?
+    - Kaj je to?
+    - Kaj počne ACE?
+
+- intent: si_ti_ai
+  examples: |
+    - Si ti AI?
+    - A si ti robot?
+    - S kom govorim?
+
+- intent: vgradnja_spletna_stran
+  examples: |
+    - Lahko to vgradim v mojo spletno stran?
+    - A deluje tudi na drugih straneh?
+    - Se to lahko priklopi na mojo stran?
+
+- intent: studija_primera
+  examples: |
+    - Imate kakšno študijo primera?
+    - Rad bi videl primere uporabe.
+    - Kako se je izkazalo v praksi?
+
+- intent: zakaj_ne_chatgpt
+  examples: |
+    - Zakaj ne bi kar ChatGPT uporabil?
+    - Kako se razlikuje od ChatGPT?
+    - A ni ChatGPT dovolj?
+
+- intent: integracija_crm
+  examples: |
+    - Se da povezati s CRM?
+    - Kako pošljem leade v CRM?
+    - Ali deluje s Hubspotom?
+
+- intent: za_agencije
+  examples: |
+    - A lahko kot agencija uporabljamo to?
+    - Imate white-label opcijo?
+    - Mi smo agencija, kako lahko sodelujemo?
+
+- intent: povezava_z_ads
+  examples: |
+    - Kako se poveže z oglasi?
+    - Deluje z Google Ads?
+    - Kam pošlje uporabnika iz oglasa?
+
+- intent: zamenja_forme
+  examples: |
+    - A to zamenja obrazce?
+    - Zakaj ne bi kar obrazec uporabil?
+    - Se bolj splača kot form?
+
+- intent: cas_postavitve
+  examples: |
+    - Kako hitro ga lahko postavite?
+    - Koliko časa traja izdelava?
+    - Kakšen je čas postavitve?
+
+- intent: vec_jezikov
+  examples: |
+    - A deluje v več jezikih?
+    - Kaj pa angleščina?
+    - Imate podporo za druge jezike?
+
+- intent: gdpr
+  examples: |
+    - Kaj pa GDPR?
+    - Kako je z varstvom podatkov?
+    - Je to skladno z zakonodajo?
+
+- intent: zacnemo_kmalu
+  examples: |
+    - Kdaj lahko začnemo?
+    - Kako hitro se lahko povežemo?
+    - Imate prost termin?
+
+- intent: zelim_agenta
+  examples: |
+    - Želim, da me kontaktira agent.
+    - Prosim za kontaktno osebo.
+    - Lahko se z nekom pogovorim?
+
+- intent: zakaj_ne_klasicen_form
+  examples: |
+    - Zakaj ne uporabimo obrazca?
+    - Kaj je narobe z landing pageom?
+    - Kaj pridobim s chatbotom?
+
+- intent: analitika
+  examples: |
+    - Kakšno analitiko dobim?
+    - Beleži podatke?
+    - A imam pregled nad uporabniki?
+
+- intent: prilagajanje_blagovni_znamki
+  examples: |
+    - Se lahko prilagodi moji blagovni znamki?
+    - Lahko zamenjamo barve/logotip?
+    - Kako fleksibilen je izgled?
+
+- intent: kako_pridobiva_leade
+  examples: |
+    - Kako pridobiva kontakte?
+    - Kdaj vpraša za email?
+    - Kako dobiš lead?
+
+- intent: ne_komunicira
+  examples: |
+    - Kaj če uporabnik ne odgovori?
+    - A pošlje opomnik?
+    - Kako ravna s tišino?
+
+- intent: primerjava_messenger
+  examples: |
+    - A ni to isto kot Messenger bot?
+    - Zakaj ne uporabim Messengerja?
+    - Kakšna je razlika z FB botom?
+
+- intent: vodi_do_rezervacije
+  examples: |
+    - A pripelje do rezervacije?
+    - Lahko zaključi nakup?
+    - A lahko uporabnik bookira?
+
+- intent: podpora
+  examples: |
+    - A nudite podporo?
+    - Kaj če ne znam nastavit?
+    - Kdo pomaga z implementacijo?
+
+- intent: za_mala_podjetja
+  examples: |
+    - Je primerno za manjše firme?
+    - Imam malo podjetje, a mi koristi?
+    - Je to zame?
+
+- intent: goodbye
+  examples: |
+    - Adijo
+    - Hvala
+    - Nasvidenje
+
+- intent: bot_challenge
+  examples: |
+    - Si ti pravi človek?
+    - A si bot?
+    - Govorim z robotom?
