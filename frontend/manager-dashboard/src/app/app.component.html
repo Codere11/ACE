@@ -1,0 +1,71 @@
+<div class="dashboard-background">
+  <div class="dashboard-container">
+    <h1 class="title">📊 Omsoft ACE Intelligence</h1>
+    <p class="subtitle">AI prodajni nadzor za lead gen kampanje</p>
+
+    <!-- KPI tiles -->
+    <section class="metrics">
+      <div class="metric-box">👀 Ogledi: <strong>{{ visitors }}</strong></div>
+      <div class="metric-box">💬 Interakcije: <strong>{{ interactions }}</strong></div>
+      <div class="metric-box">📇 Kontakti: <strong>{{ contacts }}</strong></div>
+      <div class="metric-box">📍 Ogledi v živo: <strong>{{ viewings }}</strong></div>
+      <div class="metric-box">✅ Prodaje: <strong>{{ sales }}</strong></div>
+    </section>
+
+    <!-- Ranked lead list -->
+    <section>
+      <h2>🔥 Najbolj kvalificirani kontakti (v živo)</h2>
+      <div class="lead-list">
+        <div *ngFor="let lead of rankedLeads" class="lead-entry enter-fade">
+          <div class="lead-main">
+            <div class="lead-top">
+              <div class="lead-name">{{ lead.name }}</div>
+              <div class="lead-score" [attr.aria-label]="'Lead score ' + lead.score">🔥 {{ lead.score }}</div>
+            </div>
+
+            <div class="lead-summary">
+              {{ lead.summary }}
+              <span class="dot">•</span>
+              <span class="ago">{{ formatAgo(lead.lastSeenSec) }}</span>
+            </div>
+
+            <div class="lead-lastmsg">
+              „{{ lead.lastMessage }}”
+            </div>
+
+            <div class="tags">
+              <span class="tag">💰 {{ lead.budget | number:'1.0-0' }} €</span>
+              <span class="tag">📍 {{ lead.location }}</span>
+              <span class="tag" *ngIf="lead.hasPet">🐶 ima psa</span>
+              <span class="tag good" *ngIf="lead.email">📧 email</span>
+              <span class="tag good" *ngIf="lead.phone">📞 telefon</span>
+            </div>
+          </div>
+
+          <div class="lead-actions">
+            <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTR bars -->
+    <section>
+      <h2>📈 Kanali z najboljšim CTR</h2>
+      <div class="bar-container">
+        <div class="bar-row">
+          <div class="bar-label">Google Ads</div>
+          <div class="bar google" [style.width.%]="googleCTR">{{ googleCTR }}%</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Facebook</div>
+          <div class="bar facebook" [style.width.%]="facebookCTR">{{ facebookCTR }}%</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Instagram</div>
+          <div class="bar instagram" [style.width.%]="instagramCTR">{{ instagramCTR }}%</div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

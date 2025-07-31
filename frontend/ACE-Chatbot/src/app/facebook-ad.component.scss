@@ -1,0 +1,77 @@
+.fb-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #f0f2f5;
+}
+
+.fb-ad-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 350px;
+  background: white;
+  font-family: Arial, sans-serif;
+  padding: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.fb-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+
+  .profile-img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover;
+  }
+
+  .profile-info {
+    .name {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .details {
+      font-size: 12px;
+      color: gray;
+    }
+  }
+}
+
+.ad-text {
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.ad-image img {
+  width: 100%;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.fb-cta-button {
+  background-color: #0084ff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  width: 100%;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover {
+    background-color: #006fd3;
+  }
+}

@@ -1,0 +1,6 @@
+classifiers
+modelsmodels/
+venv/
+__pycache__/
+*.pt
+*.safetensors

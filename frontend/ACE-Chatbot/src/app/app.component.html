@@ -1,0 +1,15 @@
+<div class="chat-container">
+  <div class="chat-header">Sunny Homes Assistant</div>
+
+  <div class="chat-messages" #chatWindow>
+    <div *ngFor="let msg of messages" class="chat-bubble" [ngClass]="msg.sender">
+      <div class="text">{{ msg.text }}</div>
+      <img *ngIf="msg.imageUrl" [src]="msg.imageUrl" alt="Nepremičnina" class="room-image" />
+    </div>
+  </div>
+
+  <div class="chat-input">
+    <input type="text" [(ngModel)]="userInput" placeholder="Napišite sporočilo..." (keyup.enter)="sendMessage()" />
+    <button (click)="sendMessage()">Pošlji</button>
+  </div>
+</div>
