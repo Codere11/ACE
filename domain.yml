@@ -31,6 +31,7 @@ intents:
   - za_mala_podjetja
   - goodbye
   - bot_challenge
+  - user_profession
 
 responses:
   utter_kako_deluje:
@@ -122,3 +123,9 @@ responses:
 
   utter_iamabot:
     - text: Sem AI asistent, ki ti pomaga pridobiti več leadov preko pogovora.
+
+  utter_acknowledge_profession:
+    - text: >
+        Super! Potem točno veste, kako pomembno je hitro ujeti obiskovalce. 
+        ACE vodi pogovor, pokaže apartmaje ali ponudbo in pobere kontakte — 
+        vse to brez čakanja ali obrazcev. Želite videti primer?

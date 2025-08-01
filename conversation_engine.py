@@ -72,5 +72,3 @@ def detect_property_image(text: str, config: dict) -> str | None:
         if re.search(pattern, text):
             return listing.get("image")
     return None
-
-provider = ConversationEngine()

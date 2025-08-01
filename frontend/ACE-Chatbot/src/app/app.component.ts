@@ -28,7 +28,7 @@ export class AppComponent implements AfterViewInit {
   constructor(private chatService: ChatService) {}
 
   ngAfterViewInit(): void {
-    this.addBotMessage(`Pozdravljeni! 👋 Vidimo, da vas zanima več o apartmaju v središču Ljubljane.\n\nČe vas zanimajo podrobnosti, kot so:\n\n💰 cena,\n📐 kvadratura,\n📍 lokacija ali\n👀 ali je še na voljo,\n\nme kar vprašajte — tukaj sem, da pomagam! 😊`);
+    this.addBotMessage(`Pozdravljeni! Jaz sem Omsoft Ace, chatbot ki prodaja samega sebe! S cim se pa ti ukvarjas?`);
   }
 
   sendMessage(): void {

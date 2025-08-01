@@ -1,182 +1,152 @@
 version: "3.1"
 
-nlu:
-- intent: kako_deluje
-  examples: |
-    - Kako to deluje?
-    - Kako ACE deluje?
-    - Kako poteka pogovor s tem chatbotom?
+stories:
+  - story: User asks how it works
+    steps:
+      - intent: kako_deluje
+      - action: utter_kako_deluje
 
-- intent: cena
-  examples: |
-    - Koliko to stane?
-    - Kakšna je cena?
-    - Ali je to drago?
+  - story: User asks for price
+    steps:
+      - intent: cena
+      - action: utter_cena
 
-- intent: brezplacen_preizkus
-  examples: |
-    - A imate brezplačen preizkus?
-    - Lahko testiram sistem brezplačno?
-    - Imate demo verzijo?
+  - story: User asks about free trial
+    steps:
+      - intent: brezplacen_preizkus
+      - action: utter_brezplacen_preizkus
 
-- intent: integracija_wordpress
-  examples: |
-    - Lahko to dam na WordPress?
-    - Se da vgraditi v WordPress?
-    - Kako to vgradim na svojo spletno stran?
+  - story: User asks about WordPress integration
+    steps:
+      - intent: integracija_wordpress
+      - action: utter_integracija_wordpress
 
-- intent: use_case_apartma
-  examples: |
-    - Kako bi to delovalo za apartmaje?
-    - A se to da uporabljat za najem apartmajev?
-    - Imam turistično nastanitev, ali mi koristi?
+  - story: User asks for apartma use case
+    steps:
+      - intent: use_case_apartma
+      - action: utter_use_case_apartma
 
-- intent: kaj_je_ace
-  examples: |
-    - Kaj sploh je ACE?
-    - Kaj je to?
-    - Kaj počne ACE?
+  - story: User asks what is ACE
+    steps:
+      - intent: kaj_je_ace
+      - action: utter_kaj_je_ace
 
-- intent: si_ti_ai
-  examples: |
-    - Si ti AI?
-    - A si ti robot?
-    - S kom govorim?
+  - story: User asks if bot is AI
+    steps:
+      - intent: si_ti_ai
+      - action: utter_si_ti_ai
 
-- intent: vgradnja_spletna_stran
-  examples: |
-    - Lahko to vgradim v mojo spletno stran?
-    - A deluje tudi na drugih straneh?
-    - Se to lahko priklopi na mojo stran?
+  - story: User asks about embedding on website
+    steps:
+      - intent: vgradnja_spletna_stran
+      - action: utter_vgradnja_spletna_stran
 
-- intent: studija_primera
-  examples: |
-    - Imate kakšno študijo primera?
-    - Rad bi videl primere uporabe.
-    - Kako se je izkazalo v praksi?
+  - story: User asks for case study
+    steps:
+      - intent: studija_primera
+      - action: utter_studija_primera
 
-- intent: zakaj_ne_chatgpt
-  examples: |
-    - Zakaj ne bi kar ChatGPT uporabil?
-    - Kako se razlikuje od ChatGPT?
-    - A ni ChatGPT dovolj?
+  - story: User asks why not ChatGPT
+    steps:
+      - intent: zakaj_ne_chatgpt
+      - action: utter_zakaj_ne_chatgpt
 
-- intent: integracija_crm
-  examples: |
-    - Se da povezati s CRM?
-    - Kako pošljem leade v CRM?
-    - Ali deluje s Hubspotom?
+  - story: User asks about CRM integration
+    steps:
+      - intent: integracija_crm
+      - action: utter_integracija_crm
 
-- intent: za_agencije
-  examples: |
-    - A lahko kot agencija uporabljamo to?
-    - Imate white-label opcijo?
-    - Mi smo agencija, kako lahko sodelujemo?
+  - story: User is an agency
+    steps:
+      - intent: za_agencije
+      - action: utter_za_agencije
 
-- intent: povezava_z_ads
-  examples: |
-    - Kako se poveže z oglasi?
-    - Deluje z Google Ads?
-    - Kam pošlje uporabnika iz oglasa?
+  - story: User asks about ad connection
+    steps:
+      - intent: povezava_z_ads
+      - action: utter_povezava_z_ads
 
-- intent: zamenja_forme
-  examples: |
-    - A to zamenja obrazce?
-    - Zakaj ne bi kar obrazec uporabil?
-    - Se bolj splača kot form?
+  - story: User asks if it replaces forms
+    steps:
+      - intent: zamenja_forme
+      - action: utter_zamenja_forme
 
-- intent: cas_postavitve
-  examples: |
-    - Kako hitro ga lahko postavite?
-    - Koliko časa traja izdelava?
-    - Kakšen je čas postavitve?
+  - story: User asks about setup time
+    steps:
+      - intent: cas_postavitve
+      - action: utter_cas_postavitve
 
-- intent: vec_jezikov
-  examples: |
-    - A deluje v več jezikih?
-    - Kaj pa angleščina?
-    - Imate podporo za druge jezike?
+  - story: User asks about languages
+    steps:
+      - intent: vec_jezikov
+      - action: utter_vec_jezikov
 
-- intent: gdpr
-  examples: |
-    - Kaj pa GDPR?
-    - Kako je z varstvom podatkov?
-    - Je to skladno z zakonodajo?
+  - story: User asks about GDPR
+    steps:
+      - intent: gdpr
+      - action: utter_gdpr
 
-- intent: zacnemo_kmalu
-  examples: |
-    - Kdaj lahko začnemo?
-    - Kako hitro se lahko povežemo?
-    - Imate prost termin?
+  - story: User wants to start soon
+    steps:
+      - intent: zacnemo_kmalu
+      - action: utter_zacnemo_kmalu
 
-- intent: zelim_agenta
-  examples: |
-    - Želim, da me kontaktira agent.
-    - Prosim za kontaktno osebo.
-    - Lahko se z nekom pogovorim?
+  - story: User wants human agent
+    steps:
+      - intent: zelim_agenta
+      - action: utter_zelim_agenta
 
-- intent: zakaj_ne_klasicen_form
-  examples: |
-    - Zakaj ne uporabimo obrazca?
-    - Kaj je narobe z landing pageom?
-    - Kaj pridobim s chatbotom?
+  - story: User asks why not classic form
+    steps:
+      - intent: zakaj_ne_klasicen_form
+      - action: utter_zakaj_ne_klasicen_form
 
-- intent: analitika
-  examples: |
-    - Kakšno analitiko dobim?
-    - Beleži podatke?
-    - A imam pregled nad uporabniki?
+  - story: User asks about analytics
+    steps:
+      - intent: analitika
+      - action: utter_analitika
 
-- intent: prilagajanje_blagovni_znamki
-  examples: |
-    - Se lahko prilagodi moji blagovni znamki?
-    - Lahko zamenjamo barve/logotip?
-    - Kako fleksibilen je izgled?
+  - story: User asks about brand customization
+    steps:
+      - intent: prilagajanje_blagovni_znamki
+      - action: utter_prilagajanje_blagovni_znamki
 
-- intent: kako_pridobiva_leade
-  examples: |
-    - Kako pridobiva kontakte?
-    - Kdaj vpraša za email?
-    - Kako dobiš lead?
+  - story: User asks how leads are captured
+    steps:
+      - intent: kako_pridobiva_leade
+      - action: utter_kako_pridobiva_leade
 
-- intent: ne_komunicira
-  examples: |
-    - Kaj če uporabnik ne odgovori?
-    - A pošlje opomnik?
-    - Kako ravna s tišino?
+  - story: User asks about non-response
+    steps:
+      - intent: ne_komunicira
+      - action: utter_ne_komunicira
 
-- intent: primerjava_messenger
-  examples: |
-    - A ni to isto kot Messenger bot?
-    - Zakaj ne uporabim Messengerja?
-    - Kakšna je razlika z FB botom?
+  - story: User compares to Messenger bot
+    steps:
+      - intent: primerjava_messenger
+      - action: utter_primerjava_messenger
 
-- intent: vodi_do_rezervacije
-  examples: |
-    - A pripelje do rezervacije?
-    - Lahko zaključi nakup?
-    - A lahko uporabnik bookira?
+  - story: User asks about booking
+    steps:
+      - intent: vodi_do_rezervacije
+      - action: utter_vodi_do_rezervacije
 
-- intent: podpora
-  examples: |
-    - A nudite podporo?
-    - Kaj če ne znam nastavit?
-    - Kdo pomaga z implementacijo?
+  - story: User asks about support
+    steps:
+      - intent: podpora
+      - action: utter_podpora
 
-- intent: za_mala_podjetja
-  examples: |
-    - Je primerno za manjše firme?
-    - Imam malo podjetje, a mi koristi?
-    - Je to zame?
+  - story: User asks if it's for small business
+    steps:
+      - intent: za_mala_podjetja
+      - action: utter_za_mala_podjetja
 
-- intent: goodbye
-  examples: |
-    - Adijo
-    - Hvala
-    - Nasvidenje
+  - story: User ends chat
+    steps:
+      - intent: goodbye
+      - action: utter_goodbye
 
-- intent: bot_challenge
-  examples: |
-    - Si ti pravi človek?
-    - A si bot?
-    - Govorim z robotom?
+  - story: User challenges bot
+    steps:
+      - intent: bot_challenge
+      - action: utter_iamabot
