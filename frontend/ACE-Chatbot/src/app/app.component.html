@@ -1,13 +1,12 @@
 <div class="chat-container">
   <div class="chat-header">
-  <img src="omsoft-ace.png" alt="Omsoft ACE" class="chat-logo" />
+    <img src="omsoft-ace.png" alt="Omsoft ACE" class="chat-logo" />
   </div>
-
 
   <div class="chat-messages" #chatWindow>
     <div *ngFor="let msg of messages" class="chat-bubble" [ngClass]="msg.sender">
-      <div class="text">{{ msg.text }}</div>
-      <img *ngIf="msg.imageUrl" [src]="msg.imageUrl" alt="Nepremičnina" class="room-image" />
+      <markdown [data]="msg.text"></markdown>
+      <img *ngIf="msg.imageUrl" [src]="msg.imageUrl" alt="Omsoft ACE visual" class="room-image" />
     </div>
   </div>
 

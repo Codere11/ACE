@@ -1,182 +1,40 @@
+# nlu.yml
 version: "3.1"
 
 nlu:
-- intent: kako_deluje
+- intent: greet
   examples: |
-    - Kako to deluje?
-    - Kako ACE deluje?
-    - Kako poteka pogovor s tem chatbotom?
-    - Mi lahko razložiš, kako deluje?
-    - Kako deluje ta sistem?
-    - Kaj vse zna ta sistem?
+    - Pozdravljen
+    - Zdravo
+    - Hej
+    - Lepo pozdravljen
+    - Dober dan
+    - Čao
 
-- intent: user_profession
+- intent: wants_help
   examples: |
-    - Z ustvarjanjem marketinških kampanj
-    - Ukvarjam se z marketingom
-    - Sem nepremičninski agent
-    - Delam v prodaji
-    - Ukvarjam se z oglaševanjem
-    - Vodiš kakšno marketinško kampanjo?
-    - Jaz sem agent za nepremičnine
-    - Jaz sem podjetnik
-    - Ukvarjam se s turizmom
-    - Imam agencijo
-    - Imam spletno trgovino
-    - Pomagam pri digitalnem oglaševanju
+    - Lahko pomaga meni?
+    - Mi lahko pomagaš?
+    - Rabim pomoč
+    - Kaj lahko narediš zame?
+    - Kaj znaš?
+    - Pomagaj mi prosim
 
-- intent: cena
+- intent: wants_to_know_ace
   examples: |
-    - Koliko to stane?
-    - Kakšna je cena?
-    - Ali je to drago?
-    - A je sistem drag?
-    - Koliko bom plačal?
-    - Koliko stane ACE?
-
-- intent: brezplacen_preizkus
-  examples: |
-    - A imate brezplačen preizkus?
-    - Lahko testiram sistem brezplačno?
-    - Imate demo verzijo?
-    - A nudite brezplačen test?
-    - Se da preizkusit brez obveznosti?
-    - Imam dostop do testne verzije?
-
-- intent: integracija_wordpress
-  examples: |
-    - Lahko to dam na WordPress?
-    - Se da vgraditi v WordPress?
-    - Kako to vgradim na svojo spletno stran?
-    - Deluje na WordPressu?
-    - Imam WordPress stran, lahko to vključim?
-    - Kako povežem ACE z WordPress?
-
-- intent: use_case_apartma
-  examples: |
-    - Kako bi to delovalo za apartmaje?
-    - A se to da uporabljat za najem apartmajev?
-    - Imam turistično nastanitev, ali mi koristi?
-    - Kako bi to delovalo za mojo sobo?
-    - Imam apartma v Ljubljani, kako mi pomaga?
-    - Deluje tudi za gostinske nastanitve?
-
-- intent: kaj_je_ace
-  examples: |
-    - Kaj sploh je ACE?
-    - Kaj je to?
-    - Kaj počne ACE?
-    - Kako deluje ACE agent?
-    - Kaj pomeni ACE?
     - Povej mi več o ACE
+    - Kaj je ACE?
+    - Kako ACE deluje?
+    - Kaj vse zna ta agent?
+    - Rad bi vedel več o ACE
 
-- intent: si_ti_ai
+- intent: refuse_contact
   examples: |
-    - Si ti AI?
-    - A si ti robot?
-    - S kom govorim?
-    - Govorim z umetno inteligenco?
-    - A si človek?
-    - Si pravi agent?
-
-- intent: vgradnja_spletna_stran
-  examples: |
-    - Lahko to vgradim v mojo spletno stran?
-    - A deluje tudi na drugih straneh?
-    - Se to lahko priklopi na mojo stran?
-    - Kako to vključim v svoj spletni projekt?
-    - Ali lahko uporabim svoj dizajn?
-    - A lahko prilagodim vmesnik?
-
-- intent: studija_primera
-  examples: |
-    - Imate kakšno študijo primera?
-    - Rad bi videl primere uporabe.
-    - Kako se je izkazalo v praksi?
-    - Mi lahko pokažeš primer?
-    - A imate kakšen case study?
-    - Dajte mi primer kampanje
-
-- intent: zakaj_ne_chatgpt
-  examples: |
-    - Zakaj ne bi kar ChatGPT uporabil?
-    - Kako se razlikuje od ChatGPT?
-    - A ni ChatGPT dovolj?
-    - Zakaj bi uporabil ACE namesto GPT?
-    - V čem je ACE boljši?
-    - Zakaj ne OpenAI?
-
-- intent: integracija_crm
-  examples: |
-    - Se da povezati s CRM?
-    - Kako pošljem leade v CRM?
-    - Ali deluje s Hubspotom?
-    - Kako pošilja podatke v CRM?
-    - A lahko deluje z Zoho CRM?
-    - Ali lahko povežem Salesforce?
-
-- intent: za_agencije
-  examples: |
-    - A lahko kot agencija uporabljamo to?
-    - Imate white-label opcijo?
-    - Mi smo agencija, kako lahko sodelujemo?
-    - Lahko upravljamo več strank?
-    - A je to primerno za agencije?
-    - Kako lahko uporabljamo to za več projektov?
-
-- intent: povezava_z_ads
-  examples: |
-    - Kako se poveže z oglasi?
-    - Deluje z Google Ads?
-    - Kam pošlje uporabnika iz oglasa?
-    - Kako deluje povezava z oglasi?
-    - Ali lahko uporabim Meta Ads?
-    - Kako spremlja uporabnike iz oglasov?
-
-- intent: zamenja_forme
-  examples: |
-    - A to zamenja obrazce?
-    - Zakaj ne bi kar obrazec uporabil?
-    - Se bolj splača kot form?
-    - A rabim še obrazec poleg tega?
-    - Je to boljše kot Google Form?
-    - Zakaj je pogovor boljši?
-
-- intent: cas_postavitve
-  examples: |
-    - Kako hitro ga lahko postavite?
-    - Koliko časa traja izdelava?
-    - Kakšen je čas postavitve?
-    - Kdaj bo postavljen?
-    - Koliko dni traja konfiguracija?
-    - Lahko začnemo še ta teden?
-
-- intent: vec_jezikov
-  examples: |
-    - A deluje v več jezikih?
-    - Kaj pa angleščina?
-    - Imate podporo za druge jezike?
-    - A zna nemško?
-    - Deluje tudi v hrvaščini?
-    - Katere jezike podpira?
-
-- intent: gdpr
-  examples: |
-    - Kaj pa GDPR?
-    - Kako je z varstvom podatkov?
-    - Je to skladno z zakonodajo?
-    - Ali shranjujete podatke?
-    - Kako varujete informacije?
-    - A spoštuje zakon o zasebnosti?
-
-- intent: zacnemo_kmalu
-  examples: |
-    - Kdaj lahko začnemo?
-    - Kako hitro se lahko povežemo?
-    - Imate prost termin?
-    - Rad bi začel čimprej
-    - Lahko danes začnemo?
-    - Ali imate čas za implementacijo?
+    - Ne bom pustil kontakta
+    - Ne želim oddati kontaktnih podatkov
+    - Raje ne
+    - Nočem pustiti e-maila
+    - Nočem pustiti telefonske
 
 - intent: zelim_agenta
   examples: |
@@ -187,86 +45,14 @@ nlu:
     - Dajte mi telefonsko osebe
     - Iščem agenta
 
-- intent: zakaj_ne_klasicen_form
+- intent: kako_deluje
   examples: |
-    - Zakaj ne uporabimo obrazca?
-    - Kaj je narobe z landing pageom?
-    - Kaj pridobim s chatbotom?
-    - Zakaj pogovor in ne forma?
-    - Kaj so prednosti tega pristopa?
-    - A je to res bolj učinkovito?
-
-- intent: analitika
-  examples: |
-    - Kakšno analitiko dobim?
-    - Beleži podatke?
-    - A imam pregled nad uporabniki?
-    - Lahko spremljam podatke?
-    - Ali je na voljo dashboard?
-    - Katere metrike so vidne?
-
-- intent: prilagajanje_blagovni_znamki
-  examples: |
-    - Se lahko prilagodi moji blagovni znamki?
-    - Lahko zamenjamo barve/logotip?
-    - Kako fleksibilen je izgled?
-    - A lahko spremenim ton pogovora?
-    - Prilagajate jezik?
-    - Lahko je v stilu moje firme?
-
-- intent: kako_pridobiva_leade
-  examples: |
-    - Kako pridobiva kontakte?
-    - Kdaj vpraša za email?
-    - Kako dobiš lead?
-    - Ali shrani telefonsko?
-    - Kako zajame podatke?
-    - Kako deluje konverzija?
-
-- intent: ne_komunicira
-  examples: |
-    - Kaj če uporabnik ne odgovori?
-    - A pošlje opomnik?
-    - Kako ravna s tišino?
-    - Kaj če ni odziva?
-    - Ali zna nadaljevati sam?
-    - Se sam oglasi nazaj?
-
-- intent: primerjava_messenger
-  examples: |
-    - A ni to isto kot Messenger bot?
-    - Zakaj ne uporabim Messengerja?
-    - Kakšna je razlika z FB botom?
-    - Zakaj ne Facebook bot?
-    - Kaj pa WhatsApp bot?
-    - V čem je ACE boljši?
-
-- intent: vodi_do_rezervacije
-  examples: |
-    - A pripelje do rezervacije?
-    - Lahko zaključi nakup?
-    - A lahko uporabnik bookira?
-    - Ali rezervira termin?
-    - Lahko pošlje zahtevek?
-    - Poveže do koledarja?
-
-- intent: podpora
-  examples: |
-    - A nudite podporo?
-    - Kaj če ne znam nastavit?
-    - Kdo pomaga z implementacijo?
-    - Imam težave, kdo pomaga?
-    - Ali je na voljo pomoč?
-    - A pomagate z nastavitvijo?
-
-- intent: za_mala_podjetja
-  examples: |
-    - Je primerno za manjše firme?
-    - Imam malo podjetje, a mi koristi?
-    - Je to zame?
-    - A deluje tudi za mene?
-    - Ali ga lahko uporabljam sam?
-    - Primeren za enoosebni s.p.?
+    - Kako to deluje?
+    - Kako ACE deluje?
+    - Kako poteka pogovor s tem chatbotom?
+    - Mi lahko razložiš, kako deluje?
+    - Kako deluje ta sistem?
+    - Kaj vse zna ta sistem?
 
 - intent: goodbye
   examples: |
@@ -285,4 +71,3 @@ nlu:
     - A si resen sogovornik?
     - Si umetna inteligenca?
     - A si živ?
-
