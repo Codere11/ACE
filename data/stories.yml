@@ -1,152 +1,19 @@
 version: "3.1"
-
 stories:
-  - story: User asks how it works
+  - story: leads happy path single story
     steps:
-      - intent: kako_deluje
-      - action: utter_kako_deluje
-
-  - story: User asks for price
-    steps:
-      - intent: cena
-      - action: utter_cena
-
-  - story: User asks about free trial
-    steps:
-      - intent: brezplacen_preizkus
-      - action: utter_brezplacen_preizkus
-
-  - story: User asks about WordPress integration
-    steps:
-      - intent: integracija_wordpress
-      - action: utter_integracija_wordpress
-
-  - story: User asks for apartma use case
-    steps:
-      - intent: use_case_apartma
-      - action: utter_use_case_apartma
-
-  - story: User asks what is ACE
-    steps:
-      - intent: kaj_je_ace
-      - action: utter_kaj_je_ace
-
-  - story: User asks if bot is AI
-    steps:
-      - intent: si_ti_ai
-      - action: utter_si_ti_ai
-
-  - story: User asks about embedding on website
-    steps:
-      - intent: vgradnja_spletna_stran
-      - action: utter_vgradnja_spletna_stran
-
-  - story: User asks for case study
-    steps:
-      - intent: studija_primera
-      - action: utter_studija_primera
-
-  - story: User asks why not ChatGPT
-    steps:
-      - intent: zakaj_ne_chatgpt
-      - action: utter_zakaj_ne_chatgpt
-
-  - story: User asks about CRM integration
-    steps:
-      - intent: integracija_crm
-      - action: utter_integracija_crm
-
-  - story: User is an agency
-    steps:
-      - intent: za_agencije
-      - action: utter_za_agencije
-
-  - story: User asks about ad connection
-    steps:
-      - intent: povezava_z_ads
-      - action: utter_povezava_z_ads
-
-  - story: User asks if it replaces forms
-    steps:
-      - intent: zamenja_forme
-      - action: utter_zamenja_forme
-
-  - story: User asks about setup time
-    steps:
-      - intent: cas_postavitve
-      - action: utter_cas_postavitve
-
-  - story: User asks about languages
-    steps:
-      - intent: vec_jezikov
-      - action: utter_vec_jezikov
-
-  - story: User asks about GDPR
-    steps:
-      - intent: gdpr
-      - action: utter_gdpr
-
-  - story: User wants to start soon
-    steps:
-      - intent: zacnemo_kmalu
-      - action: utter_zacnemo_kmalu
-
-  - story: User wants human agent
-    steps:
-      - intent: zelim_agenta
-      - action: utter_zelim_agenta
-
-  - story: User asks why not classic form
-    steps:
-      - intent: zakaj_ne_klasicen_form
-      - action: utter_zakaj_ne_klasicen_form
-
-  - story: User asks about analytics
-    steps:
-      - intent: analitika
-      - action: utter_analitika
-
-  - story: User asks about brand customization
-    steps:
-      - intent: prilagajanje_blagovni_znamki
-      - action: utter_prilagajanje_blagovni_znamki
-
-  - story: User asks how leads are captured
-    steps:
-      - intent: kako_pridobiva_leade
-      - action: utter_kako_pridobiva_leade
-
-  - story: User asks about non-response
-    steps:
-      - intent: ne_komunicira
-      - action: utter_ne_komunicira
-
-  - story: User compares to Messenger bot
-    steps:
-      - intent: primerjava_messenger
-      - action: utter_primerjava_messenger
-
-  - story: User asks about booking
-    steps:
-      - intent: vodi_do_rezervacije
-      - action: utter_vodi_do_rezervacije
-
-  - story: User asks about support
-    steps:
-      - intent: podpora
-      - action: utter_podpora
-
-  - story: User asks if it's for small business
-    steps:
-      - intent: za_mala_podjetja
-      - action: utter_za_mala_podjetja
-
-  - story: User ends chat
-    steps:
-      - intent: goodbye
-      - action: utter_goodbye
-
-  - story: User challenges bot
-    steps:
-      - intent: bot_challenge
-      - action: utter_iamabot
+      - intent: greet
+      - action: utter_start_choice
+      - intent: choose_leads
+      - action: utter_leads_pitch
+      - action: mini_survey_form
+      - active_loop: mini_survey_form
+      - slot_was_set:
+          - industry: "real estate"
+      - slot_was_set:
+          - budget: "3k_10k"
+      - slot_was_set:
+          - experience: "we ran meta and search, results were ok"
+      - active_loop: null
+      - action: utter_survey_submitted
+      - action: action_deepseek_assess_and_notify

@@ -1,98 +1,138 @@
-// ✅ app.component.ts
-import { Component, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { ChatService } from './services/chat.service';
-import { MarkdownModule } from 'ngx-markdown';
+import { FormsModule, ReactiveFormsModule, FormBuilder, Validators, FormGroup } from '@angular/forms';
+import { ChatService, ChatResponse, QuickReply, UIBlock, UIForm } from './services/chat.service';
 
-interface ChatMessage {
-  sender: 'user' | 'bot';
-  text: string;
-  imageUrl?: string;
-  loading?: boolean;
-}
+type Msg = { role: 'user'|'assistant'; text: string; typing?: boolean; id?: string };
 
 @Component({
   selector: 'app-root',
   standalone: true,
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './app.component.html',
-  styleUrls: ['./app.component.scss'],
-  imports: [CommonModule, FormsModule, MarkdownModule],
+  styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements AfterViewInit {
-  messages: ChatMessage[] = [];
-  userInput: string = '';
-  typingDots: string = '.';
-  typingInterval: any;
+export class AppComponent implements OnInit {
+  sid = `sid_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
-  @ViewChild('chatWindow') chatWindow!: ElementRef;
+  messages: Msg[] = [];
+  ui: UIBlock = null;
+  chatMode: 'guided'|'open' = 'guided';
+  inputText = '';
+  loading = false;
 
-  constructor(private chatService: ChatService) {}
+  surveyForm!: FormGroup;
 
-  ngAfterViewInit(): void {
-    this.addBotMessage(`Pozdravljeni! Jaz sem Omsoft Ace, chatbot ki prodaja samega sebe! S cim se pa ti ukvarjas?`);
-  }
+  // typing indicator
+  private typingId: string | null = null;
+  private typingStartedAt = 0;
+  private readonly MIN_TYPING_MS = 900;
 
-  sendMessage(): void {
-    const text = this.userInput.trim();
-    if (!text) return;
-
-    this.addUserMessage(text);
-    this.userInput = '';
-    this.scrollToBottom();
-
-    const placeholder: ChatMessage = { sender: 'bot', text: '.', loading: true };
-    this.messages.push(placeholder);
-    this.scrollToBottom();
-
-    this.typingDots = '.';
-    this.typingInterval = setInterval(() => {
-      this.typingDots = this.typingDots.length < 3 ? this.typingDots + '.' : '.';
-      placeholder.text = this.typingDots;
-    }, 400);
-
-    this.chatService.sendMessage(text).subscribe({
-      next: (res) => {
-        clearInterval(this.typingInterval);
-        this.messages.pop();
-        this.simulateTyping(res.reply, res.imageUrl);
-      },
-      error: (err) => {
-        clearInterval(this.typingInterval);
-        this.messages.pop();
-        this.addBotMessage('Prišlo je do napake. Poskusite znova.');
-        this.scrollToBottom();
-      }
+  constructor(private fb: FormBuilder, private api: ChatService) {
+    this.surveyForm = this.fb.group({
+      industry: ['', Validators.required],
+      budget: ['3k_10k', Validators.required],
+      experience: ['', Validators.required],
     });
   }
 
-  private simulateTyping(fullText: string, imageUrl?: string): void {
-    const botMessage: ChatMessage = { sender: 'bot', text: '', imageUrl };
-    this.messages.push(botMessage);
-    this.scrollToBottom();
+  ngOnInit(): void {
+    this.loading = true;
+    this.api.chat(this.sid, '/start', true).subscribe({
+      next: (res) => this.consume(res),
+      error: () => (this.loading = false),
+    });
+  }
 
-    let index = 0;
-    const interval = setInterval(() => {
-      botMessage.text = fullText.slice(0, index);
-      index++;
-      if (index > fullText.length) {
-        clearInterval(interval);
-        this.scrollToBottom();
+  private consume(res: ChatResponse) {
+    this.loading = false;
+
+    // append assistant reply for this turn
+    if (res.reply) this.messages.push({ role: 'assistant', text: res.reply });
+
+    // trust backend to tell us the UI block (choices or form)
+    this.ui = res.ui ?? (res.quickReplies ? { type: 'choices', buttons: res.quickReplies } as any : null);
+    this.chatMode = res.chatMode;
+  }
+
+  private startTyping() {
+    this.stopTyping();
+    this.typingId = `typing_${Date.now()}`;
+    this.typingStartedAt = performance.now();
+    this.messages.push({ role: 'assistant', text: '', typing: true, id: this.typingId });
+  }
+
+  private stopTyping(replaceWith?: string) {
+    if (!this.typingId) return;
+    const i = this.messages.findIndex(m => m.id === this.typingId);
+    if (i > -1) {
+      if (replaceWith !== undefined) {
+        this.messages[i] = { role: 'assistant', text: replaceWith };
+      } else {
+        this.messages.splice(i, 1);
       }
-    }, 15);
+    }
+    this.typingId = null;
   }
 
-  private addUserMessage(text: string): void {
-    this.messages.push({ sender: 'user', text });
+  sendText() {
+    if (!this.inputText.trim() || this.chatMode !== 'open' || this.loading) return;
+    const msg = this.inputText.trim();
+    this.messages.push({ role: 'user', text: msg });
+    this.inputText = '';
+    this.loading = true;
+    this.api.chat(this.sid, msg).subscribe({
+      next: (res) => this.consume(res),
+      error: () => (this.loading = false),
+    });
   }
 
-  private addBotMessage(text: string, imageUrl?: string): void {
-    this.messages.push({ sender: 'bot', text, imageUrl });
+  clickQuickReply(q: QuickReply) {
+    if (this.loading) return;
+    this.messages.push({ role: 'user', text: q.title });
+    this.loading = true;
+    this.api.chat(this.sid, q.payload).subscribe({
+      next: (res) => this.consume(res),
+      error: () => (this.loading = false),
+    });
   }
 
-  private scrollToBottom(): void {
-    setTimeout(() => {
-      this.chatWindow.nativeElement.scrollTop = this.chatWindow.nativeElement.scrollHeight;
-    }, 100);
+  submitSurvey() {
+    if (this.loading) return;
+    if (this.surveyForm.invalid) {
+      this.surveyForm.markAllAsTouched();
+      return;
+    }
+    const { industry, budget, experience } = this.surveyForm.value as any;
+    this.messages.push({ role: 'user', text: `Submitted: ${industry} / ${budget} / ${experience}` });
+
+    this.loading = true;
+    this.startTyping();
+
+    this.api.survey(this.sid, industry, budget, experience).subscribe({
+      next: (res) => {
+        const elapsed = performance.now() - this.typingStartedAt;
+        const wait = Math.max(0, this.MIN_TYPING_MS - elapsed);
+        setTimeout(() => {
+          this.stopTyping(res.reply ?? '');
+          // backend decides chatMode (guided/open) after DeepSeek
+          this.ui = res.ui ?? null;
+          this.chatMode = res.chatMode;
+          this.loading = false;
+        }, wait);
+      },
+      error: () => {
+        const elapsed = performance.now() - this.typingStartedAt;
+        const wait = Math.max(0, this.MIN_TYPING_MS - elapsed);
+        setTimeout(() => {
+          this.stopTyping('Sorry, something went wrong analyzing that.');
+          this.loading = false;
+        }, wait);
+      },
+    });
+  }
+
+  isForm(block: UIBlock): block is UIForm {
+    return !!block && (block as any).type === 'form';
   }
 }

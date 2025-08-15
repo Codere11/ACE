@@ -2,186 +2,95 @@ version: "3.1"
 
 intents:
   - greet
-  - wants_help
-  - wants_to_know_ace
-  - refuse_contact
-  - zelim_agenta
-  - kako_deluje
-  - goodbye
-  - bot_challenge
-  - cena
-  - brezplacen_preizkus
-  - integracija_wordpress
-  - use_case_apartma
-  - kaj_je_ace
-  - si_ti_ai
-  - vgradnja_spletna_stran
-  - studija_primera
-  - zakaj_ne_chatgpt
-  - integracija_crm
-  - za_agencije
-  - povezava_z_ads
-  - zamenja_forme
-  - cas_postavitve
-  - vec_jezikov
-  - gdpr
-  - zacnemo_kmalu
-  - zakaj_ne_klasicen_form
-  - analitika
-  - prilagajanje_blagovni_znamki
-  - kako_pridobiva_leade
-  - ne_komunicira
-  - primerjava_messenger
-  - vodi_do_rezervacije
-  - podpora
-  - za_mala_podjetja
+  - choose_technology
+  - choose_leads
+  - provide_budget
+
+entities:
+  - budget
 
 slots:
-  email:
+  industry:
     type: text
     influence_conversation: true
     mappings:
       - type: from_text
-  telefon:
+        conditions:
+          - active_loop: mini_survey_form
+            requested_slot: industry
+  budget:
+    type: categorical
+    values: [lt_1k, 1k_3k, 3k_10k, gt_10k]
+    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: budget
+        conditions:
+          - active_loop: mini_survey_form
+            requested_slot: budget
+  experience:
     type: text
     influence_conversation: true
     mappings:
       - type: from_text
-  ime:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
+        conditions:
+          - active_loop: mini_survey_form
+            requested_slot: experience
+
+forms:
+  mini_survey_form:
+    required_slots:
+      - industry
+      - budget
+      - experience
 
 responses:
+  utter_start_choice:
+    - text: "Hey, I see you're interested in finding more about ACE! Are you more interested in how the underlying technology works, or how it helps businesses get leads?"
+      buttons:
+        - title: "Technology"
+          payload: "/choose_technology"
+        - title: "Leads"
+          payload: "/choose_leads"
+      custom:
+        step: "start_choice"
 
-  utter_zelim_agenta:
+  utter_leads_pitch:
     - text: |
-        Odlično! Sem tukaj, da ti pomagam. Povej mi prosim svoje ime, email ali telefonsko, da lahko povežem s pravim agentom.
-        
-  utter_greeting:
-    - text: |
-        Pozdravljen/a! Jaz sem ACE, tvoj prodajni agent ki:
-        ✅ Dela 24/7
-        ✅ Vodi pogovore do cilja kampanje, ob informiranju strank!
-        ✅ Beleži občutke, pohvale, in pomisleke strank — nato jih pa zapakiramo za najboljše možne analize!
+        Compared to other lead-capture solutions, such as forms and landing pages, ACE gets the medal!
 
-        Kaj te zanima?
-        1️⃣ Lahko pomaga meni?
-        2️⃣ Povej mi več o ACE, kako deluje?
+        ✅ It is tailor-made for your campaign goal(s)
+        ✅ It informs, qualifies, and 'closes' the prospects through natural conversations!
+        ✅ It records and categorizes valuable information, such as objections, sticking points, and demographic data
 
-  utter_wants_help:
-    - text: |
-        ACE vam lahko pomaga, če:
-        💬 - Pridobivate, ali želite začeti pridobivati stranke preko interneta
-        💬 - Želite pridobiti neprecenljive povratne informacije o vaših kupcih
-        💬 - Ste pripravljeni na hiter porast strank!
+        Would you like to know if ACE could help close more leads for your business? Please fill out this mini-survey!
+      custom:
+        step: "leads_pitch"
 
-        Če se v opisu prepoznate, lahko preprosto pustite svoje kontaktne podatke (telefon, ali pa e-naslov), ter vaše ime ali pa ime podjetja! Naš sodelavec Maks vas bo potem kmalu kontaktiral.
+  utter_ask_industry:
+    - text: "1) What is your business' industry?"
+      custom:
+        step: "survey_begin"
 
-  utter_request_contact:
-    - text: Super! Prosim za tvoj email, telefonsko ali ime podjetja.
+  utter_ask_budget:
+    - text: "2) What is your monthly advertising budget?"
+      buttons:
+        - title: "< €1k"
+          payload: '/provide_budget{"budget":"lt_1k"}'
+        - title: "€1k–€3k"
+          payload: '/provide_budget{"budget":"1k_3k"}'
+        - title: "€3k–€10k"
+          payload: '/provide_budget{"budget":"3k_10k"}'
+        - title: "> €10k"
+          payload: '/provide_budget{"budget":"gt_10k"}'
 
-  utter_thank_for_contact:
-    - text: Hvala! Maks te bo kontaktiral zelo kmalu. Če želiš, mi povej več o tem, kar te zanima.
+  utter_ask_experience:
+    - text: "3) What is your previous experience with online advertising? What did you try and how satisfied were you with the results?"
 
-  utter_refuse_contact:
-    - text: |
-        Popolnoma razumem :) Če vam je ljubše lahko tudi vi kontaktirate nas na 069 735 957 ali maks.ponikvar@gmail.com. Mogoče imate pa še kakšno dodatno vprašanje ali pomislek?
+  utter_survey_submitted:
+    - text: "Thanks! Let me quickly analyze if ACE is a strong fit for you…"
+      custom:
+        step: "survey_submitted"
 
-  utter_kaj_je_ace:
-    - text: ACE je pametni AI prodajni agent, ki nadomešča klasične landing strani in obrazce z učinkovitim pogovorom, ki poveča število kvalificiranih leadov.
-
-  utter_kako_deluje:
-    - text: |
-        ACE je prodajni 'funnel' sistem, ki:
-        📝 Je popolnoma prilagodljiv
-        📝 Vodi stranke skozi naravno prodajno pot
-        📝 Vodi tudi 3-5x višji CTR (delež ljudi ki so kliknili na reklami, in kupili)
-
-        Kako to dosežemo?
-        1) Kombinacija modernih LLM agentov (Deepseek) in deterministicnega, preprostejšega chatbota
-        2) Beleženje povratnih informacij in uporaba pametnih classifier sistemov
-        3) Povratna zanka in sistemski pregled za optimizacijo celotne kampanje
-
-  utter_goodbye:
-    - text: Hvala za pogovor! Če imaš še kakšno vprašanje, sem tukaj.
-
-  utter_iamabot:
-    - text: Sem AI asistent, ki ti pomaga pridobiti več leadov preko pogovora.
-
-  utter_cena:
-    - text: Cena je odvisna od števila projektov, je pa sistem narejen, da se povrne že z enim samim kvalificiranim leadom.
-
-  utter_brezplacen_preizkus:
-    - text: Da, nudimo brezplačen preizkus! Kontaktiraj nas za dostop do demo verzije.
-
-  utter_integracija_wordpress:
-    - text: Seveda! ACE se zlahka integrira v WordPress spletne strani preko vgrajene kode.
-
-  utter_use_case_apartma:
-    - text: Za najem apartmajev je ACE izjemno koristen — odgovarja na vprašanja gostov, prikazuje slike sob in zbere podatke za rezervacijo.
-
-  utter_si_ti_ai:
-    - text: Sem ACE, umetna inteligenca, ki pomaga podjetjem prodajati bolj pametno in hitreje.
-
-  utter_vgradnja_spletna_stran:
-    - text: ACE lahko enostavno vgradimo na katerokoli spletno stran — WordPress, HTML, Webflow ali kaj drugega.
-
-  utter_studija_primera:
-    - text: Seveda! Pošlji kontakt in poslali bomo primer uspešne kampanje s podatki o povečanju konverzij.
-
-  utter_zakaj_ne_chatgpt:
-    - text: ChatGPT ni narejen za konverzije — ACE pa je. Imaš nadzor nad potekom pogovora in podatki se shranijo.
-
-  utter_integracija_crm:
-    - text: ACE se poveže z večino CRM sistemov, kot so Hubspot, Zoho, Salesforce in drugi.
-
-  utter_za_agencije:
-    - text: Imamo white-label opcijo za agencije, ki želijo ACE vključiti v svoje kampanje za več strank.
-
-  utter_povezava_z_ads:
-    - text: ACE se odlično poveže z Google in Meta oglasi — vodi uporabnike naprej in beleži rezultate.
-
-  utter_zamenja_forme:
-    - text: Klasične forme pogosto ostanejo neizpolnjene — pogovor pa spodbuja interakcijo in ima večji CTR.
-
-  utter_cas_postavitve:
-    - text: Postavitev traja 1–2 dni, lahko začnemo takoj.
-
-  utter_vec_jezikov:
-    - text: ACE trenutno podpira slovenščino, angleščino, hrvaščino in nemščino.
-
-  utter_gdpr:
-    - text: ACE je popolnoma skladen z GDPR — podatki se obdelujejo varno in po zakonodaji.
-
-  utter_zacnemo_kmalu:
-    - text: Imamo proste termine še ta teden! Kontaktiraj nas čimprej.
-
-  utter_zakaj_ne_klasicen_form:
-    - text: Landing page s formo deluje le pri zelo motiviranih. Pogovor pa aktivno vodi obiskovalca naprej.
-
-  utter_analitika:
-    - text: |
-        ACE ponuja napredno analitiko: konverzije, metrike, odzivi uporabnikov, pomisleki in mnenja — vse zbrano!
-
-  utter_prilagajanje_blagovni_znamki:
-    - text: ACE se prilagodi barvam, tonu, jeziku in dizajnu tvoje blagovne znamke.
-
-  utter_kako_pridobiva_leade:
-    - text: V pravem trenutku prosi za kontaktne podatke — email, telefon ali drugo. Shranjeno v bazo ali CRM.
-
-  utter_ne_komunicira:
-    - text: Če uporabnik ne odgovori, ACE lahko pošlje opomnik, ali zaključi pogovor z vljudnim sporočilom.
-
-  utter_primerjava_messenger:
-    - text: ACE deluje na tvoji spletni strani, z vsemi podatki in popolnim nadzorom. Messenger bot tega nima.
-
-  utter_vodi_do_rezervacije:
-    - text: Seveda! ACE lahko pripelje do rezervacije termina, sestanka ali povpraševanja.
-
-  utter_podpora:
-    - text: Nudimo pomoč pri nastavitvah, integraciji in optimizaciji. Vedno smo dosegljivi.
-
-  utter_za_mala_podjetja:
-    - text: ACE je popoln tudi za manjše firme — deluje takoj in brez zapletene integracije.
+actions:
+  - action_deepseek_assess_and_notify

@@ -44,29 +44,35 @@ Your job is to explain how Omsoft ACE works, why it’s better than traditional 
 RULES:
 - Never make up information.
 - Use the responses below as your source of truth.
-- If you're unsure, say \"I'm not sure about that.\"
+- If you're unsure, say "I'm not sure about that."
 - Never discuss pricing unless it's included below.
 - If the user asks for a demo, tell them they are already speaking to the demo agent.
 - You should behave as if the campaign manager (e.g. Maks) will read the chat.
-- If someone wants to be contacted, say: \"V redu, posredujem Maksu.\" — no extra explanation needed.
+- If someone wants to be contacted, say: "V redu, posredujem Maksu." — no extra explanation needed.
 
 TOPICS:
-"""
+""".strip()
 
     for topic in json_data.get("topics", []):
-        prompt += f"\nTopic: {topic['topic'].capitalize()}\n"
-        for example, response in zip(topic["examples"], topic["responses"]):
+        examples = topic.get("examples", []) or []
+        responses = topic.get("responses", []) or []
+
+        # NEW: auto-expand a single response to cover all examples
+        if len(responses) == 1 and len(examples) > 1:
+            responses = responses * len(examples)
+
+        prompt += f"\n\nTopic: {topic['topic'].capitalize()}\n"
+        for example, response in zip(examples, responses):
             prompt += f"- Q: {example}\n  A: {response}\n"
 
     prompt += """
 
 IMPORTANT:
 If a user asks to see a specific feature (like a dashboard, chat popup, or campaign view), say:  
-\"Tukaj je fotografija, ki vas zanima 👇\"  
+"Tukaj je fotografija, ki vas zanima 👇"  
 The system will automatically display the correct image below your message. Never describe the image or say what you can't do.
-"""
-    return prompt.strip()
-
+""".rstrip()
+    return prompt
 
 def detect_property_image(text: str, config: dict) -> str | None:
     """Detect if the user is asking to see a particular visual (dashboard, chat popup, etc)."""

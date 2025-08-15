@@ -1,13 +1,27 @@
 version: "3.1"
-
 rules:
+  - rule: greet → start choice
+    steps:
+      - intent: greet
+      - action: utter_start_choice
 
-- rule: Say goodbye anytime the user says goodbye
-  steps:
-  - intent: goodbye
-  - action: utter_goodbye
+  - rule: choose leads → pitch → form
+    steps:
+      - intent: choose_leads
+      - action: utter_leads_pitch
+      - action: mini_survey_form
+      - active_loop: mini_survey_form
 
-- rule: Say 'I am a bot' anytime the user challenges
-  steps:
-  - intent: bot_challenge
-  - action: utter_iamabot
+  - rule: submit mini survey
+    condition:
+      - active_loop: mini_survey_form
+    steps:
+      - action: mini_survey_form
+      - active_loop: null
+      - action: utter_survey_submitted
+      - action: action_deepseek_assess_and_notify
+
+  - rule: technology chosen → re-offer start choice
+    steps:
+      - intent: choose_technology
+      - action: utter_start_choice

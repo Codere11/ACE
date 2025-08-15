@@ -8,7 +8,7 @@
       "intent": "greeting",
       "examples": ["hello", "hi", "what is this?", "who are you?"],
       "responses": [
-        "Hey there 👋 I’m ACE — the AI-powered sales engine that replaces boring landing pages with smart chat. Want a quick demo?"
+        "Hej 👋 jaz sem ACE — pametni prodajni agent, ki zamenja dolgočasne landing strani s pametnim klepetom. Želiš hiter demo?"
       ]
     },
     {
@@ -16,7 +16,31 @@
       "intent": "kaj_je_ace",
       "examples": ["what is ACE?", "how does this work?", "tell me about ACE", "what do you do?"],
       "responses": [
-        "Omsoft ACE replaces static landing pages with intelligent, adaptive chat experiences that boost conversion and capture rich lead data."
+        "Omsoft ACE zamenja statične landing strani z inteligentnim, prilagodljivim klepetom, ki dvigne konverzije in zajame bogate podatke o leadih."
+      ]
+    },
+    {
+      "topic": "kako_deluje",
+      "intent": "kako_deluje",
+      "examples": ["kako deluje?", "poveš mi kako deluje?", "kako to dela?"],
+      "responses": [
+        "Delujem kot 24/7 prodajni asistent: ujamem obiskovalca iz oglasa, odgovorim na vprašanja, zberem ključne podatke (potreba, proračun, čas, kdo odloča) in ko je smiselno, predlagam termin ter te povežem z Maksem."
+      ]
+    },
+    {
+      "topic": "wants_help",
+      "intent": "wants_help",
+      "examples": ["Lahko pomaga meni?", "Mi lahko pomagaš?", "Rabim pomoč"],
+      "responses": [
+        "Seveda. Povej mi na kratko, s čim se ukvarjaš in kaj želiš doseči s kampanjo — tako ti pokažem najboljši primer."
+      ]
+    },
+    {
+      "topic": "handoff",
+      "intent": "handoff",
+      "examples": ["poveži me z Maksom", "lahko govorim z nekom?", "rad bi termin z Maksom"],
+      "responses": [
+        "V redu, posredujem Maksu."
       ]
     },
     {
@@ -24,7 +48,7 @@
       "intent": "cena",
       "examples": ["how much does it cost?", "what's the price?", "pricing?", "cost?"],
       "responses": [
-        "Cena je odvisna od tipa uporabe, obsega obiska in stopnje podpore. Ce zelite tocno ponudbo, lahko ACE poveze z Maksem."
+        "Cena je odvisna od tipa uporabe, obsega obiska in stopnje podpore. Če želite točno ponudbo, lahko ACE poveže z Maksom."
       ]
     }
   ]

@@ -1,0 +1,25 @@
+{
+  "real_estate": {
+    "villa": { "intent": "vila", "offer": "še 4 slike in okvirno ceno" },
+    "apartma": { "intent": "apartma", "offer": "slike in ceno po m²" },
+    "hisa": { "intent": "hiša", "offer": "fotografije in okvirno ceno" },
+    "hiša": { "intent": "hiša", "offer": "fotografije in okvirno ceno" },
+    "poslovno": { "intent": "poslovni prostor", "offer": "slike in okvirno ceno" },
+    "portoroz": { "location": "Portorožu" },
+    "portorož": { "location": "Portorožu" },
+    "ljubljana": { "location": "Ljubljani" },
+    "koper": { "location": "Kopru" },
+    "bled": { "location": "Bledu" }
+  },
+  "clinic": {
+    "botox": { "intent": "Botox", "offer": "najbližji prost termin in okvirno ceno" },
+    "dentist": { "intent": "zobozdravnik", "offer": "termin ta teden in okvirno ceno" },
+    "derma": { "intent": "dermatološki pregled", "offer": "termin in okvirno ceno" }
+  },
+  "gym": {
+    "trial": { "intent": "brezplačni preizkus", "offer": "urnik terminov ta teden" },
+    "personal-training": { "intent": "osebni trening", "offer": "kratek plan in prvi termin" },
+    "pilates": { "intent": "pilates", "offer": "urnik in proste termine" },
+    "crossfit": { "intent": "CrossFit", "offer": "urnik in brezplačni preizkus" }
+  }
+}

@@ -1,73 +1,34 @@
-# nlu.yml
 version: "3.1"
-
 nlu:
-- intent: greet
-  examples: |
-    - Pozdravljen
-    - Zdravo
-    - Hej
-    - Lepo pozdravljen
-    - Dober dan
-    - Čao
+  - intent: greet
+    examples: |
+      - hi
+      - hey
+      - hello
+      - /start
+      - start
 
-- intent: wants_help
-  examples: |
-    - Lahko pomaga meni?
-    - Mi lahko pomagaš?
-    - Rabim pomoč
-    - Kaj lahko narediš zame?
-    - Kaj znaš?
-    - Pomagaj mi prosim
+  - intent: choose_technology
+    examples: |
+      - technology
+      - tech
+      - how the technology works
+      - show technology
 
-- intent: wants_to_know_ace
-  examples: |
-    - Povej mi več o ACE
-    - Kaj je ACE?
-    - Kako ACE deluje?
-    - Kaj vse zna ta agent?
-    - Rad bi vedel več o ACE
+  - intent: choose_leads
+    examples: |
+      - leads
+      - I'm interested in leads
+      - how it helps businesses get leads
+      - show me the leads option
 
-- intent: refuse_contact
-  examples: |
-    - Ne bom pustil kontakta
-    - Ne želim oddati kontaktnih podatkov
-    - Raje ne
-    - Nočem pustiti e-maila
-    - Nočem pustiti telefonske
-
-- intent: zelim_agenta
-  examples: |
-    - Želim, da me kontaktira agent.
-    - Prosim za kontaktno osebo.
-    - Lahko se z nekom pogovorim?
-    - A me lahko nekdo pokliče?
-    - Dajte mi telefonsko osebe
-    - Iščem agenta
-
-- intent: kako_deluje
-  examples: |
-    - Kako to deluje?
-    - Kako ACE deluje?
-    - Kako poteka pogovor s tem chatbotom?
-    - Mi lahko razložiš, kako deluje?
-    - Kako deluje ta sistem?
-    - Kaj vse zna ta sistem?
-
-- intent: goodbye
-  examples: |
-    - Adijo
-    - Hvala
-    - Nasvidenje
-    - Se vidimo
-    - Lep dan
-    - Čao
-
-- intent: bot_challenge
-  examples: |
-    - Si ti pravi človek?
-    - A si bot?
-    - Govorim z robotom?
-    - A si resen sogovornik?
-    - Si umetna inteligenca?
-    - A si živ?
+  - intent: provide_budget
+    examples: |
+      - /provide_budget{"budget":"lt_1k"}
+      - /provide_budget{"budget":"1k_3k"}
+      - /provide_budget{"budget":"3k_10k"}
+      - /provide_budget{"budget":"gt_10k"}
+      - less than 1k
+      - around 2k
+      - about 5k
+      - more than 10k
