@@ -1,19 +1,18 @@
 version: "3.1"
+
 stories:
-  - story: leads happy path single story
-    steps:
-      - intent: greet
-      - action: utter_start_choice
-      - intent: choose_leads
-      - action: utter_leads_pitch
-      - action: mini_survey_form
-      - active_loop: mini_survey_form
-      - slot_was_set:
-          - industry: "real estate"
-      - slot_was_set:
-          - budget: "3k_10k"
-      - slot_was_set:
-          - experience: "we ran meta and search, results were ok"
-      - active_loop: null
-      - action: utter_survey_submitted
-      - action: action_deepseek_assess_and_notify
+- story: ACE qualification flow
+  steps:
+  - intent: greet
+  - action: utter_greet
+  - action: utter_greet_budget
+  - intent: choose_budget
+    entities:
+      - budget: lt_1k
+  - action: utter_platform_question
+  - intent: choose_platform
+    entities:
+      - platform: Google
+  - action: utter_describe_company
+  - intent: provide_description
+  - action: action_deepseek_score

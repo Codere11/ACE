@@ -2,95 +2,63 @@ version: "3.1"
 
 intents:
   - greet
-  - choose_technology
-  - choose_leads
-  - provide_budget
+  - start
+  - choose_budget
+  - choose_platform
+  - provide_description
 
 entities:
   - budget
+  - platform
+  - company_description
 
 slots:
-  industry:
-    type: text
-    influence_conversation: true
-    mappings:
-      - type: from_text
-        conditions:
-          - active_loop: mini_survey_form
-            requested_slot: industry
   budget:
-    type: categorical
-    values: [lt_1k, 1k_3k, 3k_10k, gt_10k]
-    influence_conversation: true
+    type: text
     mappings:
       - type: from_entity
         entity: budget
-        conditions:
-          - active_loop: mini_survey_form
-            requested_slot: budget
-  experience:
+  platform:
     type: text
-    influence_conversation: true
+    mappings:
+      - type: from_entity
+        entity: platform
+  company_description:
+    type: text
     mappings:
       - type: from_text
-        conditions:
-          - active_loop: mini_survey_form
-            requested_slot: experience
-
-forms:
-  mini_survey_form:
-    required_slots:
-      - industry
-      - budget
-      - experience
+        intent: provide_description
 
 responses:
-  utter_start_choice:
-    - text: "Hey, I see you're interested in finding more about ACE! Are you more interested in how the underlying technology works, or how it helps businesses get leads?"
+  utter_greet:
+    - text: "Hey, I'm ACE! You probably just read about me in the advertisement :). I just have 3 questions to see if I'd be a good fit! Let's get started!"
+  
+  utter_greet_budget:
+    - text: "What is your business's ad spend per month (approximate)?"
       buttons:
-        - title: "Technology"
-          payload: "/choose_technology"
-        - title: "Leads"
-          payload: "/choose_leads"
-      custom:
-        step: "start_choice"
-
-  utter_leads_pitch:
-    - text: |
-        Compared to other lead-capture solutions, such as forms and landing pages, ACE gets the medal!
-
-        ✅ It is tailor-made for your campaign goal(s)
-        ✅ It informs, qualifies, and 'closes' the prospects through natural conversations!
-        ✅ It records and categorizes valuable information, such as objections, sticking points, and demographic data
-
-        Would you like to know if ACE could help close more leads for your business? Please fill out this mini-survey!
-      custom:
-        step: "leads_pitch"
-
-  utter_ask_industry:
-    - text: "1) What is your business' industry?"
-      custom:
-        step: "survey_begin"
-
-  utter_ask_budget:
-    - text: "2) What is your monthly advertising budget?"
-      buttons:
-        - title: "< €1k"
-          payload: '/provide_budget{"budget":"lt_1k"}'
+        - title: "€500–€1k"
+          payload: '/choose_budget{{"budget":"lt_1k"}}'
         - title: "€1k–€3k"
-          payload: '/provide_budget{"budget":"1k_3k"}'
+          payload: '/choose_budget{{"budget":"1k_3k"}}'
         - title: "€3k–€10k"
-          payload: '/provide_budget{"budget":"3k_10k"}'
-        - title: "> €10k"
-          payload: '/provide_budget{"budget":"gt_10k"}'
+          payload: '/choose_budget{{"budget":"3k_10k"}}'
+        - title: "€10k+"
+          payload: '/choose_budget{{"budget":"gt_10k"}}'
 
-  utter_ask_experience:
-    - text: "3) What is your previous experience with online advertising? What did you try and how satisfied were you with the results?"
+  utter_platform_question:
+    - text: "Got it! Which platforms are you currently running ads on?"
+      buttons:
+        - title: "Google"
+          payload: '/choose_platform{{"platform":"Google"}}'
+        - title: "Facebook"
+          payload: '/choose_platform{{"platform":"Facebook"}}'
+        - title: "LinkedIn"
+          payload: '/choose_platform{{"platform":"LinkedIn"}}'
 
-  utter_survey_submitted:
-    - text: "Thanks! Let me quickly analyze if ACE is a strong fit for you…"
+  utter_describe_company:
+    - text: "Lastly, what does your company do and what do you do at the company?"
       custom:
-        step: "survey_submitted"
+        openInput: true
 
 actions:
-  - action_deepseek_assess_and_notify
+  - action_deepseek_score

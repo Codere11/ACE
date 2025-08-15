@@ -45,15 +45,26 @@ export class AppComponent implements OnInit {
   }
 
   private consume(res: ChatResponse) {
-    this.loading = false;
+  this.loading = false;
 
-    // append assistant reply for this turn
-    if (res.reply) this.messages.push({ role: 'assistant', text: res.reply });
+  // append assistant reply for this turn
+  if (res.reply) this.messages.push({ role: 'assistant', text: res.reply });
 
-    // trust backend to tell us the UI block (choices or form)
-    this.ui = res.ui ?? (res.quickReplies ? { type: 'choices', buttons: res.quickReplies } as any : null);
+  // trust backend to tell us the UI block (choices or form)
+  this.ui = res.ui ?? (res.quickReplies ? { type: 'choices', buttons: res.quickReplies } as any : null);
+  
+  // if backend says "openInput", force open mode
+  if (this.ui && (this.ui as any).openInput) {
+    this.chatMode = 'open';
+  } else {
     this.chatMode = res.chatMode;
   }
+
+  console.log("UI block received:", res.ui);
+  console.log("Chat mode received:", this.chatMode);
+}
+
+
 
   private startTyping() {
     this.stopTyping();
@@ -88,14 +99,14 @@ export class AppComponent implements OnInit {
   }
 
   clickQuickReply(q: QuickReply) {
-    if (this.loading) return;
-    this.messages.push({ role: 'user', text: q.title });
-    this.loading = true;
-    this.api.chat(this.sid, q.payload).subscribe({
-      next: (res) => this.consume(res),
-      error: () => (this.loading = false),
-    });
-  }
+  if (this.loading) return;
+  this.messages.push({ role: 'user', text: q.title });
+  this.loading = true;
+  this.api.chat(this.sid, q.payload).subscribe({
+    next: (res) => this.consume(res),
+    error: () => (this.loading = false),
+  });
+}
 
   submitSurvey() {
     if (this.loading) return;

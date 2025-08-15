@@ -1,34 +1,40 @@
 version: "3.1"
+
 nlu:
-  - intent: greet
-    examples: |
-      - hi
-      - hey
-      - hello
-      - /start
-      - start
+- intent: greet
+  examples: |
+    - hi
+    - hello
+    - hey
+    - good morning
+    - good afternoon
 
-  - intent: choose_technology
-    examples: |
-      - technology
-      - tech
-      - how the technology works
-      - show technology
+- intent: start
+  examples: |
+    - start
+    - let's go
+    - begin
+    - I want to start
 
-  - intent: choose_leads
-    examples: |
-      - leads
-      - I'm interested in leads
-      - how it helps businesses get leads
-      - show me the leads option
+- intent: choose_budget
+  examples: |
+    - my budget is €500–€1k
+    - €500–€1k
+    - lt_1k
+    - 1k_3k
+    - 3k_10k
+    - gt_10k
 
-  - intent: provide_budget
-    examples: |
-      - /provide_budget{"budget":"lt_1k"}
-      - /provide_budget{"budget":"1k_3k"}
-      - /provide_budget{"budget":"3k_10k"}
-      - /provide_budget{"budget":"gt_10k"}
-      - less than 1k
-      - around 2k
-      - about 5k
-      - more than 10k
+- intent: choose_platform
+  examples: |
+    - Google
+    - Facebook
+    - LinkedIn
+    - I advertise on Google
+    - I run ads on Facebook
+
+- intent: provide_description
+  examples: |
+    - We sell handmade jewelry and I'm the owner
+    - I run a marketing agency
+    - My company offers software development services
