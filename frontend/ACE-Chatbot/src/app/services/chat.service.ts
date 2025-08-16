@@ -30,8 +30,12 @@ export class ChatService {
   constructor(private http: HttpClient) {}
 
   chat(sid: string, message: string, firstVisit = false) {
-    return this.http.post<ChatResponse>(`${this.base}/chat`, { sid, message, meta: { first_visit: firstVisit } });
+  return this.http.post<ChatResponse>(
+    `${this.base}/chat`,
+    { sid, message }
+  );
   }
+
 
   survey(sid: string, industry: string, budget: string, experience: string) {
     return this.http.post<ChatResponse>(`${this.base}/survey`, { sid, industry, budget, experience });

@@ -59,38 +59,41 @@ export class AppComponent implements OnInit {
   }
 
   clickQuickReply(q: any) {
-    this.send(q.payload);
-  }
+  // 🔥 Use the human-readable title (what backend expects now)
+  this.send(q.title);
+}
 
   private consume(res: ChatResponse) {
     this.loading = false;
 
-    // 🔥 If DeepSeek should answer, show typing first
+    // ✅ DeepSeek final step: show typing
     if (res.storyComplete && res.reply) {
       this.startTyping();
       const wait = Math.max(900, res.reply.length * 30);
       setTimeout(() => {
         this.stopTyping(res.reply);
         this.ui = res.ui ?? null;
-        this.chatMode = 'open'; // unlock typing after DeepSeek
+        this.chatMode = 'open';
       }, wait);
       return;
     }
 
-    // Normal assistant reply
+    // Normal reply
     if (res.reply) this.messages.push({ role: 'assistant', text: res.reply });
 
     // Handle UI blocks
-    this.ui = res.ui ?? (res.quickReplies ? { type: 'choices', buttons: res.quickReplies } : null);
-
-    // Unlock input only if Rasa explicitly asked for free text
-    if (this.ui && this.ui.openInput) {
-      this.chatMode = 'open';
+    if (res.ui) {
+      this.ui = res.ui;
+    } else if (res.quickReplies) {
+      this.ui = { type: 'choices', buttons: res.quickReplies };
     } else {
-      this.chatMode = res.chatMode;
+      this.ui = null;
     }
 
-    console.log("UI block received:", res.ui);
+    // ✅ Respect backend chatMode always
+    this.chatMode = res.chatMode;
+
+    console.log("UI block received:", this.ui);
     console.log("Chat mode received:", this.chatMode);
   }
 

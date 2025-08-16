@@ -1,0 +1,27 @@
+{
+  "welcome": {
+    "text": "Hey, I'm ACE! You probably just read about me in the advertisement :). I just have 3 questions to see if I'd be a good fit!\n\nWhat is your business's ad spend per month (approximate)?",
+    "choices": [
+      { "title": "€500–€1k", "next": "budget_ack" },
+      { "title": "€1k–€3k", "next": "budget_ack" },
+      { "title": "€3k–€10k", "next": "budget_ack" },
+      { "title": "€10k+", "next": "budget_ack" }
+    ]
+  },
+  "budget_ack": {
+    "text": "Great, that budget is a solid fit for testing ACE's capabilities. Got it! Which platforms are you currently running ads on?",
+    "choices": [
+      { "title": "Google", "next": "platform_ack" },
+      { "title": "Facebook", "next": "platform_ack" },
+      { "title": "LinkedIn", "next": "platform_ack" }
+    ]
+  },
+  "platform_ack": {
+    "text": "Nice, ACE has proven results on that platform. Lastly, what does your company do and what do you do at the company?",
+    "openInput": true,
+    "next": "deepseek"
+  },
+  "deepseek": {
+    "action": "deepseek_score"
+  }
+}
