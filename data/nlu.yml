@@ -1,40 +1,48 @@
 version: "3.1"
 
 nlu:
-- intent: greet
-  examples: |
-    - hi
-    - hello
-    - hey
-    - good morning
-    - good afternoon
+  - intent: start
+    examples: |
+      - /start
+      - let's start
+      - get started
 
-- intent: start
-  examples: |
-    - start
-    - let's go
-    - begin
-    - I want to start
+  - intent: choose_budget
+    examples: |
+      - €500–€1k
+      - €1k–€3k
+      - €3k–€10k
+      - €10k+
+      - my budget is [lt_1k](budget)
+      - my budget is [1k_3k](budget)
+      - my budget is [3k_10k](budget)
+      - my budget is [gt_10k](budget)
 
-- intent: choose_budget
-  examples: |
-    - my budget is €500–€1k
-    - €500–€1k
-    - lt_1k
-    - 1k_3k
-    - 3k_10k
-    - gt_10k
+  - intent: choose_platform
+    examples: |
+      - Google
+      - Facebook
+      - LinkedIn
+      - we run ads on [Google](platform)
+      - we run ads on [Facebook](platform)
+      - we run ads on [LinkedIn](platform)
 
-- intent: choose_platform
-  examples: |
-    - Google
-    - Facebook
-    - LinkedIn
-    - I advertise on Google
-    - I run ads on Facebook
+  - intent: provide_description
+    examples: |
+      - I run a digital marketing agency and I'm the founder
+      - My company sells SaaS products, I handle sales
+      - We are a law firm, I do marketing
+      - I run a small bakery and manage advertising
+      - we sell homes and apartments
+      - I am a real estate agent
+      - we run an e-commerce clothing store
+      - I am a dentist with a private practice
 
-- intent: provide_description
-  examples: |
-    - We sell handmade jewelry and I'm the owner
-    - I run a marketing agency
-    - My company offers software development services
+  - intent: greet
+    examples: |
+      - hi
+      - hello
+      - hey
+      - good morning
+      - good afternoon
+      - hey there

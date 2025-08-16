@@ -1,0 +1,27 @@
+{
+  "lookup": {
+    "rules": {
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_budget\"}}]": "utter_ack_budget",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_budget\"}}, {\"prev_action\": {\"action_name\": \"utter_ack_budget\"}, \"user\": {\"intent\": \"choose_budget\"}}]": "utter_platform_question",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_budget\"}}, {\"prev_action\": {\"action_name\": \"utter_ack_budget\"}, \"user\": {\"intent\": \"choose_budget\"}}, {\"prev_action\": {\"action_name\": \"utter_platform_question\"}, \"user\": {\"intent\": \"choose_budget\"}}]": "action_listen",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"greet\"}}]": "utter_greet",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"greet\"}}, {\"prev_action\": {\"action_name\": \"utter_greet\"}, \"user\": {\"intent\": \"greet\"}}]": "utter_greet_budget",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"greet\"}}, {\"prev_action\": {\"action_name\": \"utter_greet\"}, \"user\": {\"intent\": \"greet\"}}, {\"prev_action\": {\"action_name\": \"utter_greet_budget\"}, \"user\": {\"intent\": \"greet\"}}]": "action_listen",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"start\"}}]": "utter_welcome",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"start\"}}, {\"prev_action\": {\"action_name\": \"utter_welcome\"}, \"user\": {\"intent\": \"start\"}}]": "action_listen",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_platform\"}}]": "utter_ack_platform",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_platform\"}}, {\"prev_action\": {\"action_name\": \"utter_ack_platform\"}, \"user\": {\"intent\": \"choose_platform\"}}]": "utter_describe_company",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"choose_platform\"}}, {\"prev_action\": {\"action_name\": \"utter_ack_platform\"}, \"user\": {\"intent\": \"choose_platform\"}}, {\"prev_action\": {\"action_name\": \"utter_describe_company\"}, \"user\": {\"intent\": \"choose_platform\"}}]": "action_listen",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"provide_description\"}}]": "action_deepseek_score",
+      "[{\"prev_action\": {\"action_name\": \"action_listen\"}, \"user\": {\"intent\": \"provide_description\"}}, {\"prev_action\": {\"action_name\": \"action_deepseek_score\"}, \"user\": {\"intent\": \"provide_description\"}}]": "action_listen"
+    },
+    "rule_only_slots": [],
+    "rule_only_loops": [],
+    "rules_for_loop_unhappy_path": {},
+    "rules_not_in_stories": [
+      "predicting default action with intent session_start",
+      "predicting default action with intent restart",
+      "predicting default action with intent back"
+    ]
+  }
+}

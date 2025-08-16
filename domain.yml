@@ -1,11 +1,11 @@
 version: "3.1"
 
 intents:
-  - greet
   - start
   - choose_budget
   - choose_platform
   - provide_description
+  - greet
 
 entities:
   - budget
@@ -30,11 +30,8 @@ slots:
         intent: provide_description
 
 responses:
-  utter_greet:
-    - text: "Hey, I'm ACE! You probably just read about me in the advertisement :). I just have 3 questions to see if I'd be a good fit! Let's get started!"
-  
-  utter_greet_budget:
-    - text: "What is your business's ad spend per month (approximate)?"
+  utter_welcome:
+    - text: "Hey, I'm ACE! You probably just read about me in the advertisement :). I just have 3 questions to see if I'd be a good fit!\n\nWhat is your business's ad spend per month (approximate)?"
       buttons:
         - title: "€500–€1k"
           payload: '/choose_budget{{"budget":"lt_1k"}}'
@@ -56,9 +53,33 @@ responses:
           payload: '/choose_platform{{"platform":"LinkedIn"}}'
 
   utter_describe_company:
-    - text: "Lastly, what does your company do and what do you do at the company?"
-      custom:
-        openInput: true
+  - custom:
+      text: "Lastly, what does your company do and what do you do at the company?"
+      openInput: true
+
+  utter_ack_budget:
+    - text: "Great, that budget is a solid fit for testing ACE's capabilities."
+
+  utter_ack_platform:
+    - text: "Nice, ACE has proven results on that platform."
+
+  utter_greet:
+    - text: "Hi there! Welcome to ACE."
+      buttons:
+        - title: "Let's start"
+          payload: "/start"
+
+  utter_greet_budget:
+    - text: "Could you tell me your business's ad spend per month?"
+      buttons:
+        - title: "€500–€1k"
+          payload: '/choose_budget{{"budget":"lt_1k"}}'
+        - title: "€1k–€3k"
+          payload: '/choose_budget{{"budget":"1k_3k"}}'
+        - title: "€3k–€10k"
+          payload: '/choose_budget{{"budget":"3k_10k"}}'
+        - title: "€10k+"
+          payload: '/choose_budget{{"budget":"gt_10k"}}'
 
 actions:
   - action_deepseek_score

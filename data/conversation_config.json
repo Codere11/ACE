@@ -1,55 +1,19 @@
 {
-  "metadata": {
-    "agency_name": "Omsoft ACE"
-  },
-  "topics": [
-    {
-      "topic": "greeting",
-      "intent": "greeting",
-      "examples": ["hello", "hi", "what is this?", "who are you?"],
-      "responses": [
-        "Hej 👋 jaz sem ACE — pametni prodajni agent, ki zamenja dolgočasne landing strani s pametnim klepetom. Želiš hiter demo?"
-      ]
-    },
-    {
-      "topic": "product_overview",
-      "intent": "kaj_je_ace",
-      "examples": ["what is ACE?", "how does this work?", "tell me about ACE", "what do you do?"],
-      "responses": [
-        "Omsoft ACE zamenja statične landing strani z inteligentnim, prilagodljivim klepetom, ki dvigne konverzije in zajame bogate podatke o leadih."
-      ]
-    },
-    {
-      "topic": "kako_deluje",
-      "intent": "kako_deluje",
-      "examples": ["kako deluje?", "poveš mi kako deluje?", "kako to dela?"],
-      "responses": [
-        "Delujem kot 24/7 prodajni asistent: ujamem obiskovalca iz oglasa, odgovorim na vprašanja, zberem ključne podatke (potreba, proračun, čas, kdo odloča) in ko je smiselno, predlagam termin ter te povežem z Maksem."
-      ]
-    },
-    {
-      "topic": "wants_help",
-      "intent": "wants_help",
-      "examples": ["Lahko pomaga meni?", "Mi lahko pomagaš?", "Rabim pomoč"],
-      "responses": [
-        "Seveda. Povej mi na kratko, s čim se ukvarjaš in kaj želiš doseči s kampanjo — tako ti pokažem najboljši primer."
-      ]
-    },
-    {
-      "topic": "handoff",
-      "intent": "handoff",
-      "examples": ["poveži me z Maksom", "lahko govorim z nekom?", "rad bi termin z Maksom"],
-      "responses": [
-        "V redu, posredujem Maksu."
-      ]
-    },
-    {
-      "topic": "pricing",
-      "intent": "cena",
-      "examples": ["how much does it cost?", "what's the price?", "pricing?", "cost?"],
-      "responses": [
-        "Cena je odvisna od tipa uporabe, obsega obiska in stopnje podpore. Če želite točno ponudbo, lahko ACE poveže z Maksom."
-      ]
-    }
+  "product": "Omsoft ACE",
+  "description": "ACE is an advanced conversational agent replacing landing pages and forms. It qualifies leads directly in chat, captures objections, and provides real-time insights.",
+  "ideal_clients": [
+    "real estate agencies",
+    "private health clinics",
+    "digital marketing firms",
+    "SMEs spending > €1000/month on ads"
+  ],
+  "bad_fit_clients": [
+    "hobby projects spending < €500/month",
+    "businesses with no digital advertising"
+  ],
+  "core_value": [
+    "more conversions vs landing pages",
+    "real-time objection capture",
+    "automatic qualification and handover"
   ]
 }

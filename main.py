@@ -2,7 +2,7 @@ import requests, logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("ace")
@@ -23,7 +23,7 @@ class ChatRequest(BaseModel):
 
 def _send_rasa(sid: str, message: str) -> List[Dict[str, Any]]:
     try:
-        r = requests.post(RASA_URL, json={"sender": sid, "message": message}, timeout=8)
+        r = requests.post(RASA_URL, json={"sender": sid, "message": message}, timeout=12)
         if r.ok:
             return r.json() or []
     except Exception as e:
@@ -34,25 +34,30 @@ def _send_rasa(sid: str, message: str) -> List[Dict[str, Any]]:
 def chat(req: ChatRequest):
     events = _send_rasa(req.sid, req.message)
 
-    reply = None
+    reply_texts = []
     ui_block = None
     story_done = False
 
     for ev in events:
         if ev.get("text"):
-            reply = ev["text"]
+            reply_texts.append(ev["text"])
         if ev.get("custom"):
+            # Merge text + custom if both exist
+            if ev.get("text"):
+                ev["custom"]["text"] = ev["text"]
             ui_block = ev["custom"]
+            if ev["custom"].get("story_complete"):
+                story_done = True
         if ev.get("buttons") and not ui_block:
             ui_block = {"type": "choices", "buttons": ev["buttons"]}
-        if ev.get("custom", {}).get("story_complete"):
-            story_done = True
+
+    reply = " ".join(reply_texts) if reply_texts else None
 
     return {
         "reply": reply,
         "quickReplies": ui_block.get("buttons") if ui_block and ui_block.get("type") == "choices" else None,
         "ui": ui_block,
-        "chatMode": "open" if story_done else "guided",
+        "chatMode": "open" if (story_done or (ui_block and ui_block.get("openInput"))) else "guided",
         "storyComplete": story_done,
         "imageUrl": None
     }

@@ -1,20 +1,27 @@
 version: "3.1"
 
 rules:
-- rule: Start ACE qualification
+- rule: Start ACE qualification from greet
   steps:
   - intent: greet
   - action: utter_greet
   - action: utter_greet_budget
 
+- rule: Start ACE qualification from /start
+  steps:
+  - intent: start
+  - action: utter_welcome
+
 - rule: After budget chosen
   steps:
   - intent: choose_budget
+  - action: utter_ack_budget
   - action: utter_platform_question
 
 - rule: After platform chosen
   steps:
   - intent: choose_platform
+  - action: utter_ack_platform
   - action: utter_describe_company
 
 - rule: After company description

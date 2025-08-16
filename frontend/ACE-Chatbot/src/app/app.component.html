@@ -19,50 +19,16 @@
     </button>
   </div>
 
-  <!-- Mini-survey form -->
-  <form *ngIf="isForm(ui)" class="survey card" [formGroup]="surveyForm" (ngSubmit)="submitSurvey()">
-    <h4>{{ $any(ui).form.title }}</h4>
-
-    <label class="field">
-      <span>{{ $any(ui).form.fields[0].label }}</span>
-      <input type="text" formControlName="industry" placeholder="e.g., Dentistry, SaaS, Legal" />
-    </label>
-
-    <div class="field">
-      <span>{{ $any(ui).form.fields[1].label }}</span>
-      <div class="options">
-        <label *ngFor="let opt of $any(ui).form.fields[1].options" class="opt">
-          <input type="radio" formControlName="budget" [value]="opt.value" />
-          {{ opt.label }}
-        </label>
-      </div>
-    </div>
-
-    <label class="field">
-      <span>{{ $any(ui).form.fields[2].label }}</span>
-      <textarea rows="3" formControlName="experience"
-        placeholder="What did you try? How satisfied were you?"></textarea>
-    </label>
-
-    <button class="primary" type="submit" [disabled]="loading">Submit</button>
-  </form>
-
-  <!-- Composer (gated) -->
-  <div class="composer">
-    <input
-      [disabled]="chatMode!=='open' || loading"
-      [(ngModel)]="inputText"
-      (keyup.enter)="sendText()"
-      placeholder="Type a message..."
-      name="composerInput"
-    />
-    <button (click)="sendText()" [disabled]="chatMode!=='open' || loading">Send</button>
-    <small *ngIf="chatMode!=='open'">Quick path: choose an option or fill the mini-survey.</small>
+  <!-- Manual input -->
+  <div *ngIf="chatMode==='open'" class="composer">
+    <input #msgInput type="text" placeholder="Type a message..." [disabled]="loading"
+           (keyup.enter)="send(msgInput.value); msgInput.value='';" />
+    <button (click)="send(msgInput.value); msgInput.value='';" [disabled]="loading">Send</button>
   </div>
 </div>
 
 <ng-template #typingTpl>
-  <span class="typing-dots">
+  <div class="typing-dots">
     <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-  </span>
+  </div>
 </ng-template>
