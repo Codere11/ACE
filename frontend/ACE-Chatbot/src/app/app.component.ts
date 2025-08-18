@@ -45,7 +45,12 @@ export class AppComponent implements OnInit {
   send(text: string) {
     if (!text.trim()) return;
 
+    // Push user message
     this.messages.push({ role: 'user', text });
+
+    // Immediately show assistant typing animation
+    this.startTyping();
+
     this.loading = true;
 
     this.http.post<ChatResponse>('http://localhost:8000/chat', { message: text, sid: this.sid })
@@ -54,32 +59,22 @@ export class AppComponent implements OnInit {
         error: err => {
           console.error(err);
           this.loading = false;
+          this.stopTyping("⚠️ Error talking to server.");
         }
       });
   }
 
   clickQuickReply(q: any) {
-  // 🔥 Use the human-readable title (what backend expects now)
-  this.send(q.title);
-}
+    this.send(q.title);
+  }
 
   private consume(res: ChatResponse) {
     this.loading = false;
 
-    // ✅ DeepSeek final step: show typing
-    if (res.storyComplete && res.reply) {
-      this.startTyping();
-      const wait = Math.max(900, res.reply.length * 30);
-      setTimeout(() => {
-        this.stopTyping(res.reply);
-        this.ui = res.ui ?? null;
-        this.chatMode = 'open';
-      }, wait);
-      return;
+    // Replace typing with real reply
+    if (res.reply) {
+      this.stopTyping(res.reply);
     }
-
-    // Normal reply
-    if (res.reply) this.messages.push({ role: 'assistant', text: res.reply });
 
     // Handle UI blocks
     if (res.ui) {
@@ -90,7 +85,7 @@ export class AppComponent implements OnInit {
       this.ui = null;
     }
 
-    // ✅ Respect backend chatMode always
+    // Always respect backend chatMode
     this.chatMode = res.chatMode;
 
     console.log("UI block received:", this.ui);
@@ -98,7 +93,10 @@ export class AppComponent implements OnInit {
   }
 
   private startTyping() {
-    this.messages.push({ role: 'assistant', typing: true });
+    // Prevent duplicates
+    if (!this.isTypingActive()) {
+      this.messages.push({ role: 'assistant', typing: true });
+    }
   }
 
   private stopTyping(replaceWith?: string) {
@@ -109,5 +107,10 @@ export class AppComponent implements OnInit {
         this.messages.push({ role: 'assistant', text: replaceWith });
       }
     }
+  }
+
+  private isTypingActive(): boolean {
+    const last = this.messages[this.messages.length - 1];
+    return !!(last && last.typing);
   }
 }

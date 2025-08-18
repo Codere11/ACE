@@ -89,7 +89,13 @@ def chat(req: ChatRequest):
     sid = req.sid
     msg = req.message.strip()
 
-    state = sessions.get(sid, {"node": "welcome"})
+    # initialize session if new
+    if sid not in sessions:
+        sessions[sid] = {"node": "welcome"}
+        node = FLOW["welcome"]
+        return format_node(node, story_complete=False)
+
+    state = sessions[sid]
     node_key = state["node"]
     node = FLOW[node_key]
 
@@ -102,23 +108,8 @@ def chat(req: ChatRequest):
             next_node = FLOW[next_key]
             return format_node(next_node, story_complete=False)
         else:
-            return {"reply": "Please choose an option.", "ui": {"type": "choices", "buttons": node["choices"]}, "chatMode": "guided", "storyComplete": False}
-
-    # Case 2: Node expects free text → next is DeepSeek
-    if node.get("openInput") and node.get("next") == "deepseek":
-        sessions[sid] = {"node": "deepseek"}
-        deepseek_reply = run_deepseek(msg, sid)
-        sessions[sid] = {"node": "done"}
-        return {"reply": deepseek_reply, "ui": {"story_complete": True, "openInput": True}, "chatMode": "open", "storyComplete": True}
-
-    # Case 3: Node is deepseek action
-    if node.get("action") == "deepseek_score":
-        deepseek_reply = run_deepseek(msg, sid)
-        sessions[sid] = {"node": "done"}
-        return {"reply": deepseek_reply, "ui": {"story_complete": True, "openInput": True}, "chatMode": "open", "storyComplete": True}
-
-    # Default: Just send node text
-    return format_node(node, story_complete=False)
+            # instead of always forcing "please choose...", just re-show the same node
+            return format_node(node, story_complete=False)
 
 def format_node(node: Dict[str, Any], story_complete: bool) -> Dict[str, Any]:
     ui = {}
