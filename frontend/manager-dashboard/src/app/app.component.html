@@ -3,69 +3,96 @@
     <h1 class="title">📊 Omsoft ACE Intelligence</h1>
     <p class="subtitle">AI prodajni nadzor za lead gen kampanje</p>
 
-    <!-- KPI tiles -->
-    <section class="metrics">
-      <div class="metric-box">👀 Ogledi: <strong>{{ visitors }}</strong></div>
-      <div class="metric-box">💬 Interakcije: <strong>{{ interactions }}</strong></div>
-      <div class="metric-box">📇 Kontakti: <strong>{{ contacts }}</strong></div>
-      <div class="metric-box">📍 Ogledi v živo: <strong>{{ viewings }}</strong></div>
-      <div class="metric-box">✅ Prodaje: <strong>{{ sales }}</strong></div>
-    </section>
+    <!-- Tab Navigation -->
+    <nav class="tabs">
+      <button [class.active]="activeTab==='leads'" (click)="activeTab='leads'">🔥 Leads</button>
+      <button [class.active]="activeTab==='notes'" (click)="activeTab='notes'">📓 Notes/Stages</button>
+      <button [class.active]="activeTab==='flow'" (click)="activeTab='flow'">📊 Sales Flow</button>
+    </nav>
 
-    <!-- Ranked lead list -->
-    <section>
+    <!-- TAB 1: Leads -->
+    <section *ngIf="activeTab==='leads'">
       <h2>🔥 Najbolj kvalificirani kontakti (v živo)</h2>
       <div class="lead-list">
-        <div *ngFor="let lead of rankedLeads" class="lead-entry enter-fade">
+        <div *ngFor="let lead of rankedLeads" class="lead-entry">
           <div class="lead-main">
             <div class="lead-top">
-              <div class="lead-name">{{ lead.name }}</div>
-              <div class="lead-score" [attr.aria-label]="'Lead score ' + lead.score">🔥 {{ lead.score }}</div>
+              <div class="lead-name">{{ lead.name }} ({{ lead.industry }})</div>
+              <div class="lead-score">🔥 {{ lead.score }}</div>
             </div>
-
             <div class="lead-summary">
-              {{ lead.summary }}
-              <span class="dot">•</span>
-              <span class="ago">{{ formatAgo(lead.lastSeenSec) }}</span>
+              Stage: {{ lead.stage }} <span class="dot">•</span>
+              {{ formatAgo(lead.lastSeenSec) }}
             </div>
-
-            <div class="lead-lastmsg">
-              „{{ lead.lastMessage }}”
-            </div>
-
+            <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
             <div class="tags">
-              <span class="tag">💰 {{ lead.budget | number:'1.0-0' }} €</span>
-              <span class="tag">📍 {{ lead.location }}</span>
-              <span class="tag" *ngIf="lead.hasPet">🐶 ima psa</span>
-              <span class="tag good" *ngIf="lead.email">📧 email</span>
-              <span class="tag good" *ngIf="lead.phone">📞 telefon</span>
+              <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
+              <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
+              <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+              <span class="tag" [class.good]="lead.email">📧 Email</span>
+              <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
             </div>
           </div>
-
           <div class="lead-actions">
             <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
           </div>
         </div>
       </div>
+
+      <!-- KPIs -->
+      <section class="kpis" *ngIf="kpis">
+        <div>👥 Leads: {{ kpis.visitors }}</div>
+        <div>💬 Pogovori: {{ kpis.interactions }}</div>
+        <div>📇 Kontakti: {{ kpis.contacts }}</div>
+        <div>⏱ Avg. odgovor: {{ kpis.avgResponseSec }}s</div>
+        <div>🔔 Aktivni: {{ kpis.activeLeads }}</div>
+      </section>
     </section>
 
-    <!-- CTR bars -->
-    <section>
-      <h2>📈 Kanali z najboljšim CTR</h2>
-      <div class="bar-container">
-        <div class="bar-row">
-          <div class="bar-label">Google Ads</div>
-          <div class="bar google" [style.width.%]="googleCTR">{{ googleCTR }}%</div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-label">Facebook</div>
-          <div class="bar facebook" [style.width.%]="facebookCTR">{{ facebookCTR }}%</div>
-        </div>
-        <div class="bar-row">
-          <div class="bar-label">Instagram</div>
-          <div class="bar instagram" [style.width.%]="instagramCTR">{{ instagramCTR }}%</div>
-        </div>
+    <!-- TAB 2: Notes & Stages -->
+    <section *ngIf="activeTab==='notes'">
+      <h2>📓 Notes & Stage Tracking</h2>
+      <table class="notes-table">
+        <thead>
+          <tr>
+            <th>Lead</th>
+            <th>Stage</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let lead of rankedLeads">
+            <td>{{ lead.name }}</td>
+            <td>{{ lead.stage }}</td>
+            <td>{{ lead.notes }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- TAB 3: Sales Flow -->
+    <section *ngIf="activeTab==='flow'">
+      <h2>📊 Sales Flow & Heatmaps</h2>
+        <section *ngIf="activeTab==='flow' && funnel">
+        <h2>📊 Sales Flow & Heatmaps</h2>
+      <div class="funnel">
+        <div class="funnel-step">Awareness → <span class="bar awareness">{{ funnel.awareness }}%</span></div>
+        <div class="funnel-step">Interest → <span class="bar interest">{{ funnel.interest }}%</span></div>
+        <div class="funnel-step">Meeting → <span class="bar meeting">{{ funnel.meeting }}%</span></div>
+        <div class="funnel-step">Close → <span class="bar close">{{ funnel.close }}%</span></div>
       </div>
+
+  <h3>Objections (Ranked)</h3>
+  <ol>
+    <li *ngFor="let obj of objections">{{ obj }}</li>
+  </ol>
+</section>
+
+
+      <h3>Objections (Ranked)</h3>
+      <ol>
+        <li *ngFor="let obj of objections">{{ obj }}</li>
+      </ol>
     </section>
   </div>
 </div>

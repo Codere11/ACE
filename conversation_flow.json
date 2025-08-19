@@ -1,55 +1,113 @@
 {
   "welcome": {
-    "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Povej mi, te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
+    "texts": [
+      "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
+      "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?"
+    ],
     "choices": [
       { "title": "Tehnologija", "next": "budget" },
       { "title": "Več strank", "next": "budget" }
     ]
   },
   "budget": {
-    "text": "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
+    "texts": [
+      "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
+      "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš."
+    ],
     "choices": [
-      { "title": "< €1k", "next": "budget_ack" },
-      { "title": "€1k–€3k", "next": "budget_ack" },
-      { "title": "€3k–€10k", "next": "budget_ack" },
-      { "title": "€10k+", "next": "budget_ack" }
+      { "title": "< €1k", "next": "platform_small" },
+      { "title": "€1k–€3k", "next": "platform_mid" },
+      { "title": "€3k–€10k", "next": "platform_high" },
+      { "title": "€10k+", "next": "platform_premium" }
     ]
   },
-  "budget_ack": {
-    "text": "Razumem. Na katerih platformah trenutno oglašujete?",
+
+  "platform_small": {
+    "texts": [
+      "Pri manjšem proračunu je učinek omejen, ampak ACE lahko pomaga maksimizirati vsako povpraševanje. Na katerih platformah trenutno oglašujete?"
+    ],
     "choices": [
-      { "title": "Facebook/Instagram", "next": "platform_ack" },
-      { "title": "Google Ads", "next": "platform_ack" },
-      { "title": "TikTok/Drugo", "next": "platform_ack" },
-      { "title": "Trenutno ne oglašujemo", "next": "platform_ack" }
+      { "title": "Facebook/Instagram", "next": "ads_dest" },
+      { "title": "Google Ads", "next": "ads_dest" },
+      { "title": "TikTok/Drugo", "next": "ads_dest" },
+      { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
     ]
   },
-  "platform_ack": {
-    "text": "Odlično, ACE ima že dokazane rezultate na tej platformi. In kam običajno vodijo vaši oglasi?",
+  "platform_mid": {
+    "texts": [
+      "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?"
+    ],
     "choices": [
-      { "title": "Landing page/obrazec", "next": "ads_dest_ack" },
-      { "title": "Spletna stran", "next": "ads_dest_ack" },
-      { "title": "Messenger/WhatsApp", "next": "ads_dest_ack" },
-      { "title": "Drugo", "next": "ads_dest_ack" }
+      { "title": "Facebook/Instagram", "next": "ads_dest" },
+      { "title": "Google Ads", "next": "ads_dest" },
+      { "title": "TikTok/Drugo", "next": "ads_dest" },
+      { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
     ]
   },
-  "ads_dest_ack": {
-    "text": "Super 👍. Zdaj pa mi na kratko povej: kako običajno pridobivate nove stranke in kdo pri vas običajno odgovarja na nove kontakte?",
+  "platform_high": {
+    "texts": [
+      "To je močan budget – ACE poskrbi, da se izkoristi vsaka priložnost. Na katerih platformah trenutno oglašujete?"
+    ],
+    "choices": [
+      { "title": "Facebook/Instagram", "next": "ads_dest" },
+      { "title": "Google Ads", "next": "ads_dest" },
+      { "title": "TikTok/Drugo", "next": "ads_dest" },
+      { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+    ]
+  },
+  "platform_premium": {
+    "texts": [
+      "Odlično! Na tem nivoju je hitra odzivnost ključna – ACE pokrije tisto, kar ljudje sami težko. Na katerih platformah trenutno oglašujete?"
+    ],
+    "choices": [
+      { "title": "Facebook/Instagram", "next": "ads_dest" },
+      { "title": "Google Ads", "next": "ads_dest" },
+      { "title": "TikTok/Drugo", "next": "ads_dest" },
+      { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+    ]
+  },
+
+  "ads_dest": {
+    "texts": [
+      "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?",
+      "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?"
+    ],
+    "choices": [
+      { "title": "Landing page/obrazec", "next": "open_question" },
+      { "title": "Spletna stran", "next": "open_question" },
+      { "title": "Messenger/WhatsApp", "next": "open_question" },
+      { "title": "Drugo", "next": "open_question" }
+    ]
+  },
+
+  "open_question": {
+    "texts": [
+      "Super 👍. Se zadnji dve vprasanji: S cim se vase podjetje ukvarja? Pri katerem produktu "
+    ],
     "openInput": true,
     "next": "deepseek"
   },
+
   "deepseek": {
     "action": "deepseek_score"
   },
+
   "closing": {
-    "text": "Hvala za informacije 🚀. Mislim, da bi ACE tu lahko veliko pomagal. Kaj je najboljši naslednji korak?",
+    "texts": [
+      "Hvala za informacije 🚀. Mislim, da bi ACE tu lahko veliko pomagal. Kaj je najboljši naslednji korak?",
+      "Odlično, zdaj imam jasno sliko. Kako želiš nadaljevati?"
+    ],
     "choices": [
       { "title": "Dogovorimo se za sestanek ta teden", "next": "end" },
       { "title": "Zaženimo test ACE takoj", "next": "end" },
       { "title": "Pošlji mi več informacij", "next": "end" }
     ]
   },
+
   "end": {
-    "text": "Odlično 👍. Naša ekipa bo kmalu v stiku!"
+    "texts": [
+      "Odlično 👍. Naša ekipa bo kmalu v stiku!",
+      "Super, hvala za pogovor – kmalu se slišimo!"
+    ]
   }
 }

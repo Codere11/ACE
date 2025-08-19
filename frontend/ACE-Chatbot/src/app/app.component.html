@@ -20,11 +20,24 @@
   </div>
 
   <!-- Manual input -->
-  <div *ngIf="chatMode==='open'" class="composer">
-    <input #msgInput type="text" placeholder="Type a message..." [disabled]="loading"
-           (keyup.enter)="send(msgInput.value); msgInput.value='';" />
-    <button (click)="send(msgInput.value); msgInput.value='';" [disabled]="loading">Send</button>
-  </div>
+  <!-- Manual input with two fields -->
+<div *ngIf="chatMode==='open'" class="composer dual-input">
+  <input #msgInput1 type="text"
+         placeholder="Kako običajno pridobivate stranke?"
+         [disabled]="loading"
+         (keyup.enter)="sendDual(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';" />
+
+  <input #msgInput2 type="text"
+         placeholder="Kdo običajno odgovarja na nove kontakte?"
+         [disabled]="loading"
+         (keyup.enter)="sendDual(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';" />
+
+  <button (click)="sendDual(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';"
+          [disabled]="loading">
+    Pošlji
+  </button>
+</div>
+
 </div>
 
 <ng-template #typingTpl>

@@ -36,6 +36,8 @@ export class AppComponent implements OnInit {
   loading = false;
   sid = Math.random().toString(36).substring(2);
 
+  backendUrl = 'http://localhost:8000'; // 👈 replace with your backend IP
+
   constructor(private http: HttpClient) {}
 
   ngOnInit() {
@@ -48,12 +50,18 @@ export class AppComponent implements OnInit {
     // Push user message
     this.messages.push({ role: 'user', text });
 
-    // Immediately show assistant typing animation
+    // Show typing animation for bot
     this.startTyping();
-
     this.loading = true;
 
-    this.http.post<ChatResponse>('http://localhost:8000/chat', { message: text, sid: this.sid })
+    // 🚀 Decide: stream or normal
+    if (this.chatMode === 'open') {
+      this.sendStream(text);
+      return;
+    }
+
+    // Default: normal POST
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat`, { message: text, sid: this.sid })
       .subscribe({
         next: res => this.consume(res),
         error: err => {
@@ -63,6 +71,49 @@ export class AppComponent implements OnInit {
         }
       });
   }
+
+  async sendStream(text: string) {
+    try {
+      const response = await fetch(`${this.backendUrl}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, sid: this.sid })
+      });
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      let decoder = new TextDecoder();
+      let buffer = "";
+
+      // Replace typing with an empty assistant bubble
+      this.messages.pop();
+      this.messages.push({ role: 'assistant', text: "" });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Update last assistant message with streamed text
+        this.messages[this.messages.length - 1].text = buffer;
+      }
+
+      this.loading = false;
+    } catch (err) {
+      console.error(err);
+      this.loading = false;
+      this.stopTyping("⚠️ Error streaming from server.");
+    }
+  }
+
+  sendDual(ans1: string, ans2: string) {
+  if (!ans1.trim() && !ans2.trim()) return;
+
+  // Combine both answers into a single message for backend
+  const combined = `Kako pridobivate stranke: ${ans1} | Kdo odgovarja leadom: ${ans2}`;
+  this.send(combined);
+}
 
   clickQuickReply(q: any) {
     this.send(q.title);
@@ -93,7 +144,6 @@ export class AppComponent implements OnInit {
   }
 
   private startTyping() {
-    // Prevent duplicates
     if (!this.isTypingActive()) {
       this.messages.push({ role: 'assistant', typing: true });
     }
