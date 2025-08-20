@@ -13,7 +13,17 @@
     <!-- TAB 1: Leads -->
     <section *ngIf="activeTab==='leads'">
       <h2>🔥 Najbolj kvalificirani kontakti (v živo)</h2>
-      <div class="lead-list">
+
+      <!-- Loading spinner -->
+      <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam leads...</div>
+
+      <!-- Empty state -->
+      <div *ngIf="!loadingLeads && rankedLeads.length === 0" class="empty">
+        🚀 Še ni nobenih leadov — počakajte na prve pogovore.
+      </div>
+
+      <!-- Lead list -->
+      <div class="lead-list" *ngIf="!loadingLeads && rankedLeads.length > 0">
         <div *ngFor="let lead of rankedLeads" class="lead-entry">
           <div class="lead-main">
             <div class="lead-top">
@@ -40,19 +50,24 @@
       </div>
 
       <!-- KPIs -->
-      <section class="kpis" *ngIf="kpis">
-        <div>👥 Leads: {{ kpis.visitors }}</div>
-        <div>💬 Pogovori: {{ kpis.interactions }}</div>
-        <div>📇 Kontakti: {{ kpis.contacts }}</div>
-        <div>⏱ Avg. odgovor: {{ kpis.avgResponseSec }}s</div>
-        <div>🔔 Aktivni: {{ kpis.activeLeads }}</div>
+      <section class="kpis">
+        <div *ngIf="loadingKPIs" class="spinner">⏳ Nalagam KPI-je...</div>
+        <ng-container *ngIf="!loadingKPIs && kpis">
+          <div>👥 Leads: {{ kpis.visitors }}</div>
+          <div>💬 Pogovori: {{ kpis.interactions }}</div>
+          <div>📇 Kontakti: {{ kpis.contacts }}</div>
+          <div>⏱ Avg. odgovor: {{ kpis.avgResponseSec }}s</div>
+          <div>🔔 Aktivni: {{ kpis.activeLeads }}</div>
+        </ng-container>
+        <div *ngIf="!loadingKPIs && !kpis" class="empty">🚀 Še ni podatkov o KPI-jih</div>
       </section>
     </section>
 
     <!-- TAB 2: Notes & Stages -->
     <section *ngIf="activeTab==='notes'">
       <h2>📓 Notes & Stage Tracking</h2>
-      <table class="notes-table">
+      <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam notes...</div>
+      <table class="notes-table" *ngIf="!loadingLeads && rankedLeads.length > 0">
         <thead>
           <tr>
             <th>Lead</th>
@@ -68,31 +83,36 @@
           </tr>
         </tbody>
       </table>
+      <div *ngIf="!loadingLeads && rankedLeads.length === 0" class="empty">
+        🚀 Še ni leadov, zato ni stage-ov ali notes-ov.
+      </div>
     </section>
 
     <!-- TAB 3: Sales Flow -->
     <section *ngIf="activeTab==='flow'">
       <h2>📊 Sales Flow & Heatmaps</h2>
-        <section *ngIf="activeTab==='flow' && funnel">
-        <h2>📊 Sales Flow & Heatmaps</h2>
-      <div class="funnel">
-        <div class="funnel-step">Awareness → <span class="bar awareness">{{ funnel.awareness }}%</span></div>
-        <div class="funnel-step">Interest → <span class="bar interest">{{ funnel.interest }}%</span></div>
-        <div class="funnel-step">Meeting → <span class="bar meeting">{{ funnel.meeting }}%</span></div>
-        <div class="funnel-step">Close → <span class="bar close">{{ funnel.close }}%</span></div>
-      </div>
 
-  <h3>Objections (Ranked)</h3>
-  <ol>
-    <li *ngFor="let obj of objections">{{ obj }}</li>
-  </ol>
-</section>
+      <div *ngIf="loadingFunnel" class="spinner">⏳ Nalagam funnel...</div>
 
+      <section *ngIf="!loadingFunnel && funnel">
+        <div class="funnel">
+          <div class="funnel-step">Awareness → <span class="bar awareness">{{ funnel.awareness }}%</span></div>
+          <div class="funnel-step">Interest → <span class="bar interest">{{ funnel.interest }}%</span></div>
+          <div class="funnel-step">Meeting → <span class="bar meeting">{{ funnel.meeting }}%</span></div>
+          <div class="funnel-step">Close → <span class="bar close">{{ funnel.close }}%</span></div>
+        </div>
+      </section>
+
+      <div *ngIf="!loadingFunnel && !funnel" class="empty">🚀 Funnel še nima podatkov</div>
 
       <h3>Objections (Ranked)</h3>
-      <ol>
+      <div *ngIf="loadingObjections" class="spinner">⏳ Nalagam objections...</div>
+      <ol *ngIf="!loadingObjections && objections.length > 0">
         <li *ngFor="let obj of objections">{{ obj }}</li>
       </ol>
+      <div *ngIf="!loadingObjections && objections.length === 0" class="empty">
+        🚀 Ni še nobenih objections
+      </div>
     </section>
   </div>
 </div>

@@ -1,8 +1,11 @@
 from fastapi import APIRouter
-from app.services import lead_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger("ace")
 
 @router.get("/")
-def get_objections():
-    return lead_service.get_objections()
+async def get_objections():
+    objections = []
+    logger.info(f"Returning objections: {objections}")
+    return objections

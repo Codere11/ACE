@@ -1,8 +1,17 @@
 from fastapi import APIRouter
-from app.services import lead_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger("ace")
 
 @router.get("/")
-def get_kpis():
-    return lead_service.get_kpis()
+async def get_kpis():
+    kpis = {
+        "visitors": 0,
+        "interactions": 0,
+        "contacts": 0,
+        "avgResponseSec": 0,
+        "activeLeads": 0
+    }
+    logger.info(f"Returning KPIs: {kpis}")
+    return kpis

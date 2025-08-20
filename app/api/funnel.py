@@ -1,8 +1,16 @@
 from fastapi import APIRouter
-from app.services import lead_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger("ace")
 
 @router.get("/")
-def get_funnel():
-    return lead_service.get_funnel()
+async def get_funnel():
+    funnel = {
+        "awareness": 0,
+        "interest": 0,
+        "meeting": 0,
+        "close": 0
+    }
+    logger.info(f"Returning funnel: {funnel}")
+    return funnel

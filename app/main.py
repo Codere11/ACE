@@ -1,14 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.api import chat, leads, kpis, funnel, objections
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(name)s: %(message)s")
+logger = logging.getLogger("ace")
 
 app = FastAPI(title="Omsoft ACE Backend")
 
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:4200",
+        "http://127.0.0.1:4200"
+    ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

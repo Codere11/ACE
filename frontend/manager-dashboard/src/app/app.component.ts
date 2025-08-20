@@ -1,36 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { HttpClient, HttpClientModule } from '@angular/common/http';
-
-type Lead = {
-  name: string;
-  industry: string;
-  score: number;
-  stage: string;
-  compatibility: boolean;
-  interest: 'High' | 'Medium' | 'Low';
-  phone: boolean;
-  email: boolean;
-  adsExp: boolean;
-  lastMessage: string;
-  lastSeenSec: number;
-  notes: string;
-};
-
-type KPIs = {
-  visitors: number;
-  interactions: number;
-  contacts: number;
-  avgResponseSec: number;
-  activeLeads: number;
-};
-
-type Funnel = {
-  awareness: number;
-  interest: number;
-  meeting: number;
-  close: number;
-};
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { HttpClientModule } from '@angular/common/http';
+import { DashboardService, Lead, KPIs, Funnel } from './services/dashboard.service';
 
 @Component({
   selector: 'app-root',
@@ -42,48 +13,79 @@ type Funnel = {
 export class AppComponent implements OnInit {
   activeTab: 'leads' | 'notes' | 'flow' = 'leads';
 
-  // Data containers
   rankedLeads: Lead[] = [];
   kpis: KPIs | null = null;
   funnel: Funnel | null = null;
   objections: string[] = [];
 
-  constructor(private http: HttpClient) {}
+  // loading flags
+  loadingLeads = true;
+  loadingKPIs = true;
+  loadingFunnel = true;
+  loadingObjections = true;
+
+  constructor(
+    private dashboardService: DashboardService,
+    @Inject(PLATFORM_ID) private platformId: Object
+  ) {}
 
   ngOnInit() {
-    this.fetchLeads();
-    this.fetchKPIs();
-    this.fetchFunnel();
-    this.fetchObjections();
-
-    // optional: refresh data every 10s
-    setInterval(() => {
+    // ✅ Only run HTTP calls in browser, not during SSR
+    if (isPlatformBrowser(this.platformId)) {
       this.fetchLeads();
       this.fetchKPIs();
-    }, 10000);
+      this.fetchFunnel();
+      this.fetchObjections();
+
+      setInterval(() => {
+        this.fetchLeads();
+        this.fetchKPIs();
+      }, 10000);
+    }
   }
 
   fetchLeads() {
-    this.http.get<Lead[]>('http://localhost:8000/leads')
-      .subscribe(data => {
-        // sort descending by score
+    this.loadingLeads = true;
+    this.dashboardService.getLeads().subscribe({
+      next: data => {
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
-      });
+        this.loadingLeads = false;
+      },
+      error: () => this.loadingLeads = false
+    });
   }
 
   fetchKPIs() {
-    this.http.get<KPIs>('http://localhost:8000/kpis')
-      .subscribe(data => this.kpis = data);
+    this.loadingKPIs = true;
+    this.dashboardService.getKPIs().subscribe({
+      next: data => {
+        this.kpis = data;
+        this.loadingKPIs = false;
+      },
+      error: () => this.loadingKPIs = false
+    });
   }
 
   fetchFunnel() {
-    this.http.get<Funnel>('http://localhost:8000/funnel')
-      .subscribe(data => this.funnel = data);
+    this.loadingFunnel = true;
+    this.dashboardService.getFunnel().subscribe({
+      next: data => {
+        this.funnel = data;
+        this.loadingFunnel = false;
+      },
+      error: () => this.loadingFunnel = false
+    });
   }
 
   fetchObjections() {
-    this.http.get<string[]>('http://localhost:8000/objections')
-      .subscribe(data => this.objections = data);
+    this.loadingObjections = true;
+    this.dashboardService.getObjections().subscribe({
+      next: data => {
+        this.objections = data;
+        this.loadingObjections = false;
+      },
+      error: () => this.loadingObjections = false
+    });
   }
 
   takeOver(lead: Lead) {

@@ -1,13 +1,11 @@
 from fastapi import APIRouter
-from app.models.lead import Lead
-from app.services import lead_service
+import logging
 
 router = APIRouter()
+logger = logging.getLogger("ace")
 
-@router.get("/", response_model=list[Lead])
-def get_leads():
-    return lead_service.get_all_leads()
-
-@router.post("/", response_model=Lead)
-def add_lead(lead: Lead):
-    return lead_service.add_lead(lead)
+@router.get("/")
+async def get_leads():
+    leads = []  # start blank for new clients
+    logger.info(f"Returning {len(leads)} leads: {leads}")
+    return leads

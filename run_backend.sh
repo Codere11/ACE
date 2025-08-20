@@ -3,7 +3,7 @@
 # --- CONFIGURATION ---
 VENV_DIR="venv"
 FASTAPI_PORT=8000
-FASTAPI_MODULE="main:app"
+FASTAPI_MODULE="app.main:app"
 
 echo "🟢 Starting Omsoft ACE backend..."
 
