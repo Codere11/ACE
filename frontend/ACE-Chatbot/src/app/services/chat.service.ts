@@ -31,13 +31,13 @@ export class ChatService {
 
   chat(sid: string, message: string, firstVisit = false) {
   return this.http.post<ChatResponse>(
-    `${this.base}/chat`,
+    `${this.base}/chat/`,
     { sid, message }
   );
   }
 
 
   survey(sid: string, industry: string, budget: string, experience: string) {
-    return this.http.post<ChatResponse>(`${this.base}/survey`, { sid, industry, budget, experience });
+    return this.http.post<ChatResponse>(`${this.base}/survey/`, { sid, industry, budget, experience });
   }
 }
