@@ -56,4 +56,9 @@ export class DashboardService {
   getObjections(): Observable<string[]> {
     return this.http.get<string[]>(`${this.baseUrl}/objections/`);
   }
+
+  getChats(): Observable<{ role: string; text: string }[]> {
+  return this.http.get<{ role: string; text: string }[]>(`${this.baseUrl}/chats/`);
+  }
+
 }

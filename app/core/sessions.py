@@ -1,4 +1,7 @@
-from typing import Dict, Any
+# app/core/sessions.py
 
-# In-memory session store
-sessions: Dict[str, Dict[str, Any]] = {}
+chat_logs = []  # simple in-memory log
+
+def add_chat(role: str, text: str):
+    """Append chat message to the log"""
+    chat_logs.append({"role": role, "text": text})

@@ -29,6 +29,8 @@ export class AppComponent implements OnInit {
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
+  chats: { role: string; text: string }[] = [];
+
   ngOnInit() {
     // ✅ Only run HTTP calls in browser, not during SSR
     if (isPlatformBrowser(this.platformId)) {
@@ -41,6 +43,12 @@ export class AppComponent implements OnInit {
         this.fetchLeads();
         this.fetchKPIs();
       }, 10000);
+    }
+
+    if (isPlatformBrowser(this.platformId)) {
+    this.dashboardService.getChats().subscribe(chats => {
+      this.chats = chats;
+    });
     }
   }
 

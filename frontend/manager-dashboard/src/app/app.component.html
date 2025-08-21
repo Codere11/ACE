@@ -114,5 +114,9 @@
         🚀 Ni še nobenih objections
       </div>
     </section>
+    <div *ngFor="let c of chats">
+  <strong>{{ c.role }}:</strong> {{ c.text }}
+</div>
+
   </div>
 </div>

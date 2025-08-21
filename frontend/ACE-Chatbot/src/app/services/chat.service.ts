@@ -26,7 +26,7 @@ export interface ChatResponse {
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private base = 'http://localhost:8000';
+  private base = '127.0.0.1:8000';
   constructor(private http: HttpClient) {}
 
   chat(sid: string, message: string, firstVisit = false) {
@@ -38,6 +38,8 @@ export class ChatService {
 
 
   survey(sid: string, industry: string, budget: string, experience: string) {
-    return this.http.post<ChatResponse>(`${this.base}/survey/`, { sid, industry, budget, experience });
-  }
+  return this.http.post<ChatResponse>(`${this.base}/chat/survey`, {
+    sid, industry, budget, experience
+  });
+}
 }
