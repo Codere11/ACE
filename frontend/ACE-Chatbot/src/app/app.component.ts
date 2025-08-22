@@ -107,13 +107,31 @@ export class AppComponent implements OnInit {
     }
   }
 
-  sendDual(ans1: string, ans2: string) {
-  if (!ans1.trim() && !ans2.trim()) return;
+  sendSurvey(ans1: string, ans2: string) {
+    if (!ans1.trim() && !ans2.trim()) return;
 
-  // Combine both answers into a single message for backend
-  const combined = `Kako pridobivate stranke: ${ans1} | Kdo odgovarja leadom: ${ans2}`;
-  this.send(combined);
-}
+    // Push user answers into chat
+    this.messages.push({ role: 'user', text: `Q1: ${ans1} | Q2: ${ans2}` });
+
+    this.startTyping();
+    this.loading = true;
+
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/survey`, {
+      sid: this.sid,
+      industry: '',
+      budget: '',
+      experience: '',
+      question1: ans1,
+      question2: ans2
+    }).subscribe({
+      next: res => this.consume(res),
+      error: err => {
+        console.error(err);
+        this.loading = false;
+        this.stopTyping("⚠️ Error submitting survey.");
+      }
+    });
+  }
 
   clickQuickReply(q: any) {
     this.send(q.title);

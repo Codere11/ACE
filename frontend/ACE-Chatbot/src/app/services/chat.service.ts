@@ -37,9 +37,10 @@ export class ChatService {
   }
 
 
-  survey(sid: string, industry: string, budget: string, experience: string) {
+  survey(sid: string, industry: string, budget: string, experience: string, question1: string, question2: string) {
   return this.http.post<ChatResponse>(`${this.base}/chat/survey`, {
-    sid, industry, budget, experience
+    sid, industry, budget, experience, question1, question2
   });
-}
+  }
+
 }

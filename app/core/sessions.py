@@ -20,3 +20,12 @@ def get_all_chats():
 def get_chats_for_sid(sid: str):
     """Return chats for a specific sid"""
     return chat_logs.get(sid, [])
+
+def get_last_user_message(sid: str) -> str | None:
+    """Return the last user message for a given sid"""
+    msgs = chat_logs.get(sid, [])
+    for msg in reversed(msgs):
+        if msg["role"] == "user":
+            return msg["text"]
+    return None
+
