@@ -8,46 +8,61 @@
       <button [class.active]="activeTab==='leads'" (click)="activeTab='leads'">🔥 Leads</button>
       <button [class.active]="activeTab==='notes'" (click)="activeTab='notes'">📓 Notes/Stages</button>
       <button [class.active]="activeTab==='flow'" (click)="activeTab='flow'">📊 Sales Flow</button>
+      <button [class.active]="activeTab==='chats'" (click)="activeTab='chats'">💬 Chats</button>
     </nav>
 
     <!-- TAB 1: Leads -->
     <section *ngIf="activeTab==='leads'">
       <h2>🔥 Najbolj kvalificirani kontakti (v živo)</h2>
 
-      <!-- Loading spinner -->
       <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam leads...</div>
-
-      <!-- Empty state -->
       <div *ngIf="!loadingLeads && rankedLeads.length === 0" class="empty">
         🚀 Še ni nobenih leadov — počakajte na prve pogovore.
       </div>
 
-      <!-- Lead list -->
       <div class="lead-list" *ngIf="!loadingLeads && rankedLeads.length > 0">
-        <div *ngFor="let lead of rankedLeads" class="lead-entry">
-          <div class="lead-main">
-            <div class="lead-top">
-              <div class="lead-name">{{ lead.name }} ({{ lead.industry }})</div>
-              <div class="lead-score">🔥 {{ lead.score }}</div>
-            </div>
-            <div class="lead-summary">
-              Stage: {{ lead.stage }} <span class="dot">•</span>
-              {{ formatAgo(lead.lastSeenSec) }}
-            </div>
-            <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
-            <div class="tags">
-              <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
-              <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
-              <span class="tag" [class.good]="lead.phone">📞 Phone</span>
-              <span class="tag" [class.good]="lead.email">📧 Email</span>
-              <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
-            </div>
-          </div>
-          <div class="lead-actions">
-            <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
-          </div>
-        </div>
+  <div *ngFor="let lead of rankedLeads" class="lead-entry">
+
+    <div class="lead-hover-zone"
+     (mouseenter)="hoveredLead = lead.id; loadChatsForLead(lead.id)"
+     (mouseleave)="hoveredLead = null">
+
+  <div class="lead-main">
+    <div class="lead-top">
+      <div class="lead-name">{{ lead.name }} ({{ lead.industry }})</div>
+      <div class="lead-score">🔥 {{ lead.score }}</div>
+    </div>
+    <div class="lead-summary">
+      Stage: {{ lead.stage }} <span class="dot">•</span>
+      {{ formatAgo(lead.lastSeenSec) }}
+    </div>
+    <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
+    <div class="tags">
+      <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
+      <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
+      <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+      <span class="tag" [class.good]="lead.email">📧 Email</span>
+      <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
+    </div>
+  </div>
+
+  <!-- chat preview -->
+  <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
+    <div *ngFor="let c of leadChats[lead.id]">
+      <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
+        <strong>{{ c.role }}:</strong> {{ c.text }}
       </div>
+    </div>
+  </div>
+</div>
+
+
+    <div class="lead-actions">
+      <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
+    </div>
+    </div>
+</div>
+
 
       <!-- KPIs -->
       <section class="kpis">
@@ -93,7 +108,6 @@
       <h2>📊 Sales Flow & Heatmaps</h2>
 
       <div *ngIf="loadingFunnel" class="spinner">⏳ Nalagam funnel...</div>
-
       <section *ngIf="!loadingFunnel && funnel">
         <div class="funnel">
           <div class="funnel-step">Awareness → <span class="bar awareness">{{ funnel.awareness }}%</span></div>
@@ -102,7 +116,6 @@
           <div class="funnel-step">Close → <span class="bar close">{{ funnel.close }}%</span></div>
         </div>
       </section>
-
       <div *ngIf="!loadingFunnel && !funnel" class="empty">🚀 Funnel še nima podatkov</div>
 
       <h3>Objections (Ranked)</h3>
@@ -114,19 +127,18 @@
         🚀 Ni še nobenih objections
       </div>
     </section>
-    <!-- Add a Chats tab -->
-  <div *ngIf="activeTab === 'chats'">
-    <h2>Chats</h2>
-    <div *ngIf="loadingChats">Loading chats...</div>
-    <div *ngIf="!loadingChats && chats.length === 0">No chats yet.</div>
-    <div *ngFor="let c of chats">
-      <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
-        <strong>{{ c.role }}:</strong> {{ c.text }}
-        <small>({{ formatAgo(c.timestamp) }})</small>
+
+    <!-- TAB 4: Chats -->
+    <section *ngIf="activeTab==='chats'">
+      <h2>💬 All Chats</h2>
+      <div *ngIf="loadingChats">Loading chats...</div>
+      <div *ngIf="!loadingChats && chats.length === 0">No chats yet.</div>
+      <div *ngFor="let c of chats">
+        <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
+          <strong>{{ c.role }}:</strong> {{ c.text }}
+          <small>({{ formatAgo(c.timestamp) }})</small>
+        </div>
       </div>
-    </div>
-  </div>
-
-
+    </section>
   </div>
 </div>

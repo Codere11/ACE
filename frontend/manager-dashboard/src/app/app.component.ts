@@ -19,6 +19,10 @@ export class AppComponent implements OnInit {
   objections: string[] = [];
   chats: ChatLog[] = [];
 
+  // lead-specific chats for hover
+  hoveredLead: string | null = null;
+  leadChats: { [sid: string]: ChatLog[] } = {};
+
   // loading flags
   loadingLeads = true;
   loadingKPIs = true;
@@ -42,7 +46,6 @@ export class AppComponent implements OnInit {
       setInterval(() => {
         this.fetchLeads();
         this.fetchKPIs();
-        this.fetchChats();
       }, 10000);
     }
   }
@@ -100,6 +103,17 @@ export class AppComponent implements OnInit {
       },
       error: () => this.loadingChats = false
     });
+  }
+
+  loadChatsForLead(sid: string) {
+    if (!this.leadChats[sid]) {
+      this.dashboardService.getChatsForLead(sid).subscribe({
+        next: data => {
+          this.leadChats[sid] = data;
+        },
+        error: () => {}
+      });
+    }
   }
 
   takeOver(lead: Lead) {

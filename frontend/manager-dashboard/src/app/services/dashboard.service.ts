@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 
 // Types
 export type Lead = {
+  id: string;
   name: string;
   industry: string;
   score: number;
@@ -34,6 +35,7 @@ export type Funnel = {
 };
 
 export type ChatLog = {
+  sid: string;
   role: string;
   text: string;
   timestamp: number;
@@ -65,5 +67,9 @@ export class DashboardService {
 
   getChats(): Observable<ChatLog[]> {
     return this.http.get<ChatLog[]>(`${this.baseUrl}/chats/`);
+  }
+
+  getChatsForLead(sid: string): Observable<ChatLog[]> {
+    return this.http.get<ChatLog[]>(`${this.baseUrl}/chats?sid=${sid}`);
   }
 }
