@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
-import { DashboardService, Lead, KPIs, Funnel } from './services/dashboard.service';
+import { DashboardService, Lead, KPIs, Funnel, ChatLog } from './services/dashboard.service';
 
 @Component({
   selector: 'app-root',
@@ -11,44 +11,39 @@ import { DashboardService, Lead, KPIs, Funnel } from './services/dashboard.servi
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
-  activeTab: 'leads' | 'notes' | 'flow' = 'leads';
+  activeTab: 'leads' | 'notes' | 'flow' | 'chats' = 'leads';
 
   rankedLeads: Lead[] = [];
   kpis: KPIs | null = null;
   funnel: Funnel | null = null;
   objections: string[] = [];
+  chats: ChatLog[] = [];
 
   // loading flags
   loadingLeads = true;
   loadingKPIs = true;
   loadingFunnel = true;
   loadingObjections = true;
+  loadingChats = true;
 
   constructor(
     private dashboardService: DashboardService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {}
 
-  chats: { role: string; text: string }[] = [];
-
   ngOnInit() {
-    // ✅ Only run HTTP calls in browser, not during SSR
     if (isPlatformBrowser(this.platformId)) {
       this.fetchLeads();
       this.fetchKPIs();
       this.fetchFunnel();
       this.fetchObjections();
+      this.fetchChats();
 
       setInterval(() => {
         this.fetchLeads();
         this.fetchKPIs();
+        this.fetchChats();
       }, 10000);
-    }
-
-    if (isPlatformBrowser(this.platformId)) {
-    this.dashboardService.getChats().subscribe(chats => {
-      this.chats = chats;
-    });
     }
   }
 
@@ -96,11 +91,23 @@ export class AppComponent implements OnInit {
     });
   }
 
+  fetchChats() {
+    this.loadingChats = true;
+    this.dashboardService.getChats().subscribe({
+      next: data => {
+        this.chats = data;
+        this.loadingChats = false;
+      },
+      error: () => this.loadingChats = false
+    });
+  }
+
   takeOver(lead: Lead) {
     alert(`Prevzem pogovora z: ${lead.name} (${lead.industry})`);
   }
 
-  formatAgo(seconds: number): string {
+  formatAgo(timestamp: number): string {
+    const seconds = Math.floor(Date.now() / 1000) - timestamp;
     if (seconds < 60) return `pred ${seconds}s`;
     const m = Math.floor(seconds / 60);
     return m === 1 ? 'pred 1 min' : `pred ${m} min`;

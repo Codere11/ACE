@@ -114,9 +114,19 @@
         🚀 Ni še nobenih objections
       </div>
     </section>
+    <!-- Add a Chats tab -->
+  <div *ngIf="activeTab === 'chats'">
+    <h2>Chats</h2>
+    <div *ngIf="loadingChats">Loading chats...</div>
+    <div *ngIf="!loadingChats && chats.length === 0">No chats yet.</div>
     <div *ngFor="let c of chats">
-  <strong>{{ c.role }}:</strong> {{ c.text }}
-</div>
+      <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
+        <strong>{{ c.role }}:</strong> {{ c.text }}
+        <small>({{ formatAgo(c.timestamp) }})</small>
+      </div>
+    </div>
+  </div>
+
 
   </div>
 </div>

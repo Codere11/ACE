@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 
 class Lead(BaseModel):
+    id: str   # unique identifier (sid)
     name: str
     industry: str
     score: int

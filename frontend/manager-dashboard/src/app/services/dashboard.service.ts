@@ -33,6 +33,12 @@ export type Funnel = {
   close: number;
 };
 
+export type ChatLog = {
+  role: string;
+  text: string;
+  timestamp: number;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -57,8 +63,7 @@ export class DashboardService {
     return this.http.get<string[]>(`${this.baseUrl}/objections/`);
   }
 
-  getChats(): Observable<{ role: string; text: string }[]> {
-  return this.http.get<{ role: string; text: string }[]>(`${this.baseUrl}/chats/`);
+  getChats(): Observable<ChatLog[]> {
+    return this.http.get<ChatLog[]>(`${this.baseUrl}/chats/`);
   }
-
 }

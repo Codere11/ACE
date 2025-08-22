@@ -6,4 +6,5 @@ router = APIRouter()
 
 @router.get("/")
 def get_chats():
+    """Return all chat logs"""
     return sessions.chat_logs

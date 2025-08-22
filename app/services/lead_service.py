@@ -10,10 +10,10 @@ _leads: List[Lead] = []
 # -------------------
 # Lead ingestion
 # -------------------
-def ingest_from_deepseek(user_message: str, classification: dict):
+def ingest_from_deepseek(user_message: str, classification: dict, sid: str = None):
     """
     Create a new lead entry from DeepSeek classification.
-    For now: name/industry unknown until enriched later in conversation.
+    If sid is passed, link it as id.
     """
     score = 90 if classification["category"] == "good_fit" else \
             70 if classification["category"] == "could_fit" else 40
@@ -24,7 +24,13 @@ def ingest_from_deepseek(user_message: str, classification: dict):
     interest = "High" if classification["category"] == "good_fit" else \
                "Medium" if classification["category"] == "could_fit" else "Low"
 
+    # prevent duplicates
+    existing = next((l for l in _leads if l.id == sid), None)
+    if existing:
+        return existing
+
     lead = Lead(
+        id=sid or f"lead_{int(time.time())}",
         name="Unknown",
         industry="Unknown",
         score=score,
@@ -39,6 +45,13 @@ def ingest_from_deepseek(user_message: str, classification: dict):
         notes=classification.get("reasons", "")
     )
     _leads.append(lead)
+    return lead
+
+
+def add_lead(lead: Lead):
+    """Append a lead to the global store if not already present."""
+    if not any(l.id == lead.id for l in _leads):
+        _leads.append(lead)
     return lead
 
 
@@ -57,7 +70,7 @@ def get_kpis():
     total = len(_leads)
     contacts = sum(1 for l in _leads if l.phone or l.email)
     interactions = sum(1 for l in _leads if l.lastMessage)
-    active_leads = sum(1 for l in _leads if l.stage in ["Interested", "Discovery"])
+    active_leads = sum(1 for l in _leads if l.stage in ["Interested", "Discovery", "Pogovori"])
 
     # avg response simulated as fixed for now
     avg_response = 30 if total == 0 else 25
