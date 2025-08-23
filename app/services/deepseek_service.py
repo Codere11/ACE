@@ -21,7 +21,7 @@ def run_deepseek(user_text: str, sid: str) -> dict:
     body = {
         "model": DEEPSEEK_MODEL,
         "messages": [
-            {"role": "system", "content": "You are ACE qualification AI."},
+            {"role": "system", "content": "You are ACE qualification AI. Always answer in Slovenian"},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.2

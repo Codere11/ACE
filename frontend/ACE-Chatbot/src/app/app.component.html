@@ -19,22 +19,24 @@
     </button>
   </div>
 
-  <!-- Manual input with two fields (Survey Q1 & Q2) -->
-  <div *ngIf="chatMode==='open'" class="composer dual-input">
+  <!-- Single open input (POST to /chat/) -->
+  <div *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='single'" class="composer">
+    <input #msgInput type="text"
+           placeholder="Vnesite odgovor..."
+           [disabled]="loading"
+           (keyup.enter)="onSubmitSingle(msgInput)" />
+    <button (click)="onSubmitSingle(msgInput)" [disabled]="loading">Pošlji</button>
+  </div>
+
+  <!-- Dual open input (POST to /chat/survey) -->
+  <div *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='dual'" class="composer dual-input">
     <input #msgInput1 type="text"
            placeholder="Kako običajno pridobivate stranke?"
-           [disabled]="loading"
-           (keyup.enter)="sendSurvey(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';" />
-
+           [disabled]="loading" />
     <input #msgInput2 type="text"
            placeholder="Kdo običajno odgovarja na nove kontakte?"
-           [disabled]="loading"
-           (keyup.enter)="sendSurvey(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';" />
-
-    <button (click)="sendSurvey(msgInput1.value, msgInput2.value); msgInput1.value=''; msgInput2.value='';"
-            [disabled]="loading">
-      Pošlji
-    </button>
+           [disabled]="loading" />
+    <button (click)="onSubmitSurvey(msgInput1, msgInput2)" [disabled]="loading">Pošlji</button>
   </div>
 </div>
 

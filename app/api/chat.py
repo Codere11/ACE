@@ -9,11 +9,14 @@ import time
 
 router = APIRouter()
 
+
 class ChatRequest(BaseModel):
     sid: str
     message: str
 
+
 SESSION_STATE = {}
+
 
 @router.post("/")
 def chat(req: ChatRequest):
@@ -55,8 +58,13 @@ def chat(req: ChatRequest):
 
     return reply
 
+
 @router.post("/survey")
 def survey(data: dict):
+    """
+    Save survey answers (industry, budget, experience, Q1, Q2) into lead,
+    but do NOT call DeepSeek yet. DeepSeek runs later via flow node with action=deepseek_score.
+    """
     sid = data.get("sid")
     industry = data.get("industry", "")
     budget = data.get("budget", "")
@@ -64,59 +72,51 @@ def survey(data: dict):
     question1 = data.get("question1", "")
     question2 = data.get("question2", "")
 
-    combined = (
-        f"Industrija: {industry} | "
-        f"Proračun: {budget} | "
-        f"Izkušnje: {experience} | "
-        f"Kako pridobivate stranke: {question1} | "
-        f"Kdo odgovarja leadom: {question2}"
-    )
-
-    result = deepseek_service.run_deepseek(combined, sid)
-
     existing = next((l for l in lead_service.get_all_leads() if l.id == sid), None)
     if existing:
-        existing.score = 90 if result["category"] == "good_fit" else 70 if result["category"] == "could_fit" else 40
-        existing.stage = (
-            "Interested" if result["category"] == "good_fit"
-            else "Discovery" if result["category"] == "could_fit"
-            else "Cold"
-        )
-        existing.interest = (
-            "High" if result["category"] == "good_fit"
-            else "Medium" if result["category"] == "could_fit"
-            else "Low"
-        )
         existing.lastSeenSec = int(time.time())
-
-        # ✅ set lastMessage so dashboard shows Q1/Q2
         if question1 or question2:
             existing.lastMessage = f"{question1} | {question2}"
-        else:
-            existing.lastMessage = combined
 
-        # ✅ merge notes
+        # merge notes
         notes_parts = []
         if question1:
             notes_parts.append(f"Q1: {question1}")
         if question2:
             notes_parts.append(f"Q2: {question2}")
-        if result.get("reasons"):
-            notes_parts.append(f"Reasons: {result['reasons']}")
         existing.notes = " | ".join(notes_parts)
 
     else:
-        lead_service.ingest_from_deepseek(combined, result, sid)
+        # provisional lead if needed
+        provisional = Lead(
+            id=sid,
+            name="Unknown",
+            industry=industry or "Unknown",
+            score=50,
+            stage="Pogovori",
+            compatibility=True,
+            interest="Medium",
+            phone=False,
+            email=False,
+            adsExp=False,
+            lastMessage=f"{question1} | {question2}",
+            lastSeenSec=int(time.time()),
+            notes=f"Q1: {question1} | Q2: {question2}"
+        )
+        lead_service.add_lead(provisional)
 
-    reply = f"{result['pitch']} Razlogi: {result['reasons']}"
+    # reply just acknowledges answers
+    reply = "Hvala za odgovore 🙏. Nadaljujmo..."
+
     sessions.add_chat(sid, "assistant", reply)
 
     return {
         "reply": reply,
-        "ui": {"story_complete": True, "openInput": True},
-        "chatMode": "open",
-        "storyComplete": True
+        "ui": {"story_complete": False, "openInput": False},
+        "chatMode": "guided",
+        "storyComplete": False
     }
+
 
 @router.post("/stream")
 def chat_stream(req: ChatRequest):
