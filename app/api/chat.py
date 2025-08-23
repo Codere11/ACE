@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+# app/api/chat.py
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from app.core import sessions
@@ -9,21 +10,32 @@ import time
 
 router = APIRouter()
 
-
 class ChatRequest(BaseModel):
     sid: str
     message: str
 
-
 SESSION_STATE = {}
 
+def _now():
+    return int(time.time())
+
+def _log(prefix: str, sid: str, rid: str, msg: str = "", extra: dict | None = None):
+    base = f"[CHAT] {prefix} sid={sid} rid={rid}"
+    if msg:
+        base += f" msg='{msg}'"
+    if extra:
+        base += f" {extra}"
+    print(base)
 
 @router.post("/")
-def chat(req: ChatRequest):
-    # log user message
+def chat(req: ChatRequest, request: Request):
+    rid = request.headers.get("x-req-id", "-")
+    _log("IN", req.sid, rid, req.message)
+
+    # log user message (per-sid)
     sessions.add_chat(req.sid, "user", req.message)
 
-    # ensure lead exists
+    # ensure lead exists / update lastMessage
     leads = lead_service.get_all_leads()
     existing = next((l for l in leads if l.id == req.sid), None)
 
@@ -40,58 +52,50 @@ def chat(req: ChatRequest):
             email=False,
             adsExp=False,
             lastMessage=req.message,
-            lastSeenSec=int(time.time()),
+            lastSeenSec=_now(),
             notes=""
         )
         lead_service.add_lead(provisional)
-        print(f"[DEBUG] Provisional lead created for sid={req.sid}")
+        _log("lead_created", req.sid, rid)
     else:
-        # always update lastMessage with the user message
         existing.lastMessage = req.message
-        existing.lastSeenSec = int(time.time())
+        existing.lastSeenSec = _now()
+        _log("lead_updated", req.sid, rid, extra={"lastMessage": req.message})
 
     # run conversation flow
     reply = handle_chat(req, SESSION_STATE)
 
-    if reply.get("reply"):
+    # log assistant reply
+    if reply.get("reply") is not None:
         sessions.add_chat(req.sid, "assistant", reply["reply"])
 
+    _log("OUT", req.sid, rid, extra={"chatMode": reply.get("chatMode"), "ui": reply.get("ui")})
     return reply
 
-
 @router.post("/survey")
-def survey(data: dict):
-    """
-    Save survey answers (industry, budget, experience, Q1, Q2) into lead,
-    but do NOT call DeepSeek yet. DeepSeek runs later via flow node with action=deepseek_score.
-    """
+def survey(data: dict, request: Request):
+    rid = request.headers.get("x-req-id", "-")
     sid = data.get("sid")
-    industry = data.get("industry", "")
-    budget = data.get("budget", "")
-    experience = data.get("experience", "")
     question1 = data.get("question1", "")
     question2 = data.get("question2", "")
 
+    _log("SURVEY_IN", sid, rid, extra={"q1": question1, "q2": question2})
+
     existing = next((l for l in lead_service.get_all_leads() if l.id == sid), None)
     if existing:
-        existing.lastSeenSec = int(time.time())
+        existing.lastSeenSec = _now()
         if question1 or question2:
             existing.lastMessage = f"{question1} | {question2}"
-
-        # merge notes
-        notes_parts = []
-        if question1:
-            notes_parts.append(f"Q1: {question1}")
-        if question2:
-            notes_parts.append(f"Q2: {question2}")
-        existing.notes = " | ".join(notes_parts)
-
+        # notes merge
+        pieces = []
+        if question1: pieces.append(f"Q1: {question1}")
+        if question2: pieces.append(f"Q2: {question2}")
+        existing.notes = " | ".join(pieces) if pieces else existing.notes
     else:
-        # provisional lead if needed
         provisional = Lead(
             id=sid,
             name="Unknown",
-            industry=industry or "Unknown",
+            industry="Unknown",
             score=50,
             stage="Pogovori",
             compatibility=True,
@@ -100,16 +104,15 @@ def survey(data: dict):
             email=False,
             adsExp=False,
             lastMessage=f"{question1} | {question2}",
-            lastSeenSec=int(time.time()),
+            lastSeenSec=_now(),
             notes=f"Q1: {question1} | Q2: {question2}"
         )
         lead_service.add_lead(provisional)
 
-    # reply just acknowledges answers
-    reply = "Hvala za odgovore 🙏. Nadaljujmo..."
-
+    reply = "Hvala za odgovore 🙏. Nadaljujmo…"
     sessions.add_chat(sid, "assistant", reply)
 
+    _log("SURVEY_OUT", sid, rid)
     return {
         "reply": reply,
         "ui": {"story_complete": False, "openInput": False},
@@ -117,9 +120,11 @@ def survey(data: dict):
         "storyComplete": False
     }
 
-
 @router.post("/stream")
-def chat_stream(req: ChatRequest):
+def chat_stream(req: ChatRequest, request: Request):
+    rid = request.headers.get("x-req-id", "-")
+    _log("STREAM_IN", req.sid, rid, req.message)
+
     sessions.add_chat(req.sid, "user", req.message)
 
     def event_generator():
@@ -128,5 +133,6 @@ def chat_stream(req: ChatRequest):
             buffer += chunk
             yield chunk
         sessions.add_chat(req.sid, "assistant", buffer)
+        _log("STREAM_DONE", req.sid, rid)
 
     return StreamingResponse(event_generator(), media_type="text/plain")

@@ -11,6 +11,7 @@
   <div *ngIf="ui && ($any(ui).type === 'choices')" class="choices">
     <button
       *ngFor="let q of $any(ui).buttons"
+      type="button"                  
       class="chip"
       (click)="clickQuickReply(q)"
       [disabled]="loading"
@@ -19,25 +20,28 @@
     </button>
   </div>
 
-  <!-- Single open input (POST to /chat/) -->
-  <div *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='single'" class="composer">
+  <!-- Single open input (handled by form to unify Enter & Click) -->
+  <form *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='single'"
+        class="composer"
+        (ngSubmit)="onSubmitSingle(msgInput)">
     <input #msgInput type="text"
            placeholder="Vnesite odgovor..."
-           [disabled]="loading"
-           (keyup.enter)="onSubmitSingle(msgInput)" />
-    <button (click)="onSubmitSingle(msgInput)" [disabled]="loading">Pošlji</button>
-  </div>
+           [disabled]="loading" />
+    <button type="submit" [disabled]="loading">Pošlji</button>
+  </form>
 
-  <!-- Dual open input (POST to /chat/survey) -->
-  <div *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='dual'" class="composer dual-input">
+  <!-- Dual open input (survey Q1+Q2) -->
+  <form *ngIf="chatMode==='open' && ui?.openInput && ui?.inputType==='dual'"
+        class="composer dual-input"
+        (ngSubmit)="onSubmitSurvey(msgInput1, msgInput2)">
     <input #msgInput1 type="text"
            placeholder="Kako običajno pridobivate stranke?"
-           [disabled]="loading" />
+          [disabled]="loading" />
     <input #msgInput2 type="text"
            placeholder="Kdo običajno odgovarja na nove kontakte?"
            [disabled]="loading" />
-    <button (click)="onSubmitSurvey(msgInput1, msgInput2)" [disabled]="loading">Pošlji</button>
-  </div>
+    <button type="submit" [disabled]="loading">Pošlji</button>
+  </form>
 </div>
 
 <ng-template #typingTpl>
