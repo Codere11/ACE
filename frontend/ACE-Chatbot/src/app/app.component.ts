@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
-import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 interface Message { role: 'user' | 'assistant'; text?: string; typing?: boolean; }
@@ -18,50 +18,86 @@ export class AppComponent implements OnInit {
   ui: any = null;
   chatMode: 'guided'|'open' = 'guided';
   loading = false;
-  sid = Math.random().toString(36).substring(2);
+
+  // NOTE: SID is created ONLY on the browser and stored in localStorage
+  sid = 'SSR_NO_SID';
   backendUrl = 'http://localhost:8000';
 
   private singleSubmitting = false;
   private surveySubmitting = false;
+  private isBrowser = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, @Inject(PLATFORM_ID) platformId: Object) {
+    this.isBrowser = isPlatformBrowser(platformId);
 
-  ngOnInit() { this.send('/start'); }
+    if (this.isBrowser) {
+      // one stable SID per browser (tab refresh-safe)
+      const existing = localStorage.getItem('ace_sid');
+      if (existing && existing.length >= 8) {
+        this.sid = existing;
+      } else {
+        this.sid = Math.random().toString(36).slice(2);
+        localStorage.setItem('ace_sid', this.sid);
+      }
+      console.debug('[SID] init(browser)', { sid: this.sid });
+    } else {
+      // SSR path: DO NOT start chat or call backend here
+      this.sid = 'SSR_NO_SID';
+      console.debug('[SID] init(ssr) — no network calls, no SID creation');
+    }
+  }
 
-  private rid(prefix: string) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; }
+  ngOnInit() {
+    if (!this.isBrowser) return;           // ✅ prevent SSR double-start
+    this.send('/start');                   // only on the client
+  }
+
+  private rid(prefix: string) {
+    return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  }
+
   private headers(rid: string) {
     return new HttpHeaders({ 'X-Req-Id': rid, 'X-Sid': this.sid, 'Content-Type': 'application/json' });
   }
 
   send(text: string) {
+    if (!this.isBrowser) return;           // ✅ never send from SSR
     if (!text.trim()) return;
     const rid = this.rid('SEND');
 
-    console.groupCollapsed(`[FE] ${rid} send() text='${text}' chatMode=${this.chatMode} ui=${JSON.stringify(this.ui)}`);
+    console.groupCollapsed(`[FE] ${rid} send() text='${text}'`);
+    console.debug('[SID] using', { sid: this.sid });
+
     this.messages.push({ role: 'user', text });
     this.startTyping();
     this.loading = true;
 
     const isOpenInput = !!(this.ui && this.ui.openInput === true);
+    console.debug('[FE] state before send', { chatMode: this.chatMode, isOpenInput, ui: this.ui });
 
     if (this.chatMode === 'open' && !isOpenInput) {
-      console.log('[FE] streaming /chat/stream', { rid, sid: this.sid });
+      console.debug('[FE] streaming /chat/stream', { rid, sid: this.sid, url: `${this.backendUrl}/chat/stream` });
       console.groupEnd();
       this.sendStream(text, rid);
       return;
     }
 
-    console.log('[FE] POST /chat/', { rid, sid: this.sid });
-    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { message: text, sid: this.sid }, { headers: this.headers(rid) })
+    const body = { message: text, sid: this.sid };
+    console.debug('[FE] POST /chat/ body', body);
+
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
       .subscribe({
-        next: res => { console.log('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
+        next: res => { console.debug('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
         error: err => { console.error('[FE] /chat/ ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri komunikaciji s strežnikom.'); }
       });
   }
 
   async sendStream(text: string, ridOuter?: string) {
+    if (!this.isBrowser) return;           // ✅ never stream from SSR
     const rid = ridOuter || this.rid('STRM');
     console.groupCollapsed(`[FE] ${rid} sendStream() text='${text}'`);
+    console.debug('[SID] using', { sid: this.sid });
+
     try {
       const response = await fetch(`${this.backendUrl}/chat/stream`, {
         method: 'POST',
@@ -96,47 +132,51 @@ export class AppComponent implements OnInit {
   }
 
   sendSingle(answer: string) {
+    if (!this.isBrowser) return;           // ✅ guard
     if (!answer.trim()) return;
     if (this.singleSubmitting) return;
     this.singleSubmitting = true;
 
     const rid = this.rid('SINGLE');
     console.groupCollapsed(`[FE] ${rid} sendSingle() answer='${answer}'`);
+    console.debug('[SID] using', { sid: this.sid });
 
     this.messages.push({ role: 'user', text: answer });
     this.startTyping();
     this.loading = true;
 
-    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { sid: this.sid, message: answer }, { headers: this.headers(rid) })
+    const body = { sid: this.sid, message: answer };
+    console.debug('[FE] POST /chat/ body', body);
+
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
       .subscribe({
-        next: res => { this.singleSubmitting = false; console.log('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
+        next: res => { this.singleSubmitting = false; console.debug('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
         error: err => { this.singleSubmitting = false; console.error('[FE] /chat/ ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju odgovora.'); }
       });
   }
 
   sendSurvey(ans1: string, ans2: string) {
+    if (!this.isBrowser) return;           // ✅ guard
     if (!ans1.trim() && !ans2.trim()) return;
     if (this.surveySubmitting) return;
     this.surveySubmitting = true;
 
     const rid = this.rid('SURVEY');
     console.groupCollapsed(`[FE] ${rid} sendSurvey() Q1='${ans1}' Q2='${ans2}'`);
+    console.debug('[SID] using', { sid: this.sid });
 
     this.messages.push({ role: 'user', text: `Q1: ${ans1} | Q2: ${ans2}` });
     this.startTyping();
     this.loading = true;
 
-    this.http.post<ChatResponse>(`${this.backendUrl}/chat/survey`, {
-      sid: this.sid,
-      industry: '',
-      budget: '',
-      experience: '',
-      question1: ans1,
-      question2: ans2
-    }, { headers: this.headers(rid) }).subscribe({
-      next: res => { this.surveySubmitting = false; console.log('[FE] /chat/survey OK', { rid, res }); console.groupEnd(); this.consume(res); },
-      error: err => { this.surveySubmitting = false; console.error('[FE] /chat/survey ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju ankete.'); }
-    });
+    const body = { sid: this.sid, industry: '', budget: '', experience: '', question1: ans1, question2: ans2 };
+    console.debug('[FE] POST /chat/survey body', body);
+
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/survey`, body, { headers: this.headers(rid) })
+      .subscribe({
+        next: res => { this.surveySubmitting = false; console.debug('[FE] /chat/survey OK', { rid, res }); console.groupEnd(); this.consume(res); },
+        error: err => { this.surveySubmitting = false; console.error('[FE] /chat/survey ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju ankete.'); }
+      });
   }
 
   onSubmitSingle(input: HTMLInputElement) {

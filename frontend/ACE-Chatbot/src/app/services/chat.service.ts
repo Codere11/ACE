@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { tap } from 'rxjs/operators';
 
 export type ChatMode = 'guided' | 'open';
 
@@ -26,21 +27,32 @@ export interface ChatResponse {
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  private base = '127.0.0.1:8000';
-  constructor(private http: HttpClient) {}
+  // FIX: add protocol so devtools show the actual full URL
+  private base = 'http://127.0.0.1:8000';
+
+  constructor(private http: HttpClient) {
+    console.debug('[FE][ChatService] init', { base: this.base });
+  }
 
   chat(sid: string, message: string, firstVisit = false) {
-  return this.http.post<ChatResponse>(
-    `${this.base}/chat/`,
-    { sid, message }
-  );
+    const payload = { sid, message };
+    console.debug('[FE][ChatService] POST /chat/ payload', payload);
+    return this.http.post<ChatResponse>(`${this.base}/chat/`, payload).pipe(
+      tap({
+        next: res => console.debug('[FE][ChatService] /chat OK', { sid, res }),
+        error: err => console.debug('[FE][ChatService] /chat ERR', { sid, err })
+      })
+    );
   }
-
 
   survey(sid: string, industry: string, budget: string, experience: string, question1: string, question2: string) {
-  return this.http.post<ChatResponse>(`${this.base}/chat/survey`, {
-    sid, industry, budget, experience, question1, question2
-  });
+    const payload = { sid, industry, budget, experience, question1, question2 };
+    console.debug('[FE][ChatService] POST /chat/survey payload', payload);
+    return this.http.post<ChatResponse>(`${this.base}/chat/survey`, payload).pipe(
+      tap({
+        next: res => console.debug('[FE][ChatService] /chat/survey OK', { sid, res }),
+        error: err => console.debug('[FE][ChatService] /chat/survey ERR', { sid, err })
+      })
+    );
   }
-
 }
