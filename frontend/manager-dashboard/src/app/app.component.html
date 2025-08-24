@@ -21,48 +21,45 @@
       </div>
 
       <div class="lead-list" *ngIf="!loadingLeads && rankedLeads.length > 0">
-  <div *ngFor="let lead of rankedLeads" class="lead-entry">
+        <div *ngFor="let lead of rankedLeads" class="lead-entry">
+          <div class="lead-hover-zone"
+               (mouseenter)="hoveredLead = lead.id; loadChatsForLead(lead.id)"
+               (mouseleave)="hoveredLead = null">
 
-    <div class="lead-hover-zone"
-     (mouseenter)="hoveredLead = lead.id; loadChatsForLead(lead.id)"
-     (mouseleave)="hoveredLead = null">
+            <div class="lead-main">
+              <div class="lead-top">
+                <div class="lead-name">{{ lead.name }} ({{ lead.industry }})</div>
+                <div class="lead-score">🔥 {{ lead.score }}</div>
+              </div>
+              <div class="lead-summary">
+                Stage: {{ lead.stage }} <span class="dot">•</span>
+                {{ formatAgo(lead.lastSeenSec) }}
+              </div>
+              <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
+              <div class="tags">
+                <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
+                <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
+                <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+                <span class="tag" [class.good]="lead.email">📧 Email</span>
+                <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
+              </div>
+            </div>
 
-  <div class="lead-main">
-    <div class="lead-top">
-      <div class="lead-name">{{ lead.name }} ({{ lead.industry }})</div>
-      <div class="lead-score">🔥 {{ lead.score }}</div>
-    </div>
-    <div class="lead-summary">
-      Stage: {{ lead.stage }} <span class="dot">•</span>
-      {{ formatAgo(lead.lastSeenSec) }}
-    </div>
-    <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
-    <div class="tags">
-      <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
-      <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
-      <span class="tag" [class.good]="lead.phone">📞 Phone</span>
-      <span class="tag" [class.good]="lead.email">📧 Email</span>
-      <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
-    </div>
-  </div>
+            <!-- chat preview -->
+            <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
+              <div *ngFor="let c of leadChats[lead.id]">
+                <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
+                  <strong>{{ c.role }}:</strong> {{ c.text }}
+                </div>
+              </div>
+            </div>
+          </div>
 
-  <!-- chat preview -->
-  <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
-    <div *ngFor="let c of leadChats[lead.id]">
-      <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
-        <strong>{{ c.role }}:</strong> {{ c.text }}
+          <div class="lead-actions">
+            <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
-
-
-    <div class="lead-actions">
-      <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
-    </div>
-    </div>
-</div>
-
 
       <!-- KPIs -->
       <section class="kpis">
@@ -81,26 +78,31 @@
     <!-- TAB 2: Notes & Stages -->
     <section *ngIf="activeTab==='notes'">
       <h2>📓 Notes & Stage Tracking</h2>
-      <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam notes...</div>
-      <table class="notes-table" *ngIf="!loadingLeads && rankedLeads.length > 0">
-        <thead>
-          <tr>
-            <th>Lead</th>
-            <th>Stage</th>
-            <th>Notes</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let lead of rankedLeads">
-            <td>{{ lead.name }}</td>
-            <td>{{ lead.stage }}</td>
-            <td>{{ lead.notes }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div *ngIf="!loadingLeads && rankedLeads.length === 0" class="empty">
-        🚀 Še ni leadov, zato ni stage-ov ali notes-ov.
+
+      <div class="notes-toolbar" *ngIf="rankedLeads.length > 0; else noLeads">
+        <label>
+          Lead/Session:
+          <!-- Use ngModel (requires FormsModule in imports) -->
+          <select [(ngModel)]="selectedLeadSid" (ngModelChange)="selectLeadSid($event)">
+            <option *ngFor="let l of rankedLeads" [ngValue]="l.id">
+              {{ l.name }} — {{ l.industry }}
+            </option>
+          </select>
+        </label>
+        <small class="sid">sid: {{ selectedLeadSid }}</small>
       </div>
+
+      <ng-container *ngIf="selectedLeadSid; else pickOne">
+        <ace-notes-table [sid]="selectedLeadSid"></ace-notes-table>
+      </ng-container>
+
+      <ng-template #pickOne>
+        <div class="empty">Izberite lead zgoraj, da uredite njegove zapiske.</div>
+      </ng-template>
+
+      <ng-template #noLeads>
+        <div class="empty">🚀 Še ni leadov, zato ni stage-ov ali notes-ov.</div>
+      </ng-template>
     </section>
 
     <!-- TAB 3: Sales Flow -->

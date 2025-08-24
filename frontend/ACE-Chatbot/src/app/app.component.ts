@@ -11,6 +11,7 @@ interface ChatResponse { reply?: string; quickReplies?: { title: string; payload
   standalone: true,
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
+  // ⬇️ ADD NotesTableComponent here
   imports: [CommonModule, FormsModule, HttpClientModule]
 })
 export class AppComponent implements OnInit {

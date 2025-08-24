@@ -1,0 +1,73 @@
+<div class="notes-panel">
+  <div class="notes-header">
+    <h3>📓 Notes & Stages</h3>
+    <div class="right">
+      <span class="count">{{ rows().length }}</span>
+      <button class="add" (click)="addRow()">+</button>
+    </div>
+  </div>
+
+  <table class="notes-table">
+    <thead>
+      <tr>
+        <th class="col-stage">Stage</th>
+        <th>Title</th>
+        <th class="col-updated">Updated</th>
+        <th class="col-actions">Actions</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <!-- single ngFor with trackBy so inputs don't lose focus -->
+      <ng-container *ngFor="let r of rows(); trackBy: trackById">
+        <tr class="row-main">
+          <td>
+            <select [(ngModel)]="r.stage" (ngModelChange)="touch(r)">
+              <option *ngFor="let s of stages" [value]="s">{{ s }}</option>
+            </select>
+          </td>
+
+          <td class="title-cell">
+            <input
+              [(ngModel)]="r.title"
+              (ngModelChange)="touch(r)"
+              placeholder="Short note title..."
+            />
+          </td>
+
+          <td class="mono">{{ ts(r.updatedAt) }}</td>
+
+          <td class="actions">
+            <button class="link" (click)="toggle(r.id)">
+              {{ expandedId() === r.id ? 'Collapse' : 'Expand' }}
+            </button>
+            <button class="link danger" (click)="remove(r.id)">Delete</button>
+          </td>
+        </tr>
+
+        <tr class="row-details" *ngIf="expandedId() === r.id">
+          <td colspan="4" class="details-cell">
+            <div class="details">
+              <label>Details</label>
+              <textarea
+                rows="5"
+                [(ngModel)]="r.details"
+                (ngModelChange)="touch(r)"
+                placeholder="Add context, next steps, objections, etc."
+              ></textarea>
+              <div class="row-meta">
+                <span>Created: {{ ts(r.createdAt) }}</span>
+                <span>Updated: {{ ts(r.updatedAt) }}</span>
+              </div>
+            </div>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+
+  <div class="footer">
+    <span>Total: {{ rows().length }}</span>
+    <span *ngIf="savedFlag()" class="saved">Saved</span>
+  </div>
+</div>
