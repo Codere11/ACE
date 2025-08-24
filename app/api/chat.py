@@ -1,230 +1,392 @@
 # app/api/chat.py
-from fastapi import APIRouter, Request
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from app.core import sessions
-from app.services.flow_service import handle_chat
-from app.services import deepseek_service, lead_service
-from app.models.lead import Lead
-from app.models.chat import ChatRequest
-import time
-import uuid
-import hashlib
+from __future__ import annotations
 
+import asyncio
+import logging
+import random
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
+from app.core.config import FLOW
+from app.services import deepseek_service, lead_service
+from app.services import session_service as takeover
+from app.services import chat_store, event_bus
+
+logger = logging.getLogger("ace.api.chat")
 router = APIRouter()
 
-# ---------- Models ----------
-class ChatRequestBody(BaseModel):
-    sid: str | None = None
-    message: str
+class ChatRequest(BaseModel):
+    sid: str = Field(min_length=3)
+    message: Optional[str] = ""
 
-# ---------- In-memory flow/session state ----------
-SESSION_STATE: dict[str, dict] = {}
+class SurveyRequest(BaseModel):
+    sid: str = Field(min_length=3)
+    industry: Optional[str] = ""
+    budget: Optional[str] = ""
+    experience: Optional[str] = ""
+    question1: Optional[str] = ""
+    question2: Optional[str] = ""
 
-# ---------- Utils ----------
-def _now() -> int:
-    return int(time.time())
-
-def _log(prefix: str, sid: str, rid: str, msg: str = "", extra: dict | None = None):
-    base = f"[CHAT] {prefix} sid={sid} rid={rid}"
-    if msg:
-        base += f" msg='{msg}'"
-    if extra is not None:
-        base += f" {extra}"
-    print(base)
-
-def _normalize_sid(raw_sid: str | None) -> str | None:
-    s = (raw_sid or "").strip()
-    if not s or s.lower() in {"undefined", "null", "(null)", "(undefined)"}:
-        return None
-    if len(s) < 8:  # safety
-        return None
-    return s
-
-def _fingerprint_sid(request: Request) -> str:
-    # Stable per device/browser without cookies or storage.
-    ip = (request.client.host if request.client else "") or ""
-    ua = request.headers.get("user-agent", "")
-    raw = f"{ip}|{ua}"
-    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
-
-def _resolve_sid_with_debug(request: Request, body_sid: str | None) -> tuple[str, dict]:
-    """
-    Return (final_sid, debug_info) without changing any existing behavior,
-    but with full introspection so we can see what's happening.
-    Rule:
-      1) use valid body sid if provided
-      2) else fingerprint(IP+UA)
-      3) else random uuid (very rare)
-    """
-    cookie_sid = None  # we are not using cookies here, but log slot for clarity
-
-    raw_body_sid = body_sid
-    norm_body_sid = _normalize_sid(raw_body_sid)
-    fp_sid = _fingerprint_sid(request)
-    final_sid = norm_body_sid or fp_sid or str(uuid.uuid4())
-
-    debug = {
-        "raw_body_sid": raw_body_sid,
-        "norm_body_sid": norm_body_sid,
-        "cookie_sid": cookie_sid,
-        "fingerprint_sid": fp_sid,
-        "final_sid": final_sid,
-        "client_ip": (request.client.host if request.client else None),
-        "user_agent": request.headers.get("user-agent", None),
-        "path": request.url.path,
-        "method": request.method,
-    }
-    return final_sid, debug
-
-def _lead_exists(sid: str) -> bool:
-    return next((l for l in lead_service.get_all_leads() if l.id == sid), None) is not None
-
-def _sid_snapshot(sid: str) -> dict:
-    """Capture current state around this sid for debugging."""
-    st = SESSION_STATE.get(sid, {})
-    leads = lead_service.get_all_leads()
-    exists = next((l for l in leads if l.id == sid), None)
+def make_response(
+    reply: Optional[str],
+    ui: Dict[str, Any] | None = None,
+    chat_mode: str = "guided",
+    story_complete: bool = False,
+    image_url: Optional[str] = None,
+) -> Dict[str, Any]:
     return {
-        "session_state": st.copy(),
-        "lead_exists": exists is not None,
-        "leads_total": len(leads),
-        "lead_lastMessage": getattr(exists, "lastMessage", None) if exists else None,
-        "lead_notes": getattr(exists, "notes", None) if exists else None,
+        "reply": reply,
+        "ui": ui or {},
+        "chatMode": chat_mode,
+        "storyComplete": story_complete,
+        "imageUrl": image_url,
     }
 
-# ---------- Endpoints ----------
+def get_node_by_id(node_id: str) -> Dict[str, Any] | None:
+    return next((n for n in FLOW["nodes"] if n["id"] == node_id), None)
+
+def _trace(sid: str, stage: str, node_id: str | None, state: dict, msg: str = ""):
+    logger.info("[FLOW] sid=%s %s node=%s waiting_input=%s awaiting_node=%s msg='%s'",
+                sid, stage, node_id, state.get("waiting_input"), state.get("awaiting_node"), msg)
+
+def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
+    leads = lead_service.get_all_leads()
+    lead = next((l for l in leads if l.id == sid), None)
+    pitch = (result or {}).get("pitch", "") if result else ""
+    reasons = (result or {}).get("reasons", "") if result else ""
+    summary = pitch.strip()
+    if reasons:
+        summary = f"{summary} Razlogi: {reasons}".strip()
+
+    if not lead:
+        logger.warning("Lead missing for sid=%s; creating placeholder", sid)
+        from app.models.lead import Lead
+        lead = Lead(
+            id=sid,
+            name="Unknown",
+            industry="Unknown",
+            score=50,
+            stage="Pogovori",
+            compatibility=True,
+            interest="Medium",
+            phone=False,
+            email=False,
+            adsExp=False,
+            lastMessage=summary or (prompt[:200] if prompt else ""),
+            lastSeenSec=0,
+            notes=f"Notes: {prompt}" if prompt else ""
+        )
+        lead_service.add_lead(lead)
+        return
+
+    if prompt:
+        lead.notes = f"{lead.notes} | {prompt}".strip(" |") if lead.notes else prompt
+    if summary:
+        lead.lastMessage = summary
+
+def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
+    action = node.get("action")
+    next_key = node.get("next")
+    node_id = node.get("id")
+
+    if action == "deepseek_score":
+        _trace(sid, "deepseek(start)", node_id, flow_sessions.get(sid, {}))
+        lead = next((l for l in lead_service.get_all_leads() if l.id == sid), None)
+        prompt = ""
+        if lead:
+            parts = []
+            if getattr(lead, "notes", None):
+                parts.append(f"Notes: {lead.notes}")
+            if getattr(lead, "lastMessage", None):
+                parts.append(f"Last: {lead.lastMessage}")
+            prompt = "\n".join(parts).strip()
+        if not prompt:
+            prompt = "No structured answers were captured. Score fit and generate a short pitch."
+
+        try:
+            result = deepseek_service.run_deepseek(prompt, sid)
+        except Exception as e:
+            logger.exception("deepseek error sid=%s", sid)
+            _update_lead_with_deepseek(sid, prompt, {"pitch": "", "reasons": str(e)})
+            flow_sessions[sid] = {"node": next_key or "done"}
+            return make_response(
+                "⚠️ Prišlo je do težave pri ocenjevanju z DeepSeek. Predlagam, da rezervirava kratek termin.",
+                ui={"story_complete": True, "openInput": True},
+                chat_mode="open",
+                story_complete=True,
+            )
+
+        _update_lead_with_deepseek(sid, prompt, result)
+        flow_sessions[sid] = {"node": next_key or "done"}
+        pitch = (result or {}).get("pitch", "")
+        reasons = (result or {}).get("reasons", "")
+        reply = f"{pitch} Razlogi: {reasons}".strip() or \
+                "Hitra ocena je pripravljena. Predlagam kratek test ACE ali termin za posvet."
+        return make_response(
+            reply,
+            ui={"story_complete": True, "openInput": True},
+            chat_mode="open",
+            story_complete=True,
+        )
+
+    return format_node(node, story_complete=False)
+
+def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
+    sid = req.sid
+    msg = (req.message or "").strip()
+
+    if sid not in flow_sessions:
+        flow_sessions[sid] = {"node": "welcome"}
+        node = get_node_by_id("welcome")
+        _trace(sid, "init", "welcome", flow_sessions[sid], msg)
+        return format_node(node, story_complete=False)
+
+    state = flow_sessions[sid]
+    node_key = state.get("node")
+    node = get_node_by_id(node_key) if node_key else None
+    _trace(sid, "enter", node_key, state, msg)
+
+    if not node:
+        logger.error("Flow node missing sid=%s node_key=%s", sid, node_key)
+        return make_response("⚠️ Napaka v pogovornem toku.", ui={}, chat_mode="guided", story_complete=True)
+
+    if "choices" in node:
+        chosen = next((c for c in node["choices"]
+                       if c.get("title") == msg or c.get("payload") == msg), None)
+        if chosen:
+            next_key = chosen.get("next")
+            next_node = get_node_by_id(next_key) if next_key else None
+            if not next_node:
+                flow_sessions[sid] = {"node": next_key or "done"}
+                _trace(sid, "choice->missing_next", next_key, flow_sessions[sid], msg)
+                return make_response("⚠️ Manjka naslednji korak.", ui={}, chat_mode="guided", story_complete=True)
+
+            if next_node.get("openInput"):
+                flow_sessions[sid] = {"node": next_key, "waiting_input": True, "awaiting_node": next_key}
+                _trace(sid, "choice->openInput(armed)", next_key, flow_sessions[sid], msg)
+                return format_node(next_node, story_complete=False)
+
+            if next_node.get("action"):
+                flow_sessions[sid] = {"node": next_key}
+                _trace(sid, "choice->action(exec)", next_key, flow_sessions[sid], msg)
+                return _execute_action_node(sid, next_node, flow_sessions)
+
+            flow_sessions[sid] = {"node": next_key}
+            _trace(sid, "choice->next", next_key, flow_sessions[sid], msg)
+            return format_node(next_node, story_complete=False)
+
+        _trace(sid, "choice->repeat", node_key, state, msg)
+        return format_node(node, story_complete=False)
+
+    if node.get("openInput"):
+        next_key = node.get("next")
+        current_id = node.get("id")
+
+        if state.get("waiting_input") is None:
+            state["waiting_input"] = True
+            state["awaiting_node"] = current_id
+            _trace(sid, "ask", current_id, state)
+            return format_node(node, story_complete=False)
+
+        state.pop("waiting_input", None)
+        _trace(sid, "answer", current_id, state, msg)
+
+        if state.get("awaiting_node") == current_id:
+            state.pop("awaiting_node", None)
+
+            if node.get("action") == "store_answer":
+                lead = next((l for l in lead_service.get_all_leads() if l.id == sid), None)
+                if lead:
+                    lead.notes = f"{lead.notes} | {msg}".strip(" |") if lead.notes else msg
+                    lead.lastMessage = msg
+
+            if next_key:
+                next_node = get_node_by_id(next_key)
+                flow_sessions[sid] = {"node": next_key}
+
+                if next_node and next_node.get("openInput"):
+                    flow_sessions[sid]["waiting_input"] = True
+                    flow_sessions[sid]["awaiting_node"] = next_key
+                    _trace(sid, "armed_next_openInput", next_key, flow_sessions[sid])
+                    return format_node(next_node, story_complete=False)
+
+                if next_node and next_node.get("action"):
+                    _trace(sid, "goto_next->action(exec)", next_key, flow_sessions[sid])
+                    return _execute_action_node(sid, next_node, flow_sessions)
+
+                _trace(sid, "goto_next", next_key, flow_sessions[sid])
+                return format_node(next_node, story_complete=False)
+
+        _trace(sid, "dup_or_mismatch", current_id, state, msg)
+        if next_key:
+            next_node = get_node_by_id(next_key)
+            flow_sessions[sid] = {"node": next_key}
+            if next_node and next_node.get("action"):
+                _trace(sid, "dup_or_mismatch->action(exec)", next_key, flow_sessions[sid])
+                return _execute_action_node(sid, next_node, flow_sessions)
+            return format_node(next_node, story_complete=False)
+
+        return make_response("", ui={}, chat_mode="guided", story_complete=False)
+
+    if node.get("action"):
+        _trace(sid, "action(exec at enter)", node_key, state, msg)
+        return _execute_action_node(sid, node, flow_sessions)
+
+    _trace(sid, "default", node_key, state)
+    return format_node(node, story_complete=False)
+
+def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, Any]:
+    if not node:
+        return make_response("⚠️ Manjka vozlišče v pogovornem toku.", ui={}, chat_mode="guided", story_complete=True)
+
+    if "choices" in node:
+        ui = {"type": "choices", "buttons": node["choices"]}
+        mode = "guided"
+    elif node.get("openInput"):
+        ui = {"openInput": True, "inputType": node.get("inputType", "single")}
+        mode = "open"
+    else:
+        ui = {}
+        mode = "guided"
+
+    if isinstance(node.get("texts"), list) and node["texts"]:
+        reply = random.choice(node["texts"])
+    else:
+        reply = node.get("text", "")
+
+    return make_response(reply or "", ui=ui, chat_mode=mode, story_complete=story_complete)
+
+# In-memory flow session state (separate from takeover)
+FLOW_SESSIONS: Dict[str, Dict[str, Any]] = {}
+
 @router.post("/")
-def chat(req: ChatRequestBody, request: Request):
-    rid = request.headers.get("x-req-id", "-")
+async def chat(req: ChatRequest):
+    sid = req.sid
+    message = (req.message or "").strip()
+    logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
 
-    # Resolve SID + emit pre-processing debug
-    sid_final, debug = _resolve_sid_with_debug(request, req.sid)
-    _log("SID_DEBUG_IN", sid_final, rid, extra=debug)
+    # Persist & publish user message BEFORE routing
+    try:
+        user_msg = chat_store.append_message(sid, role="user", text=message)
+        await event_bus.publish(sid, "message.created", user_msg)
+    except Exception:
+        logger.exception("persist/publish user message failed sid=%s", sid)
+        raise
 
-    # Log user message into per-sid transcript
-    sessions.add_chat(sid_final, "user", req.message)
+    # Human takeover short-circuit
+    if takeover.is_human_mode(sid):
+        logger.info("human-mode active sid=%s -> skipping bot", sid)
+        return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
-    # Ensure lead exists / update lastMessage
-    existing = next((l for l in lead_service.get_all_leads() if l.id == sid_final), None)
-    if not existing:
-        provisional = Lead(
-            id=sid_final,
-            name="Unknown",
-            industry="Unknown",
-            score=50,
-            stage="Pogovori",
-            compatibility=True,
-            interest="Medium",
-            phone=False,
-            email=False,
-            adsExp=False,
-            lastMessage=req.message,
-            lastSeenSec=_now(),
-            notes=""
-        )
-        lead_service.add_lead(provisional)
-        _log("lead_created", sid_final, rid)
-    else:
-        existing.lastMessage = req.message
-        existing.lastSeenSec = _now()
-        _log("lead_updated", sid_final, rid, extra={"lastMessage": req.message})
+    # Bot flow
+    try:
+        result = handle_flow(req, FLOW_SESSIONS)
+    except Exception:
+        logger.exception("flow error sid=%s", sid)
+        raise
 
-    # Snapshot before flow
-    _log("SID_SNAPSHOT_PRE_FLOW", sid_final, rid, extra=_sid_snapshot(sid_final))
+    # Persist & publish assistant message (if any)
+    reply_text = (result.get("reply") or "").strip()
+    if reply_text:
+        try:
+            assistant_msg = chat_store.append_message(sid, role="assistant", text=reply_text)
+            await event_bus.publish(sid, "message.created", assistant_msg)
+        except Exception:
+            logger.exception("persist/publish assistant message failed sid=%s", sid)
+            # don't raise, the bot reply will still be returned to the HTTP caller
 
-    # Run conversation flow
-    reply = handle_chat(ChatRequest(sid=sid_final, message=req.message), SESSION_STATE)
-
-    # Log assistant reply
-    if reply.get("reply") is not None:
-        sessions.add_chat(sid_final, "assistant", reply["reply"])
-
-    # Snapshot after flow
-    post = _sid_snapshot(sid_final)
-    post.update({"chatMode": reply.get("chatMode"), "ui": reply.get("ui")})
-    _log("SID_SNAPSHOT_POST_FLOW", sid_final, rid, extra=post)
-
-    _log("OUT", sid_final, rid, extra={"chatMode": reply.get("chatMode"), "ui": reply.get("ui")})
-    return reply
-
-@router.post("/survey")
-def survey(data: dict, request: Request):
-    rid = request.headers.get("x-req-id", "-")
-
-    sid_final, debug = _resolve_sid_with_debug(request, data.get("sid"))
-    _log("SID_DEBUG_SURVEY_IN", sid_final, rid, extra=debug)
-
-    q1 = data.get("question1", "")
-    q2 = data.get("question2", "")
-
-    # Upsert + merge notes
-    existing = next((l for l in lead_service.get_all_leads() if l.id == sid_final), None)
-    if existing:
-        existing.lastSeenSec = _now()
-        if q1 or q2:
-            existing.lastMessage = f"{q1} | {q2}".strip(" |")
-        pieces = []
-        if q1: pieces.append(f"Q1: {q1}")
-        if q2: pieces.append(f"Q2: {q2}")
-        if pieces:
-            existing.notes = " | ".join([p for p in [existing.notes, " | ".join(pieces)] if p]).strip(" |")
-    else:
-        provisional = Lead(
-            id=sid_final,
-            name="Unknown",
-            industry="Unknown",
-            score=50,
-            stage="Pogovori",
-            compatibility=True,
-            interest="Medium",
-            phone=False,
-            email=False,
-            adsExp=False,
-            lastMessage=f"{q1} | {q2}".strip(" |"),
-            lastSeenSec=_now(),
-            notes=" | ".join([p for p in [f"Q1: {q1}" if q1 else "", f"Q2: {q2}" if q2 else ""] if p])
-        )
-        lead_service.add_lead(provisional)
-        _log("lead_created", sid_final, rid, extra={"source": "survey"})
-
-    # Snapshot before action
-    _log("SID_SNAPSHOT_PRE_DEEPSEEK", sid_final, rid, extra=_sid_snapshot(sid_final))
-
-    # Move to action node and execute immediately (DeepSeek)
-    SESSION_STATE[sid_final] = {"node": "survey_done"}
-    reply = handle_chat(ChatRequest(sid=sid_final, message=""), SESSION_STATE)
-
-    # Log assistant reply
-    if reply.get("reply") is not None:
-        sessions.add_chat(sid_final, "assistant", reply["reply"])
-
-    # Snapshot after action
-    post = _sid_snapshot(sid_final)
-    post.update({"chatMode": reply.get("chatMode"), "ui": reply.get("ui")})
-    _log("SID_SNAPSHOT_POST_DEEPSEEK", sid_final, rid, extra=post)
-
-    _log("SURVEY_OUT", sid_final, rid, extra={"triggered": "deepseek", "ui": reply.get("ui")})
-    return reply
+    logger.info("POST /chat sid=%s done reply_len=%d", sid, len(reply_text))
+    return result
 
 @router.post("/stream")
-def chat_stream(req: ChatRequestBody, request: Request):
-    rid = request.headers.get("x-req-id", "-")
+async def chat_stream(req: ChatRequest):
+    sid = req.sid
+    message = (req.message or "").strip()
+    logger.info("POST /chat/stream sid=%s len=%d", sid, len(message or ""))
 
-    sid_final, debug = _resolve_sid_with_debug(request, req.sid)
-    _log("SID_DEBUG_STREAM_IN", sid_final, rid, extra=debug)
+    # Persist & publish user message
+    try:
+        user_msg = chat_store.append_message(sid, role="user", text=message)
+        await event_bus.publish(sid, "message.created", user_msg)
+    except Exception:
+        logger.exception("persist/publish user message failed (stream) sid=%s", sid)
+        raise
 
-    sessions.add_chat(sid_final, "user", req.message)
+    # Human takeover -> stream a tiny notice and exit
+    if takeover.is_human_mode(sid):
+        logger.info("human-mode active sid=%s -> streaming notice", sid)
+        async def human_notice():
+            yield "Agent je prevzel pogovor. 🤝\n"
+        return StreamingResponse(human_notice(), media_type="text/plain; charset=utf-8")
 
-    def event_generator():
-        buffer = ""
-        for chunk in deepseek_service.stream_deepseek(req.message, sid_final):
-            buffer += chunk
-            yield chunk
-        sessions.add_chat(sid_final, "assistant", buffer)
-        _log("STREAM_DONE", sid_final, rid)
+    # Bot flow
+    try:
+        result = handle_flow(req, FLOW_SESSIONS)
+    except Exception:
+        logger.exception("flow error (stream) sid=%s", sid)
+        raise
 
-    # Snapshot around stream start
-    _log("SID_SNAPSHOT_STREAM_BEGIN", sid_final, rid, extra=_sid_snapshot(sid_final))
+    reply_text = (result.get("reply") or "").strip()
 
-    return StreamingResponse(event_generator(), media_type="text/plain")
+    async def streamer():
+        try:
+            if not reply_text:
+                return
+            step = 24
+            for i in range(0, len(reply_text), step):
+                yield reply_text[i:i+step]
+                await asyncio.sleep(0.02)
+        except Exception:
+            logger.exception("stream send error sid=%s", sid)
+            raise
+
+    # Persist & publish after we know full text
+    if reply_text:
+        try:
+            assistant_msg = chat_store.append_message(sid, role="assistant", text=reply_text)
+            await event_bus.publish(sid, "message.created", assistant_msg)
+        except Exception:
+            logger.exception("persist/publish assistant failed (stream) sid=%s", sid)
+
+    logger.info("POST /chat/stream sid=%s done reply_len=%d", sid, len(reply_text))
+    return StreamingResponse(streamer(), media_type="text/plain; charset=utf-8")
+
+@router.post("/survey")
+async def survey(body: SurveyRequest):
+    sid = body.sid
+    logger.info("POST /chat/survey sid=%s", sid)
+
+    parts = []
+    if body.industry:   parts.append(f"Industry: {body.industry}")
+    if body.budget:     parts.append(f"Budget: {body.budget}")
+    if body.experience: parts.append(f"Experience: {body.experience}")
+    if body.question1:  parts.append(f"Q1: {body.question1}")
+    if body.question2:  parts.append(f"Q2: {body.question2}")
+    survey_text = " | ".join(parts) if parts else "No answers provided."
+
+    try:
+        user_msg = chat_store.append_message(sid, role="user", text=f"[Survey] {survey_text}")
+        await event_bus.publish(sid, "message.created", user_msg)
+    except Exception:
+        logger.exception("persist/publish survey message failed sid=%s", sid)
+
+    try:
+        lead = next((l for l in lead_service.get_all_leads() if l.id == sid), None)
+        if lead:
+            lead.notes = f"{lead.notes} | {survey_text}".strip(" |") if lead.notes else survey_text
+            lead.lastMessage = body.question2 or body.question1 or (body.industry or "")
+    except Exception:
+        logger.exception("lead update failed sid=%s", sid)
+
+    reply = "Hvala za odgovore! Na podlagi vaših informacij lahko pripravim konkreten predlog ali kratek demo."
+    try:
+        assistant_msg = chat_store.append_message(sid, role="assistant", text=reply)
+        await event_bus.publish(sid, "message.created", assistant_msg)
+    except Exception:
+        logger.exception("persist/publish survey assistant failed sid=%s", sid)
+
+    logger.info("POST /chat/survey sid=%s done", sid)
+    return make_response(reply=reply, ui={"openInput": True}, chat_mode="open", story_complete=False)
