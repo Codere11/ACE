@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 import sys
-from fastapi import APIRouter
+from typing import List, Dict, Any
+from fastapi import APIRouter, Query, Request
 import pydantic  # type: ignore
 
 from app.models import chat as chat_models
@@ -34,3 +35,25 @@ def store_health():
         "sessions": s["sessions"],
         "messages": s["messages"],
     }
+
+@router.get("/store/messages")
+def store_messages(sid: str = Query(..., min_length=1)):
+    """Inspect exactly what's persisted for a SID."""
+    return chat_store.list_messages(sid)
+
+@router.get("/routes")
+def list_routes(request: Request):
+    """
+    Introspect all registered routes to verify there are no collisions.
+    Uses Request to access the FastAPI instance (correct pattern).
+    """
+    app = request.app
+    out: List[Dict[str, Any]] = []
+    for r in app.routes:
+        path = getattr(r, "path", None)
+        methods = getattr(r, "methods", None)
+        name = getattr(r, "name", None)
+        if path and methods:
+            out.append({"path": path, "methods": sorted(list(methods)), "name": name})
+    out.sort(key=lambda x: (x["path"], ",".join(x["methods"])))
+    return {"ok": True, "routes": out}

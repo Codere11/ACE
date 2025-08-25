@@ -6,3 +6,20 @@
 {"sid": "6xjuijr9d7r", "role": "assistant", "text": "To je močan budget – ACE poskrbi, da se izkoristi vsaka priložnost. Na katerih platformah trenutno oglašujete?", "timestamp": 1756132998}
 {"sid": "TEST12345", "role": "staff", "text": "hi from staff", "timestamp": 1756139292}
 {"sid": "TEST12345", "role": "staff", "text": "hi from staff", "timestamp": 1756146740}
+{"sid": "TEST12345", "role": "staff", "text": "hi from staff v2", "timestamp": 1756147430}
+{"sid": "TEST12345", "role": "user", "text": "demo user msg 3", "timestamp": 1756148194}
+{"sid": "TEST12345", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756148194}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "/start", "timestamp": 1756148238}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1756148238}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Tehnologija", "timestamp": 1756148261}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?", "timestamp": 1756148261}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "€1k–€3k", "timestamp": 1756148261}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?", "timestamp": 1756148261}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Google Ads", "timestamp": 1756148262}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?", "timestamp": 1756148262}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Spletna stran", "timestamp": 1756148262}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "S čim se ukvarja vaše podjetje?", "timestamp": 1756148262}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Digitalni marketing", "timestamp": 1756148266}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?", "timestamp": 1756148266}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "[Survey] Q1: Google ads | Q2: Jaz", "timestamp": 1756148270}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Pozdravljeni! Ponujamo strokovne storitve digitalnega marketinga, vključno z optimizacijo Google Ads, za doseganje vaših poslovnih ciljev. Bi želeli več informacij? Razlogi: Lead se nanaša na digitalni marketing in Google Ads, kar kaže na potencialno zanimanje za storitve, vendar ni podatkov o specifičnih ciljih ali ponudbah, ki bi omogočili natančno klasifikacijo.", "timestamp": 1756148280}

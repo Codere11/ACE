@@ -36,14 +36,19 @@ app.add_middleware(
 )
 
 # ---- Routers ----------------------------------------------------------------
-app.include_router(chat.router,        prefix="/chat",  tags=["Chat"])
-app.include_router(chats.router,       prefix="/chats", tags=["Chats"])
-app.include_router(leads.router,       prefix="/leads", tags=["Leads"])
-app.include_router(kpis.router,        prefix="/kpis",  tags=["KPIs"])
-app.include_router(funnel.router,      prefix="/funnel", tags=["Funnel"])
-app.include_router(objections.router,  prefix="/objections", tags=["Objections"])
-app.include_router(agent.router,       prefix="/agent", tags=["Agent"])
-app.include_router(chat_events.router, prefix="/chat",  tags=["ChatEvents"])
-app.include_router(health.router, prefix="/health", tags=["Health"])
+# Keep business chat endpoints on /chat
+app.include_router(chat.router,        prefix="/chat",        tags=["Chat"])
+# All-history reads
+app.include_router(chats.router,       prefix="/chats",       tags=["Chats"])
+# Other API
+app.include_router(leads.router,       prefix="/leads",       tags=["Leads"])
+app.include_router(kpis.router,        prefix="/kpis",        tags=["KPIs"])
+app.include_router(funnel.router,      prefix="/funnel",      tags=["Funnel"])
+app.include_router(objections.router,  prefix="/objections",  tags=["Objections"])
+app.include_router(agent.router,       prefix="/agent",       tags=["Agent"])
+# 👇 Move chat_events off /chat to avoid path collisions
+app.include_router(chat_events.router, prefix="/chat-events", tags=["ChatEvents"])
+# Health + introspection
+app.include_router(health.router,      prefix="/health",      tags=["Health"])
 
 logger.info("Routers registered.")

@@ -12,7 +12,7 @@ from fastapi.responses import StreamingResponse
 
 from app.core.config import FLOW
 from app.core import sessions  # legacy memory store
-from app.models import chat as chat_models  # for log line
+from app.models import chat as chat_models  # proves centralized models
 from app.models.chat import ChatRequest, SurveyRequest, StaffMessage
 from app.services import deepseek_service, lead_service
 from app.services import chat_store, event_bus
@@ -281,9 +281,8 @@ def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, 
 # ---------------- In-memory flow sessions ----------------
 FLOW_SESSIONS: Dict[str, Dict[str, Any]] = {}
 
-# ---------------- Routes ----------------
-@router.post("/")
-async def chat(req: ChatRequest):
+# ---------------- Route impls (single impl + dual mounts) ----------------
+async def _chat_impl(req: ChatRequest):
     sid = req.sid
     message = (req.message or "").strip()
     logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
@@ -323,8 +322,16 @@ async def chat(req: ChatRequest):
     logger.info("POST /chat sid=%s done reply_len=%d", sid, len(reply_text))
     return result
 
-@router.post("/stream")
-async def chat_stream(req: ChatRequest):
+@router.post("/", name="chat")
+async def chat(req: ChatRequest):
+    return await _chat_impl(req)
+
+@router.post("", include_in_schema=False, name="chat_no_slash")
+async def chat_no_slash(req: ChatRequest):
+    return await _chat_impl(req)
+
+# ---- stream ----
+async def _chat_stream_impl(req: ChatRequest):
     sid = req.sid
     message = (req.message or "").strip()
     logger.info("POST /chat/stream sid=%s len=%d", sid, len(message or ""))
@@ -379,8 +386,16 @@ async def chat_stream(req: ChatRequest):
     logger.info("POST /chat/stream sid=%s done reply_len=%d", sid, len(reply_text))
     return StreamingResponse(streamer(), media_type="text/plain; charset=utf-8")
 
-@router.post("/survey")
-async def survey(body: SurveyRequest):
+@router.post("/stream", name="chat_stream")
+async def chat_stream(req: ChatRequest):
+    return await _chat_stream_impl(req)
+
+@router.post("/stream/", include_in_schema=False, name="chat_stream_slash")
+async def chat_stream_slash(req: ChatRequest):
+    return await _chat_stream_impl(req)
+
+# ---- survey ----
+async def _survey_impl(body: SurveyRequest):
     sid = body.sid
     logger.info("POST /chat/survey sid=%s", sid)
 
@@ -450,8 +465,16 @@ async def survey(body: SurveyRequest):
         story_complete=story_complete
     )
 
-@router.post("/staff")
-async def staff_message(body: StaffMessage):
+@router.post("/survey", name="survey")
+async def survey(body: SurveyRequest):
+    return await _survey_impl(body)
+
+@router.post("/survey/", include_in_schema=False, name="survey_slash")
+async def survey_slash(body: SurveyRequest):
+    return await _survey_impl(body)
+
+# ---- staff ----
+async def _staff_impl(body: StaffMessage):
     """Persist a staff message from the dashboard takeover UI (dual-write for legacy)."""
     sid = body.sid
     text = (body.text or "").strip()
@@ -472,3 +495,11 @@ async def staff_message(body: StaffMessage):
         logger.exception("persist/publish staff message failed sid=%s", sid)
 
     return {"ok": True, "message": saved}
+
+@router.post("/staff", name="staff_message")
+async def staff_message(body: StaffMessage):
+    return await _staff_impl(body)
+
+@router.post("/staff/", include_in_schema=False, name="staff_message_slash")
+async def staff_message_slash(body: StaffMessage):
+    return await _staff_impl(body)
