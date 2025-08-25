@@ -45,7 +45,7 @@
               </div>
             </div>
 
-            <!-- chat preview -->
+            <!-- chat preview on hover -->
             <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
               <div *ngFor="let c of leadChats[lead.id]">
                 <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
@@ -82,7 +82,6 @@
       <div class="notes-toolbar" *ngIf="rankedLeads.length > 0; else noLeads">
         <label>
           Lead/Session:
-          <!-- Use ngModel (requires FormsModule in imports) -->
           <select [(ngModel)]="selectedLeadSid" (ngModelChange)="selectLeadSid($event)">
             <option *ngFor="let l of rankedLeads" [ngValue]="l.id">
               {{ l.name }} — {{ l.industry }}
@@ -142,5 +141,36 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+
+<!-- ===== Takeover chat panel (fixed bottom) ===== -->
+<div class="takeover" *ngIf="takeoverOpen && takeoverLead">
+  <div class="takeover-header">
+    <div class="takeover-title">
+      🕹 Prevzem pogovora — <strong>{{ takeoverLead.name }}</strong> ({{ takeoverLead.industry }})
+      <span class="score">🔥 {{ takeoverLead.score }}</span>
+    </div>
+    <button class="close-btn" (click)="closeTakeover()" aria-label="Zapri">✕</button>
+  </div>
+
+  <div id="takeover-body" class="takeover-body">
+    <div *ngIf="takeoverLoading" class="spinner">⏳ Nalagam chat...</div>
+
+    <ng-container *ngIf="!takeoverLoading">
+      <div *ngIf="!leadChats[takeoverLead.id] || leadChats[takeoverLead.id].length === 0" class="empty">
+        Ni sporočil za ta pogovor.
+      </div>
+
+      <div *ngFor="let m of leadChats[takeoverLead.id]">
+        <div [ngClass]="{'bubble user': m.role==='user', 'bubble assistant': m.role==='assistant'}">
+          <div class="meta">
+            <strong>{{ m.role }}</strong>
+            <small>{{ formatAgo(m.timestamp) }}</small>
+          </div>
+          <div class="text">{{ m.text }}</div>
+        </div>
+      </div>
+    </ng-container>
   </div>
 </div>

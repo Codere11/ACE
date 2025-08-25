@@ -1,7 +1,7 @@
 import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
-import { FormsModule } from '@angular/forms'; // ⬅️ add this
+import { FormsModule } from '@angular/forms';
 import { DashboardService, Lead, KPIs, Funnel, ChatLog } from './services/dashboard.service';
 import { NotesTableComponent } from './notes-table/notes-table.component';
 
@@ -10,7 +10,7 @@ const SELECT_KEY = 'ace_notes_selected_lead_sid';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, HttpClientModule, FormsModule, NotesTableComponent], // ⬅️ include FormsModule
+  imports: [CommonModule, HttpClientModule, FormsModule, NotesTableComponent],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
@@ -32,8 +32,13 @@ export class AppComponent implements OnInit {
   loadingObjections = true;
   loadingChats = true;
 
-  /** Currently selected LEAD session id for Notes tab (empty string when none) */
+  /** Notes tab selection */
   selectedLeadSid: string = '';
+
+  /** Takeover chat panel state */
+  takeoverOpen = false;
+  takeoverLead: Lead | null = null;
+  takeoverLoading = false;
 
   constructor(
     private dashboardService: DashboardService,
@@ -59,13 +64,14 @@ export class AppComponent implements OnInit {
     }
   }
 
+  // -------- Data fetchers --------
   fetchLeads() {
     this.loadingLeads = true;
     this.dashboardService.getLeads().subscribe({
       next: data => {
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
 
-        // Ensure selection is valid across refresh
+        // Keep Notes selection valid across refreshes
         const exists = this.rankedLeads.some(l => l.id === this.selectedLeadSid);
         if (!exists) {
           this.selectedLeadSid = this.rankedLeads.length ? this.rankedLeads[0].id : '';
@@ -120,15 +126,44 @@ export class AppComponent implements OnInit {
     }
   }
 
-  /** Called by (ngModelChange) with the selected string value */
+  // -------- UI handlers --------
+  /** Notes tab select */
   selectLeadSid(sid: string) {
     this.selectedLeadSid = sid || '';
     if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
     else localStorage.removeItem(SELECT_KEY);
   }
 
+  /** Open takeover panel at the bottom and show chat so far */
   takeOver(lead: Lead) {
-    alert(`Prevzem pogovora z: ${lead.name} (${lead.industry})`);
+    this.takeoverLead = lead;
+    this.takeoverOpen = true;
+
+    if (!this.leadChats[lead.id]) {
+      this.takeoverLoading = true;
+      this.dashboardService.getChatsForLead(lead.id).subscribe({
+        next: data => {
+          this.leadChats[lead.id] = data;
+          this.takeoverLoading = false;
+          this.scrollTakeoverToBottomSoon();
+        },
+        error: () => { this.takeoverLoading = false; }
+      });
+    } else {
+      this.scrollTakeoverToBottomSoon();
+    }
+  }
+
+  closeTakeover() {
+    this.takeoverOpen = false;
+  }
+
+  private scrollTakeoverToBottomSoon() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    setTimeout(() => {
+      const el = document.getElementById('takeover-body');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 50);
   }
 
   formatAgo(timestamp: number): string {
