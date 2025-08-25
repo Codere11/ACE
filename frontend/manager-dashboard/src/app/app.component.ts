@@ -24,7 +24,14 @@ export class AppComponent implements OnInit {
   chats: ChatLog[] = [];
 
   hoveredLead: string | null = null;
+  private hoverTimer: any = null;
+
   leadChats: { [sid: string]: ChatLog[] } = {};
+  takeoverOpen = false;
+  takeoverLead: Lead | null = null;
+  takeoverLoading = false;
+  takeoverInput = '';
+  takeoverSending = false;
 
   loadingLeads = true;
   loadingKPIs = true;
@@ -33,12 +40,6 @@ export class AppComponent implements OnInit {
   loadingChats = true;
 
   selectedLeadSid: string = '';
-
-  takeoverOpen = false;
-  takeoverLead: Lead | null = null;
-  takeoverLoading = false;
-
-  takeoverInput = '';
 
   constructor(
     private dashboardService: DashboardService,
@@ -64,18 +65,20 @@ export class AppComponent implements OnInit {
     }
   }
 
-  // ---------- data ----------
+  // -------- Data fetchers --------
   fetchLeads() {
     this.loadingLeads = true;
     this.dashboardService.getLeads().subscribe({
       next: data => {
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
+
         const exists = this.rankedLeads.some(l => l.id === this.selectedLeadSid);
         if (!exists) {
           this.selectedLeadSid = this.rankedLeads.length ? this.rankedLeads[0].id : '';
           if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
           else localStorage.removeItem(SELECT_KEY);
         }
+
         this.loadingLeads = false;
       },
       error: () => (this.loadingLeads = false),
@@ -114,82 +117,82 @@ export class AppComponent implements OnInit {
     });
   }
 
-  loadChatsForLead(sid: string) {
-    if (!this.leadChats[sid]) {
-      this.dashboardService.getChatsForLead(sid).subscribe({
-        next: data => { this.leadChats[sid] = data; },
-        error: () => {},
-      });
-    }
+  loadChatsForLead(sid: string, force = false) {
+    if (!force && this.leadChats[sid]) return;
+    this.dashboardService.getChatsForLead(sid).subscribe({
+      next: data => { this.leadChats[sid] = data; },
+      error: () => {},
+    });
   }
 
-  // ---------- ui ----------
+  // -------- UI helpers --------
   selectLeadSid(sid: string) {
     this.selectedLeadSid = sid || '';
     if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
     else localStorage.removeItem(SELECT_KEY);
   }
 
-  takeOver(lead: Lead) {
+  onLeadHover(sid: string) {
+    this.hoveredLead = sid;
+    clearTimeout(this.hoverTimer);
+    this.hoverTimer = setTimeout(() => this.loadChatsForLead(sid, false), 150);
+  }
+  onLeadLeave() {
+    clearTimeout(this.hoverTimer);
+    this.hoveredLead = null;
+  }
+
+  openTakeover(lead: Lead) {
     this.takeoverLead = lead;
     this.takeoverOpen = true;
-
-    if (!this.leadChats[lead.id]) {
-      this.takeoverLoading = true;
-      this.dashboardService.getChatsForLead(lead.id).subscribe({
-        next: data => {
-          this.leadChats[lead.id] = data;
-          this.takeoverLoading = false;
-          this.scrollTakeoverToBottomSoon();
-        },
-        error: () => { this.takeoverLoading = false; }
-      });
-    } else {
-      this.scrollTakeoverToBottomSoon();
-    }
+    this.takeoverLoading = true;
+    this.loadChatsForLead(lead.id, true);
+    // light delay just for spinner feel
+    setTimeout(() => (this.takeoverLoading = false), 150);
   }
 
   closeTakeover() {
     this.takeoverOpen = false;
-  }
-
-  /** Append locally + force a new array ref so Angular always re-renders. */
-  sendInlineMessage() {
-    const text = (this.takeoverInput || '').trim();
-    if (!text || !this.takeoverLead) return;
-
-    const sid = this.takeoverLead.id;
-    const existing = this.leadChats[sid] || [];
-    const appended: ChatLog[] = [
-      ...existing,
-      { sid, role: 'user', text, timestamp: Math.floor(Date.now() / 1000) }
-    ];
-
-    // immutable bump ensures change detection
-    this.leadChats = { ...this.leadChats, [sid]: appended };
-
-    // reflect on card immediately
-    this.takeoverLead = { ...this.takeoverLead, lastMessage: text, lastSeenSec: Math.floor(Date.now() / 1000) };
-
+    this.takeoverLead = null;
     this.takeoverInput = '';
-    this.scrollTakeoverToBottomSoon();
+    this.takeoverSending = false;
   }
 
-  handleInlineKeydown(ev: KeyboardEvent) {
-    if (ev.key === 'Enter' && !ev.shiftKey) {
-      ev.preventDefault();
-      this.sendInlineMessage();
-    }
-  }
+  // -------- Staff send (dashboard) --------
+  sendStaffMessage() {
+    if (!this.takeoverLead) return;
+    const sid = this.takeoverLead.id;
+    const text = (this.takeoverInput || '').trim();
+    if (!text) return;
 
-  trackByIdx(i: number, _m: ChatLog) { return i; }
+    this.takeoverSending = true;
 
-  private scrollTakeoverToBottomSoon() {
-    if (!isPlatformBrowser(this.platformId)) return;
-    setTimeout(() => {
-      const el = document.getElementById('takeover-body');
-      if (el) el.scrollTop = el.scrollHeight;
-    }, 0);
+    // Optimistic append so it appears instantly
+    const optimistic: ChatLog = {
+      sid,
+      role: 'staff',
+      text,
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+    this.leadChats[sid] = [...(this.leadChats[sid] || []), optimistic];
+
+    this.dashboardService.sendStaffMessage(sid, text).subscribe({
+      next: _ => {
+        this.takeoverInput = '';
+        this.takeoverSending = false;
+        // Force-refresh from server to stay canonical
+        this.loadChatsForLead(sid, true);
+        // scroll takeover body to bottom
+        setTimeout(() => {
+          const el = document.getElementById('takeover-body');
+          if (el) el.scrollTop = el.scrollHeight;
+        }, 0);
+      },
+      error: _ => {
+        // On error, remove optimistic or mark failed (minimal: just keep it)
+        this.takeoverSending = false;
+      }
+    });
   }
 
   formatAgo(timestamp: number): string {

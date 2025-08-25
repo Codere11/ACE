@@ -23,8 +23,8 @@
       <div class="lead-list" *ngIf="!loadingLeads && rankedLeads.length > 0">
         <div *ngFor="let lead of rankedLeads" class="lead-entry">
           <div class="lead-hover-zone"
-               (mouseenter)="hoveredLead = lead.id; loadChatsForLead(lead.id)"
-               (mouseleave)="hoveredLead = null">
+               (mouseenter)="onLeadHover(lead.id)"
+               (mouseleave)="onLeadLeave()">
 
             <div class="lead-main">
               <div class="lead-top">
@@ -45,18 +45,22 @@
               </div>
             </div>
 
-            <!-- chat preview on hover -->
+            <!-- chat preview -->
             <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
               <div *ngFor="let c of leadChats[lead.id]">
-                <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
-                  <strong>{{ c.role }}:</strong> {{ c.text }}
+                <div [ngClass]="{
+                      'user': c.role==='user',
+                      'assistant': c.role==='assistant',
+                      'staff': c.role==='staff'
+                    }">
+                  <strong>{{ c.role }}</strong>: {{ c.text }}
                 </div>
               </div>
             </div>
           </div>
 
           <div class="lead-actions">
-            <button class="chat-btn" (click)="takeOver(lead)">Prevzemi pogovor</button>
+            <button class="chat-btn" (click)="openTakeover(lead)">Prevzemi pogovor</button>
           </div>
         </div>
       </div>
@@ -135,7 +139,7 @@
       <div *ngIf="loadingChats">Loading chats...</div>
       <div *ngIf="!loadingChats && chats.length === 0">No chats yet.</div>
       <div *ngFor="let c of chats">
-        <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant'}">
+        <div [ngClass]="{'user': c.role==='user', 'assistant': c.role==='assistant', 'staff': c.role==='staff'}">
           <strong>{{ c.role }}:</strong> {{ c.text }}
           <small>({{ formatAgo(c.timestamp) }})</small>
         </div>
@@ -144,27 +148,24 @@
   </div>
 </div>
 
-<!-- ===== Takeover chat panel (fixed bottom) ===== -->
-<div class="takeover" *ngIf="takeoverOpen && takeoverLead">
-  <div class="takeover-header">
+<!-- Takeover bottom panel -->
+<section class="takeover" *ngIf="takeoverOpen && takeoverLead">
+  <header class="takeover-header">
     <div class="takeover-title">
-      🕹 Prevzem pogovora — <strong>{{ takeoverLead.name }}</strong> ({{ takeoverLead.industry }})
+      Prevzem pogovora — {{ takeoverLead.name }} ({{ takeoverLead.industry }})
       <span class="score">🔥 {{ takeoverLead.score }}</span>
     </div>
-    <button class="close-btn" (click)="closeTakeover()" aria-label="Zapri">✕</button>
-  </div>
+    <button class="close-btn" (click)="closeTakeover()">Zapri</button>
+  </header>
 
   <div id="takeover-body" class="takeover-body">
-    <div *ngIf="takeoverLoading" class="spinner">⏳ Nalagam chat...</div>
-
-    <ng-container *ngIf="!takeoverLoading">
+    <ng-container *ngIf="!takeoverLoading; else taking">
       <div *ngIf="!leadChats[takeoverLead.id] || leadChats[takeoverLead.id].length === 0" class="empty">
         Ni sporočil za ta pogovor.
       </div>
 
-      <!-- messages -->
-      <div *ngFor="let m of (leadChats[takeoverLead.id] || []); trackBy: trackByIdx">
-        <div class="bubble" [ngClass]="m.role">  <!-- adds 'user' or 'assistant' -->
+      <div *ngFor="let m of leadChats[takeoverLead.id]">
+        <div class="bubble" [ngClass]="{'user': m.role==='user', 'assistant': m.role==='assistant', 'staff': m.role==='staff'}">
           <div class="meta">
             <strong>{{ m.role }}</strong>
             <small>{{ formatAgo(m.timestamp) }}</small>
@@ -173,17 +174,21 @@
         </div>
       </div>
 
-      <!-- inline input -->
       <div class="inline-input">
         <input
           type="text"
-          placeholder="Napiši sporočilo…"
+          placeholder="Napiši sporočilo kot osebje…"
           [(ngModel)]="takeoverInput"
-          (keydown)="handleInlineKeydown($event)" />
-        <button class="send-btn" (click)="sendInlineMessage()" [disabled]="!takeoverInput.trim()">
-          Pošlji
+          (keyup.enter)="!takeoverSending && sendStaffMessage()"
+          [disabled]="takeoverSending"
+        />
+        <button class="send-btn" (click)="sendStaffMessage()" [disabled]="takeoverSending || !takeoverInput.trim()">
+          {{ takeoverSending ? 'Pošiljam…' : 'Pošlji' }}
         </button>
       </div>
     </ng-container>
+    <ng-template #taking>
+      <div class="spinner">⏳ Nalagam pogovor…</div>
+    </ng-template>
   </div>
-</div>
+</section>

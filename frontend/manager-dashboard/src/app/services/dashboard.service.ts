@@ -36,7 +36,7 @@ export type Funnel = {
 
 export type ChatLog = {
   sid: string;
-  role: string;
+  role: 'user' | 'assistant' | 'staff';
   text: string;
   timestamp: number;
 };
@@ -65,11 +65,18 @@ export class DashboardService {
     return this.http.get<string[]>(`${this.baseUrl}/objections/`);
   }
 
+  /** All chats (flat) */
   getChats(): Observable<ChatLog[]> {
     return this.http.get<ChatLog[]>(`${this.baseUrl}/chats/`);
   }
 
+  /** Chats for a specific lead/session id (reads from persistent store) */
   getChatsForLead(sid: string): Observable<ChatLog[]> {
-    return this.http.get<ChatLog[]>(`${this.baseUrl}/chats?sid=${sid}`);
+    return this.http.get<ChatLog[]>(`${this.baseUrl}/chats?sid=${encodeURIComponent(sid)}`);
+  }
+
+  /** Send a STAFF message (dashboard takeover) -> persisted as role=staff */
+  sendStaffMessage(sid: string, text: string): Observable<{ ok: boolean; message?: ChatLog }> {
+    return this.http.post<{ ok: boolean; message?: ChatLog }>(`${this.baseUrl}/chat/staff`, { sid, text });
   }
 }
