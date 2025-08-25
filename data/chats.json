@@ -97,6 +97,300 @@
       "role": "assistant",
       "text": "Hvala za odgovore! Na podlagi vaših informacij lahko pripravim konkreten predlog ali kratek demo.",
       "ts": 1756108510.2774
+    },
+    {
+      "id": "4453842a-530d-452e-8d89-f8b749cf02a1",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "/start",
+      "ts": 1756121523.802105
+    },
+    {
+      "id": "3402d314-11d5-45ed-82e2-08a1664832f8",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?",
+      "ts": 1756121523.8043337
+    },
+    {
+      "id": "d9957461-341f-4f25-a4a1-d2b7dbc97e79",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Tehnologija",
+      "ts": 1756127290.4942207
+    },
+    {
+      "id": "6d5ce3a8-1df9-4441-8241-40bea1b2bf92",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš.",
+      "ts": 1756127290.4958963
+    },
+    {
+      "id": "bad36757-fb5a-47b3-b1fe-7cba65a750e2",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "€3k–€10k",
+      "ts": 1756127290.926425
+    },
+    {
+      "id": "d865eb38-9aa0-4142-b9ef-fc006f4d0e06",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "To je močan budget – ACE poskrbi, da se izkoristi vsaka priložnost. Na katerih platformah trenutno oglašujete?",
+      "ts": 1756127290.9277773
+    },
+    {
+      "id": "fca48935-af64-4e3c-897d-c83bd66c9571",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Google Ads",
+      "ts": 1756127291.5577369
+    },
+    {
+      "id": "7a451492-74c8-4b5c-935b-67e9bbb56f52",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?",
+      "ts": 1756127291.5591588
+    },
+    {
+      "id": "cf5232da-1a40-461d-9e11-3c0e743d5e66",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Spletna stran",
+      "ts": 1756127291.7290142
+    },
+    {
+      "id": "1b428123-c7fa-4c82-a9b0-2d9c31eaa003",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "S čim se ukvarja vaše podjetje?",
+      "ts": 1756127291.7310596
+    },
+    {
+      "id": "a6c1a3fd-7aac-46a7-8108-7f2b9a8ec829",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Digitalni marketing",
+      "ts": 1756127295.2086856
+    },
+    {
+      "id": "bdecb032-aa89-414f-9b6c-bb7824bdc9bc",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?",
+      "ts": 1756127295.2106247
+    },
+    {
+      "id": "d2f337a6-0e7f-4680-a401-7c4a00c3df09",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "[Survey] Q1: Google Ads | Q2: Moja tajnica",
+      "ts": 1756127301.1324012
+    },
+    {
+      "id": "3d3f58ec-ce84-4261-9231-1ce14e024def",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Hvala za odgovore! Na podlagi vaših informacij lahko pripravim konkreten predlog ali kratek demo.",
+      "ts": 1756127301.134141
+    },
+    {
+      "id": "95dd8ed6-ad59-4200-a648-9183ff6076a4",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "/start",
+      "ts": 1756127659.4353912
+    },
+    {
+      "id": "821f04dd-b6ec-4a4e-b81b-723645d6426d",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?",
+      "ts": 1756127659.4403155
+    },
+    {
+      "id": "e6494225-2529-4474-911d-22a87b638419",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Tehnologija",
+      "ts": 1756127660.607732
+    },
+    {
+      "id": "2bd5b7c8-0641-49fa-bbb9-ee470fb055b4",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
+      "ts": 1756127660.6097338
+    },
+    {
+      "id": "99eb513d-b41a-42be-a9aa-fa6acdfd2fc2",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "€1k–€3k",
+      "ts": 1756127661.3847053
+    },
+    {
+      "id": "9d66e9ed-d9b6-4371-8acf-63ead4163dc9",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?",
+      "ts": 1756127661.3871706
+    },
+    {
+      "id": "3889be0e-abc5-4eef-bb33-fe51f153cecc",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Google Ads",
+      "ts": 1756127661.8696432
+    },
+    {
+      "id": "1db0fc01-f8e1-482f-ab56-54fe1b977005",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?",
+      "ts": 1756127661.8713257
+    },
+    {
+      "id": "7eb61b59-2573-4a1f-9cc1-8938b6f44fa7",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Spletna stran",
+      "ts": 1756127662.3256078
+    },
+    {
+      "id": "f938a3c4-13ba-45d6-88c4-2299ff449099",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "S čim se ukvarja vaše podjetje?",
+      "ts": 1756127662.3271637
+    },
+    {
+      "id": "89fe05c9-99c9-4513-9509-1f2d82a51217",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Digitalni marketing",
+      "ts": 1756127665.9304628
+    },
+    {
+      "id": "6abbb0d9-13d8-42cb-8d6e-c1a1e41bf7f6",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?",
+      "ts": 1756127665.9324946
+    },
+    {
+      "id": "34f44760-1e07-4086-9a78-462063bf9a8d",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "[Survey] Q1: Google Ads | Q2: Jaz",
+      "ts": 1756127671.9369478
+    },
+    {
+      "id": "328e63a6-3945-42db-adf5-56ec31d18d8d",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Trenutno nimamo dovolj informacij za prilagojeno ponudbo. Prosimo, nam povejte več o vašem podjetju in specifičnih potrebah, da vam lahko ponudimo ustrezne rešitve. Razlogi: Neznana znamka, jezik in cilji, poleg tega se oglas kaže kot anketo brez jasnega namena ali podrobnosti o storitvah/storitvah.",
+      "ts": 1756127683.6856983
+    },
+    {
+      "id": "7ef1de2d-fa52-4bf1-af33-f4d814bdce0d",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "/start",
+      "ts": 1756129116.6641653
+    },
+    {
+      "id": "1cecdb7b-3c09-41dd-9768-8e28584e2553",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
+      "ts": 1756129116.6690652
+    },
+    {
+      "id": "dc1fb3b1-7c38-4a9e-9ade-b10091c9fa2c",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Tehnologija",
+      "ts": 1756129125.3714886
+    },
+    {
+      "id": "04fa71a4-5daf-4b74-a977-48995cb88acb",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš.",
+      "ts": 1756129125.375867
+    },
+    {
+      "id": "3e340a7b-e189-4039-82b5-8fc284d74826",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "€1k–€3k",
+      "ts": 1756129125.8188224
+    },
+    {
+      "id": "360e32dd-d4db-4e85-9917-c5427da88290",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?",
+      "ts": 1756129125.822484
+    },
+    {
+      "id": "fb0b5809-572c-4856-b5e7-3556038a032c",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Google Ads",
+      "ts": 1756129126.3965127
+    },
+    {
+      "id": "30f6dfe9-20a9-4ae5-b4de-a54c06091c52",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?",
+      "ts": 1756129126.4004703
+    },
+    {
+      "id": "de82d964-8368-4198-aa58-0a5ccee77b11",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Landing page/obrazec",
+      "ts": 1756129128.0430105
+    },
+    {
+      "id": "0d5120f6-a38c-47d5-811a-6cbb99b9c2ed",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "S čim se ukvarja vaše podjetje?",
+      "ts": 1756129128.0474257
+    },
+    {
+      "id": "d060c392-bbc7-48db-ab4a-f294a1800a40",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Digitalni marketing",
+      "ts": 1756129131.6859345
+    },
+    {
+      "id": "1b48bc0a-1b3e-40a3-8d84-1c6cca1bdc40",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?",
+      "ts": 1756129131.6920795
+    },
+    {
+      "id": "3c63ca3a-77d8-4bd5-ada9-4e7be053ec13",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "[Survey] Q1: Google ads | Q2: Moja prodajna ekipa",
+      "ts": 1756129136.9180198
+    },
+    {
+      "id": "8af4365b-5ead-4300-bed4-92c93a48c8b2",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Pozdravljeni! Ponujamo vam strokovne storitve digitalnega marketinga, vključno z optimizacijo Google Ads, ki lahko poveča vašo prodajo. Naša ekipa je specializirana za prilagodljive rešitve, ki podpirajo vaše prodajne cilje. Bi se radi posvetovali o vaših potrebah? Razlogi: Lead se osredotoča na digitalni marketing in Google Ads, kar je del naših storitev, vendar ni jasno izraženih specifičnih ciljev ali potreb. Poudarek na prodajni ekipi lahko nakazuje potrebo po integraciji marketinških strategij, vendar manjkajo podrobnosti za natančno klasifikacijo.",
+      "ts": 1756129151.6405418
     }
   ]
 }
