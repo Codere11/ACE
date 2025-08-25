@@ -15,6 +15,8 @@ const SELECT_KEY = 'ace_notes_selected_lead_sid';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
+  private LOG = true; // flip to false to silence logs
+
   activeTab: 'leads' | 'notes' | 'flow' | 'chats' = 'leads';
 
   rankedLeads: Lead[] = [];
@@ -65,12 +67,19 @@ export class AppComponent implements OnInit {
     }
   }
 
+  // -------- Logger --------
+  private log(...args: any[]) {
+    if (this.LOG) console.log('[ACE-DASH]', ...args);
+  }
+
   // -------- Data fetchers --------
   fetchLeads() {
     this.loadingLeads = true;
+    this.log('fetchLeads()');
     this.dashboardService.getLeads().subscribe({
       next: data => {
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
+        this.log('fetchLeads ok ->', this.rankedLeads.length);
 
         const exists = this.rankedLeads.some(l => l.id === this.selectedLeadSid);
         if (!exists) {
@@ -81,47 +90,62 @@ export class AppComponent implements OnInit {
 
         this.loadingLeads = false;
       },
-      error: () => (this.loadingLeads = false),
+      error: (e) => { this.loadingLeads = false; this.log('fetchLeads err', e); },
     });
   }
 
   fetchKPIs() {
     this.loadingKPIs = true;
+    this.log('fetchKPIs()');
     this.dashboardService.getKPIs().subscribe({
-      next: data => { this.kpis = data; this.loadingKPIs = false; },
-      error: () => (this.loadingKPIs = false),
+      next: data => { this.kpis = data; this.loadingKPIs = false; this.log('fetchKPIs ok', data); },
+      error: (e) => { this.loadingKPIs = false; this.log('fetchKPIs err', e); },
     });
   }
 
   fetchFunnel() {
     this.loadingFunnel = true;
+    this.log('fetchFunnel()');
     this.dashboardService.getFunnel().subscribe({
-      next: data => { this.funnel = data; this.loadingFunnel = false; },
-      error: () => (this.loadingFunnel = false),
+      next: data => { this.funnel = data; this.loadingFunnel = false; this.log('fetchFunnel ok', data); },
+      error: (e) => { this.loadingFunnel = false; this.log('fetchFunnel err', e); },
     });
   }
 
   fetchObjections() {
     this.loadingObjections = true;
+    this.log('fetchObjections()');
     this.dashboardService.getObjections().subscribe({
-      next: data => { this.objections = data; this.loadingObjections = false; },
-      error: () => (this.loadingObjections = false),
+      next: data => { this.objections = data; this.loadingObjections = false; this.log('fetchObjections ok', data.length); },
+      error: (e) => { this.loadingObjections = false; this.log('fetchObjections err', e); },
     });
   }
 
   fetchChats() {
     this.loadingChats = true;
+    this.log('fetchChats()');
     this.dashboardService.getChats().subscribe({
-      next: data => { this.chats = data; this.loadingChats = false; },
-      error: () => (this.loadingChats = false),
+      next: data => { this.chats = data; this.loadingChats = false; this.log('fetchChats ok', data.length); },
+      error: (e) => { this.loadingChats = false; this.log('fetchChats err', e); },
     });
   }
 
   loadChatsForLead(sid: string, force = false) {
     if (!force && this.leadChats[sid]) return;
+    this.log('loadChatsForLead()', sid, 'force=', force);
     this.dashboardService.getChatsForLead(sid).subscribe({
-      next: data => { this.leadChats[sid] = data; },
-      error: () => {},
+      next: data => {
+        this.leadChats[sid] = data;
+        this.log('loadChatsForLead ok', sid, 'count=', data.length);
+        // Auto-scroll if takeover open for this sid
+        setTimeout(() => {
+          if (this.takeoverOpen && this.takeoverLead?.id === sid) {
+            const el = document.getElementById('takeover-body');
+            if (el) el.scrollTop = el.scrollHeight;
+          }
+        }, 0);
+      },
+      error: (e) => { this.log('loadChatsForLead err', sid, e); },
     });
   }
 
@@ -130,6 +154,7 @@ export class AppComponent implements OnInit {
     this.selectedLeadSid = sid || '';
     if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
     else localStorage.removeItem(SELECT_KEY);
+    this.log('selectLeadSid', this.selectedLeadSid);
   }
 
   onLeadHover(sid: string) {
@@ -146,12 +171,13 @@ export class AppComponent implements OnInit {
     this.takeoverLead = lead;
     this.takeoverOpen = true;
     this.takeoverLoading = true;
+    this.log('openTakeover', lead.id);
     this.loadChatsForLead(lead.id, true);
-    // light delay just for spinner feel
     setTimeout(() => (this.takeoverLoading = false), 150);
   }
 
   closeTakeover() {
+    this.log('closeTakeover');
     this.takeoverOpen = false;
     this.takeoverLead = null;
     this.takeoverInput = '';
@@ -166,8 +192,9 @@ export class AppComponent implements OnInit {
     if (!text) return;
 
     this.takeoverSending = true;
+    this.log('sendStaffMessage -> optimistic append', { sid, text });
 
-    // Optimistic append so it appears instantly
+    // Optimistic append
     const optimistic: ChatLog = {
       sid,
       role: 'staff',
@@ -177,19 +204,22 @@ export class AppComponent implements OnInit {
     this.leadChats[sid] = [...(this.leadChats[sid] || []), optimistic];
 
     this.dashboardService.sendStaffMessage(sid, text).subscribe({
-      next: _ => {
+      next: res => {
+        this.log('sendStaffMessage ok', res);
         this.takeoverInput = '';
         this.takeoverSending = false;
         // Force-refresh from server to stay canonical
         this.loadChatsForLead(sid, true);
-        // scroll takeover body to bottom
+        // Refresh global chats tab too (optional but helpful)
+        this.fetchChats();
+        // Scroll to bottom
         setTimeout(() => {
           const el = document.getElementById('takeover-body');
           if (el) el.scrollTop = el.scrollHeight;
         }, 0);
       },
-      error: _ => {
-        // On error, remove optimistic or mark failed (minimal: just keep it)
+      error: err => {
+        this.log('sendStaffMessage err', err);
         this.takeoverSending = false;
       }
     });

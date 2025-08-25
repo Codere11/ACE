@@ -260,18 +260,18 @@
   border: 1px solid rgba(255,255,255,0.06);
 
   &.user {
-    background: #e6edf3;
-    color: #0b1220; /* readable on light bubble */
+    background: #e6edf3;     /* light bubble */
+    color: #0b1220;          /* dark text for contrast */
   }
 
   &.assistant {
-    background: #14252a;
-    color: #7dd3fc;
+    background: #14252a;     /* teal-ish dark */
+    color: #7dd3fc;          /* cyan text */
   }
 
   &.staff {
-    background: #2b1f3a;   /* plum */
-    color: #f0d9ff;        /* light lavender text */
+    background: #2b1f3a;     /* plum */
+    color: #f0d9ff;          /* light lavender text */
   }
 
   .meta {
@@ -286,7 +286,7 @@
 
   .text {
     white-space: pre-wrap;
-    color: inherit; /* ensure visible even with aggressive selectors */
+    color: inherit; /* inherit bubble color */
   }
 }
 

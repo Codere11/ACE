@@ -26,3 +26,21 @@
 {"sid": "6xjuijr9d7r", "role": "user", "text": "/start", "timestamp": 1756148657}
 {"sid": "6xjuijr9d7r", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756148657}
 {"sid": "6xjuijr9d7r", "role": "staff", "text": "Dober dan", "timestamp": 1756148675}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "/start", "timestamp": 1756150162}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756150162}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Tehnologija", "timestamp": 1756150163}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš.", "timestamp": 1756150163}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "€3k–€10k", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "To je močan budget – ACE poskrbi, da se izkoristi vsaka priložnost. Na katerih platformah trenutno oglašujete?", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Google Ads", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Messenger/WhatsApp", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "S čim se ukvarja vaše podjetje?", "timestamp": 1756150164}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Google Ads", "timestamp": 1756150167}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?", "timestamp": 1756150167}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "[Survey] Q1: Google Ads | Q2: Moja tajnica", "timestamp": 1756150176}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Trenutno se ne ujemate z našimi ciljnimi profilom. V prihodnje, če boste iskali strokovne rešitve za rast podjetja, se obrnite na nas za prilagojene možnosti. Razlogi: Neznana znamka, cilji in ponudbe. Opisi 'Google Ads' in 'Moja tajnica' nakazujejo generično ali osebno uporabo, ne pa poslovnega profila, ki ustreza ACE.", "timestamp": 1756150187}
+{"sid": "6xjuijr9d7r", "role": "staff", "text": "Kako smo", "timestamp": 1756150192}
+{"sid": "TEST_DASH", "role": "user", "text": "hello from user", "timestamp": 1756150247}
+{"sid": "TEST_DASH", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1756150247}
+{"sid": "TEST_DASH", "role": "staff", "text": "hello from staff", "timestamp": 1756150247}

@@ -70,7 +70,7 @@ export class DashboardService {
     return this.http.get<ChatLog[]>(`${this.baseUrl}/chats/`);
   }
 
-  /** Chats for a specific lead/session id (reads from persistent store) */
+  /** Chats for a specific lead/session id (persistent-first) */
   getChatsForLead(sid: string): Observable<ChatLog[]> {
     return this.http.get<ChatLog[]>(`${this.baseUrl}/chats?sid=${encodeURIComponent(sid)}`);
   }
