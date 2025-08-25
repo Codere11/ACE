@@ -1,3 +1,5 @@
+:host { color-scheme: dark; }
+
 .dashboard-background {
   background: #0d1117;
   color: #fff;
@@ -259,8 +261,8 @@
   border: 1px solid rgba(255,255,255,0.06);
 
   &.user {
-    background: #1b2635;
-    color: #e6edf3;
+    background: #1b2635;        /* dark bubble */
+    color: #e6edf3;             /* light text */
   }
 
   &.assistant {
@@ -284,3 +286,93 @@
 /* Helpers */
 .spinner { color: #9fb3c8; }
 .empty { color: #8b949e; }
+
+.inline-input {
+  display: flex;
+  gap: .6rem;
+  margin-top: .75rem;
+  padding-top: .6rem;
+  border-top: 1px solid rgba(255,255,255,0.08);
+
+  input {
+    flex: 1;
+    background: #0b1220;
+    color: #e6edf3 !important;  /* force visible text */
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    padding: .6rem .75rem;
+    font-size: .95rem;
+    outline: none;
+
+    &::placeholder { color: #6b7280; }
+    &:focus {
+      border-color: #2ea043;
+      box-shadow: 0 0 0 3px rgba(46,160,67,0.15);
+    }
+  }
+
+  .send-btn {
+    background: #238636;
+    color: #fff;
+    border: 1px solid #2ea043;
+    padding: .55rem .9rem;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 92px;
+    transition: .15s ease;
+
+    &:hover { background: #2ea043; }
+    &:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      background: #1a2b1f;
+      border-color: rgba(46,160,67,0.4);
+    }
+  }
+}
+
+/* ---- Extra hardening: placeholders & autofill ---- */
+.inline-input input::placeholder { color: #6b7280; }
+.inline-input input:-webkit-autofill,
+.inline-input input:-webkit-autofill:hover,
+.inline-input input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #e6edf3 !important;
+  box-shadow: 0 0 0px 1000px #0b1220 inset;
+  transition: background-color 99999s ease-in-out 0s;
+}
+
+/* Ensure user/assistant text never goes dark accidentally */
+.bubble.user,
+.bubble.user .text { color: #e6edf3 !important; }
+.bubble.assistant,
+.bubble.assistant .text { color: #7dd3fc !important; }
+
+/* --- Bulletproof text color fix for takeover chat --- */
+
+/* Exact node you pointed at, forced */
+#takeover-body > div:nth-child(5) > div:nth-child(1) > div:nth-child(2) {
+  color: #e6edf3 !important;
+}
+
+/* Make ALL text inside user bubbles white (incl. nested spans/strong/small) */
+#takeover-body .bubble.user,
+#takeover-body .bubble.user * {
+  color: #e6edf3 !important;
+}
+
+/* Assistant stays cyan */
+#takeover-body .bubble.assistant,
+#takeover-body .bubble.assistant * {
+  color: #7dd3fc !important;
+}
+
+/* If some global/third-party style still wins due to encapsulation, pierce it: */
+:host ::ng-deep #takeover-body .bubble.user,
+:host ::ng-deep #takeover-body .bubble.user * {
+  color: #e6edf3 !important;
+}
+:host ::ng-deep #takeover-body .bubble.assistant,
+:host ::ng-deep #takeover-body .bubble.assistant * {
+  color: #7dd3fc !important;
+}

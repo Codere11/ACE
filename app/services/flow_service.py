@@ -3,7 +3,7 @@ from typing import Dict, Any
 from app.core.config import FLOW
 from app.services import deepseek_service, lead_service
 from app.models.chat import ChatRequest
-from app.models.lead import Lead  # <-- ensure we can create/update if missing
+from app.models.lead import Lead  # used when creating a missing lead
 
 
 def get_node_by_id(node_id: str) -> Dict[str, Any] | None:
@@ -16,10 +16,7 @@ def _trace(sid: str, stage: str, node_id: str | None, state: dict, msg: str = ""
 
 
 def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
-    """
-    Update the existing lead (same sid) with DeepSeek output.
-    NEVER create a 'lead_...' duplicate here.
-    """
+    """Update existing lead with DeepSeek output; if missing, create with SAME sid."""
     leads = lead_service.get_all_leads()
     lead = next((l for l in leads if l.id == sid), None)
 
@@ -30,7 +27,6 @@ def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
         summary = f"{summary} Razlogi: {reasons}".strip()
 
     if not lead:
-        # If for some reason lead is missing, create one WITH THE SAME SID (not a new id)
         lead = Lead(
             id=sid,
             name="Unknown",
@@ -49,7 +45,7 @@ def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
         lead_service.add_lead(lead)
         return
 
-    # Update existing lead in place
+    # Update existing
     if prompt:
         lead.notes = f"{lead.notes} | {prompt}".strip(" |") if lead.notes else prompt
     if summary:
@@ -77,23 +73,22 @@ def _execute_action_node(sid: str, node: Dict[str, Any], sessions: Dict[str, Dic
         if not prompt:
             prompt = "No structured answers were captured. Score fit and generate a short pitch."
 
-        # Run DeepSeek (once)
-        try:
-            result = deepseek_service.run_deepseek(prompt, sid)
-        except Exception as e:
-            _trace(sid, f"deepseek(error={e})", node_id, sessions.get(sid, {}))
-            # Still advance the story; update lead notes with the error so you can see it in dashboard
-            _update_lead_with_deepseek(sid, prompt, {"pitch": "", "reasons": str(e)})
+        # Run DeepSeek safely
+        result = deepseek_service.run_deepseek(prompt, sid)
+
+        # Treat explicit error category like an exception (do not show raw error to user)
+        if not result or result.get("category") == "error":
+            _update_lead_with_deepseek(sid, prompt, {"pitch": "", "reasons": ""})
             sessions[sid] = {"node": next_key or "done"}
             return {
-                "reply": "⚠️ Prišlo je do težave pri ocenjevanju z DeepSeek. Predlagam, da rezervirava kratek termin.",
+                "reply": "⚠️ Trenutno ne morem oceniti. Predlagam kratek termin ali hiter test ACE.",
                 "ui": {"story_complete": True, "openInput": True},
                 "chatMode": "open",
                 "storyComplete": True,
                 "imageUrl": None
             }
 
-        # Persist DeepSeek output to the SAME lead (no duplicates)
+        # Persist DeepSeek output
         _update_lead_with_deepseek(sid, prompt, result)
 
         sessions[sid] = {"node": next_key or "done"}
@@ -141,7 +136,7 @@ def handle_chat(req: ChatRequest, sessions: Dict[str, Dict[str, Any]]) -> dict:
             "imageUrl": None
         }
 
-    # 3) CHOICES
+    # 3) choices
     if "choices" in node:
         chosen = next((c for c in node["choices"]
                        if c.get("title") == msg or c.get("payload") == msg), None)
@@ -177,7 +172,7 @@ def handle_chat(req: ChatRequest, sessions: Dict[str, Dict[str, Any]]) -> dict:
         _trace(sid, "choice->repeat", node_key, state, msg)
         return format_node(node, story_complete=False)
 
-    # 4) OPEN-INPUT
+    # 4) open-input
     if node.get("openInput"):
         next_key = node.get("next")
         current_id = node.get("id")
@@ -228,12 +223,12 @@ def handle_chat(req: ChatRequest, sessions: Dict[str, Dict[str, Any]]) -> dict:
 
         return {"reply": "", "ui": {}, "chatMode": "guided", "storyComplete": False, "imageUrl": None}
 
-    # 5) ACTIONS (execute immediately on enter)
+    # 5) actions (execute immediately on enter)
     if node.get("action"):
         _trace(sid, "action(exec at enter)", node_key, state, msg)
         return _execute_action_node(sid, node, sessions)
 
-    # 6) DEFAULT
+    # 6) default
     _trace(sid, "default", node_key, state)
     return format_node(node, story_complete=False)
 

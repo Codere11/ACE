@@ -162,14 +162,27 @@
         Ni sporočil za ta pogovor.
       </div>
 
-      <div *ngFor="let m of leadChats[takeoverLead.id]">
-        <div [ngClass]="{'bubble user': m.role==='user', 'bubble assistant': m.role==='assistant'}">
+      <!-- messages -->
+      <div *ngFor="let m of (leadChats[takeoverLead.id] || []); trackBy: trackByIdx">
+        <div class="bubble" [ngClass]="m.role">  <!-- adds 'user' or 'assistant' -->
           <div class="meta">
             <strong>{{ m.role }}</strong>
             <small>{{ formatAgo(m.timestamp) }}</small>
           </div>
           <div class="text">{{ m.text }}</div>
         </div>
+      </div>
+
+      <!-- inline input -->
+      <div class="inline-input">
+        <input
+          type="text"
+          placeholder="Napiši sporočilo…"
+          [(ngModel)]="takeoverInput"
+          (keydown)="handleInlineKeydown($event)" />
+        <button class="send-btn" (click)="sendInlineMessage()" [disabled]="!takeoverInput.trim()">
+          Pošlji
+        </button>
       </div>
     </ng-container>
   </div>
