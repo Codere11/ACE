@@ -9,28 +9,30 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
 from app.core.config import FLOW
+from app.core import sessions  # legacy memory store
+from app.models import chat as chat_models  # for log line
+from app.models.chat import ChatRequest, SurveyRequest, StaffMessage
 from app.services import deepseek_service, lead_service
-from app.services import session_service as takeover
 from app.services import chat_store, event_bus
+
+# Optional human takeover service (if present)
+try:
+    from app.services import session_service as takeover
+except Exception:
+    takeover = None  # type: ignore
 
 logger = logging.getLogger("ace.api.chat")
 router = APIRouter()
 
-# ---------------- Models ----------------
-class ChatRequest(BaseModel):
-    sid: str = Field(min_length=3)
-    message: Optional[str] = ""
-
-class SurveyRequest(BaseModel):
-    sid: str = Field(min_length=3)
-    industry: Optional[str] = ""
-    budget: Optional[str] = ""
-    experience: Optional[str] = ""
-    question1: Optional[str] = ""
-    question2: Optional[str] = ""
+# One-time log proving centralized models are loaded
+logger.info(
+    "Chat models: version=%s fingerprint=%s modules=%s",
+    chat_models.SCHEMA_VERSION,
+    chat_models.schema_fingerprint()[:12],
+    chat_models.model_modules(),
+)
 
 # ---------------- Helpers ----------------
 def _now() -> int:
@@ -63,7 +65,6 @@ def _ensure_lead(sid: str):
     lead = next((l for l in leads if l.id == sid), None)
     if lead:
         return lead
-    # create placeholder, but DO NOT write AI text into lastMessage
     from app.models.lead import Lead
     lead = Lead(
         id=sid,
@@ -76,7 +77,7 @@ def _ensure_lead(sid: str):
         phone=False,
         email=False,
         adsExp=False,
-        lastMessage="",        # keep empty; will be filled by real user msg
+        lastMessage="",
         lastSeenSec=_now(),
         notes=""
     )
@@ -85,7 +86,6 @@ def _ensure_lead(sid: str):
     return lead
 
 def _touch_lead_message(sid: str, message: str | None):
-    """Update lastMessage/lastSeenSec on real user messages; never with AI output."""
     lead = _ensure_lead(sid)
     if message:
         lead.lastMessage = message
@@ -98,16 +98,11 @@ def _append_lead_notes(sid: str, note: str):
     lead.notes = (" | ".join([p for p in [lead.notes, note] if p])).strip(" |")
 
 def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
-    """
-    Store AI output in notes (prefixed 'AI:'), do NOT overwrite lastMessage.
-    Also add the prompt context to notes for traceability.
-    """
     pitch = (result or {}).get("pitch", "") if result else ""
     reasons = (result or {}).get("reasons", "") if result else ""
     summary = pitch.strip()
     if reasons:
         summary = f"{summary} Razlogi: {reasons}".strip()
-
     if prompt:
         _append_lead_notes(sid, f"Prompt: {prompt}")
     if summary:
@@ -223,26 +218,26 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
         if state.get("awaiting_node") == current_id:
             state.pop("awaiting_node", None)
 
-            if node.get("action") == "store_answer":
-                _append_lead_notes(sid, msg)         # store as notes
-                _touch_lead_message(sid, msg)        # but keep lastMessage = real answer
+        if node.get("action") == "store_answer":
+            _append_lead_notes(sid, msg)
+            _touch_lead_message(sid, msg)
 
-            if next_key:
-                next_node = get_node_by_id(next_key)
-                flow_sessions[sid] = {"node": next_key}
+        if next_key:
+            next_node = get_node_by_id(next_key)
+            flow_sessions[sid] = {"node": next_key}
 
-                if next_node and next_node.get("openInput"):
-                    flow_sessions[sid]["waiting_input"] = True
-                    flow_sessions[sid]["awaiting_node"] = next_key
-                    _trace(sid, "armed_next_openInput", next_key, flow_sessions[sid])
-                    return format_node(next_node, story_complete=False)
-
-                if next_node and next_node.get("action"):
-                    _trace(sid, "goto_next->action(exec)", next_key, flow_sessions[sid])
-                    return _execute_action_node(sid, next_node, flow_sessions)
-
-                _trace(sid, "goto_next", next_key, flow_sessions[sid])
+            if next_node and next_node.get("openInput"):
+                flow_sessions[sid]["waiting_input"] = True
+                flow_sessions[sid]["awaiting_node"] = next_key
+                _trace(sid, "armed_next_openInput", next_key, flow_sessions[sid])
                 return format_node(next_node, story_complete=False)
+
+            if next_node and next_node.get("action"):
+                _trace(sid, "goto_next->action(exec)", next_key, flow_sessions[sid])
+                return _execute_action_node(sid, next_node, flow_sessions)
+
+            _trace(sid, "goto_next", next_key, flow_sessions[sid])
+            return format_node(next_node, story_complete=False)
 
         _trace(sid, "dup_or_mismatch", current_id, state, msg)
         if next_key:
@@ -293,10 +288,9 @@ async def chat(req: ChatRequest):
     message = (req.message or "").strip()
     logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
 
-    # Ensure lead exists + update last message/seen immediately
     _touch_lead_message(sid, message)
 
-    # Persist & publish user message
+    # Persist & publish USER
     try:
         user_msg = chat_store.append_message(sid, role="user", text=message)
         await event_bus.publish(sid, "message.created", user_msg)
@@ -304,8 +298,8 @@ async def chat(req: ChatRequest):
         logger.exception("persist/publish user message failed sid=%s", sid)
         raise
 
-    # Human takeover short-circuit
-    if takeover.is_human_mode(sid):
+    # Human takeover short-circuit (if service exists)
+    if takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid):
         logger.info("human-mode active sid=%s -> skipping bot", sid)
         return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
@@ -316,13 +310,12 @@ async def chat(req: ChatRequest):
         logger.exception("flow error sid=%s", sid)
         raise
 
-    # Persist & publish assistant message (if any)
+    # Persist & publish ASSISTANT
     reply_text = (result.get("reply") or "").strip()
     if reply_text:
         try:
             assistant_msg = chat_store.append_message(sid, role="assistant", text=reply_text)
             await event_bus.publish(sid, "message.created", assistant_msg)
-            # assistant also counts as "activity" for last seen (optional)
             _touch_lead_message(sid, reply_text)
         except Exception:
             logger.exception("persist/publish assistant message failed sid=%s", sid)
@@ -336,10 +329,9 @@ async def chat_stream(req: ChatRequest):
     message = (req.message or "").strip()
     logger.info("POST /chat/stream sid=%s len=%d", sid, len(message or ""))
 
-    # Ensure lead exists + update last message/seen
     _touch_lead_message(sid, message)
 
-    # Persist & publish user message
+    # Persist & publish USER
     try:
         user_msg = chat_store.append_message(sid, role="user", text=message)
         await event_bus.publish(sid, "message.created", user_msg)
@@ -347,8 +339,8 @@ async def chat_stream(req: ChatRequest):
         logger.exception("persist/publish user message failed (stream) sid=%s", sid)
         raise
 
-    # Human takeover -> stream a tiny notice and exit
-    if takeover.is_human_mode(sid):
+    # Human takeover -> stream a notice and exit
+    if takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid):
         logger.info("human-mode active sid=%s -> streaming notice", sid)
         async def human_notice():
             yield "Agent je prevzel pogovor. 🤝\n"
@@ -375,7 +367,7 @@ async def chat_stream(req: ChatRequest):
             logger.exception("stream send error sid=%s", sid)
             raise
 
-    # Persist & publish after we know full text
+    # Persist & publish ASSISTANT
     if reply_text:
         try:
             assistant_msg = chat_store.append_message(sid, role="assistant", text=reply_text)
@@ -392,7 +384,6 @@ async def survey(body: SurveyRequest):
     sid = body.sid
     logger.info("POST /chat/survey sid=%s", sid)
 
-    # Merge survey answers
     parts = []
     if body.industry:   parts.append(f"Industry: {body.industry}")
     if body.budget:     parts.append(f"Budget: {body.budget}")
@@ -401,19 +392,18 @@ async def survey(body: SurveyRequest):
     if body.question2:  parts.append(f"Q2: {body.question2}")
     survey_text = " | ".join(parts) if parts else "No answers provided."
 
-    # Ensure lead and update last message/seen with the last meaningful answer
     _ensure_lead(sid)
     _append_lead_notes(sid, survey_text)
     _touch_lead_message(sid, body.question2 or body.question1 or body.industry or "")
 
-    # Persist & publish the survey as a user message
+    # Persist & publish USER (survey as a message)
     try:
         user_msg = chat_store.append_message(sid, role="user", text=f"[Survey] {survey_text}")
         await event_bus.publish(sid, "message.created", user_msg)
     except Exception:
         logger.exception("persist/publish survey message failed sid=%s", sid)
 
-    # DeepSeek classification (safe)
+    # DeepSeek summary → notes only (never overwrite lastMessage)
     try:
         lead = _ensure_lead(sid)
         prompt_parts = []
@@ -429,10 +419,8 @@ async def survey(body: SurveyRequest):
         logger.exception("deepseek error in survey sid=%s", sid)
         result = {"category": "error", "reasons": "", "pitch": ""}
 
-    # Store AI output in notes only
     _update_lead_with_deepseek(sid, prompt, result)
 
-    # Build reply
     if result and result.get("category") != "error":
         pitch = (result or {}).get("pitch", "") or ""
         reasons = (result or {}).get("reasons", "") or ""
@@ -446,7 +434,7 @@ async def survey(body: SurveyRequest):
         )
         story_complete = False
 
-    # Persist & publish assistant reply
+    # Persist & publish ASSISTANT
     try:
         assistant_msg = chat_store.append_message(sid, role="assistant", text=reply)
         await event_bus.publish(sid, "message.created", assistant_msg)
@@ -454,12 +442,33 @@ async def survey(body: SurveyRequest):
     except Exception:
         logger.exception("persist/publish survey assistant failed sid=%s", sid)
 
-    logger.info("POST /chat/survey sid=%s done (deepseek=%s)",
-                sid, "ok" if result and result.get("category") != "error" else "fail")
-
+    logger.info("POST /chat/survey sid=%s done", sid)
     return make_response(
         reply=reply,
         ui={"openInput": True},
         chat_mode="open",
         story_complete=story_complete
     )
+
+@router.post("/staff")
+async def staff_message(body: StaffMessage):
+    """Persist a staff message from the dashboard takeover UI (dual-write for legacy)."""
+    sid = body.sid
+    text = (body.text or "").strip()
+    if not text:
+        return {"ok": False}
+
+    _touch_lead_message(sid, text)
+
+    saved = None
+    try:
+        # Persistent store
+        saved = chat_store.append_message(sid, role="staff", text=text)
+        # Legacy in-memory (so old readers still see it)
+        sessions.add_chat(sid, "staff", text)
+        # Publish event
+        await event_bus.publish(sid, "message.created", saved)
+    except Exception:
+        logger.exception("persist/publish staff message failed sid=%s", sid)
+
+    return {"ok": True, "message": saved}

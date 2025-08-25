@@ -1,71 +1,126 @@
+# app/services/chat_store.py
 from __future__ import annotations
 
 import json
-import logging
+import os
 import threading
 import time
-import uuid
-from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, TypedDict, Literal
+import logging
 
 logger = logging.getLogger("ace.chat_store")
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DATA_DIR / "chats.json"
+Role = Literal["user", "assistant", "staff"]
 
-_LOCK = threading.Lock()
+class ChatMessage(TypedDict):
+    sid: str
+    role: Role
+    text: str
+    timestamp: int  # epoch seconds
 
-def _load() -> Dict[str, List[Dict]]:
-    if not DB_PATH.exists():
-        logger.debug("DB file not found, initializing empty store at %s", DB_PATH)
-        return {}
+
+# Store path (configurable)
+STORE_PATH = os.getenv(
+    "ACE_CHAT_STORE_PATH",
+    os.path.join(os.getcwd(), "data", "chat_store.jsonl")
+)
+
+_index: Dict[str, List[ChatMessage]] = {}
+_lock = threading.RLock()
+
+
+def _ensure_store_dir():
+    d = os.path.dirname(STORE_PATH)
+    if d and not os.path.exists(d):
+        os.makedirs(d, exist_ok=True)
+
+
+def _load_once() -> None:
+    if _index:  # already loaded
+        return
+    _ensure_store_dir()
+    if not os.path.exists(STORE_PATH):
+        logger.info("chat_store: no file, starting empty path=%s", STORE_PATH)
+        return
+    loaded = 0
+    bad = 0
     try:
-        with DB_PATH.open("r", encoding="utf-8") as f:
-            db = json.load(f)
-            return db if isinstance(db, dict) else {}
-    except Exception:
-        logger.exception("Failed to load DB file %s", DB_PATH)
-        return {}
+        with open(STORE_PATH, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    msg = json.loads(line)
+                    sid = msg.get("sid")
+                    role = msg.get("role")
+                    text = msg.get("text")
+                    ts = msg.get("timestamp")
+                    if not (sid and role and isinstance(text, str) and isinstance(ts, int)):
+                        bad += 1
+                        continue
+                    _index.setdefault(sid, []).append({
+                        "sid": sid, "role": role, "text": text, "timestamp": ts
+                    })  # type: ignore
+                    loaded += 1
+                except Exception:
+                    bad += 1
+                    continue
+        logger.info("chat_store: loaded=%d bad=%d path=%s", loaded, bad, STORE_PATH)
+    except Exception as e:
+        logger.exception("chat_store: load error: %s", e)
 
-def _save(db: Dict[str, List[Dict]]) -> None:
-    tmp = DB_PATH.with_suffix(".json.tmp")
-    try:
-        with tmp.open("w", encoding="utf-8") as f:
-            json.dump(db, f, ensure_ascii=False, indent=2)
-        tmp.replace(DB_PATH)
-        logger.debug("DB saved %s (sessions=%d)", DB_PATH, len(db))
-    except Exception:
-        logger.exception("Failed to save DB file %s", DB_PATH)
 
-def append_message(sid: str, role: str, text: str) -> Dict:
-    msg = {
-        "id": str(uuid.uuid4()),
+_load_once()
+
+
+def append_message(sid: str, role: Role, text: str, *, ts: Optional[int] = None) -> ChatMessage:
+    if not sid or not text or role not in ("user", "assistant", "staff"):
+        raise ValueError("invalid message")
+
+    msg: ChatMessage = {
         "sid": sid,
         "role": role,
         "text": text,
-        "ts": time.time(),
+        "timestamp": int(ts if ts is not None else time.time()),
     }
-    with _LOCK:
-        db = _load()
-        db.setdefault(sid, []).append(msg)
-        _save(db)
-    logger.info("message appended sid=%s role=%s id=%s len=%d",
-                sid, role, msg["id"], len(text or ""))
+
+    _ensure_store_dir()
+    with _lock:
+        _index.setdefault(sid, []).append(msg)
+        with open(STORE_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(msg, ensure_ascii=False) + "\n")
+    logger.info("WRITE chat_store sid=%s role=%s len=%d ts=%d", sid, role, len(text), msg["timestamp"])
     return msg
 
-def list_messages(sid: Optional[str] = None, limit: Optional[int] = None) -> List[Dict]:
-    with _LOCK:
-        db = _load()
-    if sid:
-        msgs = db.get(sid, [])
-        logger.debug("list_messages sid=%s count=%d", sid, len(msgs))
-    else:
-        msgs = []
-        for arr in db.values():
-            msgs.extend(arr)
-        logger.debug("list_messages all_sessions total=%d", len(msgs))
-    msgs.sort(key=lambda m: m.get("ts", 0))
-    if limit:
-        return msgs[-limit:]
-    return msgs
+
+def list_messages(sid: str) -> List[ChatMessage]:
+    with _lock:
+        return list(_index.get(sid, []))
+
+
+def list_all(limit_per_sid: int = 1000) -> Dict[str, List[ChatMessage]]:
+    out: Dict[str, List[ChatMessage]] = {}
+    with _lock:
+        for k, v in _index.items():
+            out[k] = v[-limit_per_sid:]
+    return out
+
+
+def list_all_flat(limit: int = 10000) -> List[ChatMessage]:
+    with _lock:
+        all_msgs: List[ChatMessage] = []
+        for arr in _index.values():
+            all_msgs.extend(arr)
+        all_msgs.sort(key=lambda m: m["timestamp"])
+        return all_msgs[-limit:]
+
+
+def stats() -> dict:
+    with _lock:
+        total = sum(len(v) for v in _index.values())
+        return {
+            "path": STORE_PATH,
+            "sessions": len(_index),
+            "messages": total,
+        }

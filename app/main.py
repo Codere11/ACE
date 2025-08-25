@@ -6,6 +6,7 @@ import os
 from app.api import chat, chats, leads, kpis, funnel, objections
 from app.middleware.request_logger import RequestLoggerMiddleware
 from app.api import agent, chat_events
+from app.api import health
 
 # ---- Logging config ---------------------------------------------------------
 LOG_LEVEL = os.getenv("ACE_LOG_LEVEL", "INFO").upper()
@@ -43,5 +44,6 @@ app.include_router(funnel.router,      prefix="/funnel", tags=["Funnel"])
 app.include_router(objections.router,  prefix="/objections", tags=["Objections"])
 app.include_router(agent.router,       prefix="/agent", tags=["Agent"])
 app.include_router(chat_events.router, prefix="/chat",  tags=["ChatEvents"])
+app.include_router(health.router, prefix="/health", tags=["Health"])
 
 logger.info("Routers registered.")

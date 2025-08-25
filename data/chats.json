@@ -391,6 +391,118 @@
       "role": "assistant",
       "text": "Pozdravljeni! Ponujamo vam strokovne storitve digitalnega marketinga, vključno z optimizacijo Google Ads, ki lahko poveča vašo prodajo. Naša ekipa je specializirana za prilagodljive rešitve, ki podpirajo vaše prodajne cilje. Bi se radi posvetovali o vaših potrebah? Razlogi: Lead se osredotoča na digitalni marketing in Google Ads, kar je del naših storitev, vendar ni jasno izraženih specifičnih ciljev ali potreb. Poudarek na prodajni ekipi lahko nakazuje potrebo po integraciji marketinških strategij, vendar manjkajo podrobnosti za natančno klasifikacijo.",
       "ts": 1756129151.6405418
+    },
+    {
+      "id": "a0c28e1d-7bba-468a-9019-1c18cb7a576e",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "/start",
+      "ts": 1756135752.092521
+    },
+    {
+      "id": "277fa0ef-768c-4097-8a65-c7130cf37709",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?",
+      "ts": 1756135752.0981958
+    },
+    {
+      "id": "3e11df87-1d77-458e-9ff6-7a823c6a407a",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Tehnologija",
+      "ts": 1756135776.2359939
+    },
+    {
+      "id": "ed6ebf14-daf5-4ea0-9681-3559a537e428",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
+      "ts": 1756135776.2383676
+    },
+    {
+      "id": "d3d12c63-37f0-4503-a175-9af1821c7948",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "€1k–€3k",
+      "ts": 1756135776.947725
+    },
+    {
+      "id": "b34fbf7b-4616-4c69-bdc6-fcbf714a784a",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?",
+      "ts": 1756135776.9509015
+    },
+    {
+      "id": "bd667ac8-96b2-499c-9e9c-663513db6b0f",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Google Ads",
+      "ts": 1756135777.5696106
+    },
+    {
+      "id": "5edf4d2d-b6be-44c9-9619-85b61da6cb6f",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?",
+      "ts": 1756135777.5719342
+    },
+    {
+      "id": "56b694ad-9d74-4501-8c2e-a7894995708d",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Messenger/WhatsApp",
+      "ts": 1756135778.6101506
+    },
+    {
+      "id": "612686b4-3e9d-4603-b247-70d464d20534",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "S čim se ukvarja vaše podjetje?",
+      "ts": 1756135778.6125982
+    },
+    {
+      "id": "2216130d-c4bd-473b-b498-09d5e4c41403",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "Digitalni marketing",
+      "ts": 1756135789.5162895
+    },
+    {
+      "id": "d71dd34b-d3b2-4e89-9e72-3c10179f54ea",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?",
+      "ts": 1756135789.5195594
+    },
+    {
+      "id": "429112b3-dc97-4697-a5fb-045e653f692d",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "[Survey] Q1: Google Ads | Q2: Jaz",
+      "ts": 1756135804.712067
+    },
+    {
+      "id": "4357e72c-6209-416e-9297-b2ece8adbeca",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Pozdravljeni! Kot strokovnjak za digitalni marketing vam lahko pomagam optimizirati vaše Google Ads kampanje in povečati vidnost ter učinkovitost. Bi se radi posvetovali o vaših specifičnih potrebah? Razlogi: Lead se osredotoča na digitalni marketing in Google Ads, kar kaže na potencialno zanimanje za storitve, vendar pomanjkanje specifičnih podatkov o ciljih ali ponudbah onemogoča natančno klasifikacijo.",
+      "ts": 1756135816.678327
+    },
+    {
+      "id": "c9cc92ce-7cac-4ea2-9a98-50987df23b31",
+      "sid": "6xjuijr9d7r",
+      "role": "user",
+      "text": "/start",
+      "ts": 1756136364.848156
+    },
+    {
+      "id": "30485716-492c-4f2b-838c-3b22eb4820f7",
+      "sid": "6xjuijr9d7r",
+      "role": "assistant",
+      "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
+      "ts": 1756136364.8543735
     }
   ]
 }
