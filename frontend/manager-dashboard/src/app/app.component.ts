@@ -49,7 +49,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private liveSub?: Subscription;
   private pollTimer?: any;
 
-  // 👇 per-SID human mode: if true, suppress assistant messages on dashboard
+  // per-SID human mode: if true, suppress assistant messages on dashboard
   private humanMode: Record<string, boolean> = {};
 
   constructor(
@@ -146,9 +146,11 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       }
 
-      // B) Message bubbles for selected takeover lead
+      // B) Message bubbles + update lead.lastMessage for selected takeover lead
       if (type === 'message.created') {
-        const role = payload?.role ?? 'assistant';
+        const role = (payload?.role as ChatLog['role']) ?? 'assistant';
+        const text = payload?.text ?? '';
+        const timestamp = payload?.timestamp ?? Math.floor(Date.now() / 1000);
 
         // If staff spoke (from any tab/agent), enter human mode for this SID
         if (role === 'staff') {
@@ -156,32 +158,43 @@ export class AppComponent implements OnInit, OnDestroy {
           this.log('live: human mode ON for sid', sid);
         }
 
-        // 🔕 Suppress assistant messages while human mode is on for this SID
+        // 🔕 Suppress assistant messages while human mode is on for this SID (UI only)
         if (role === 'assistant' && this.humanMode[sid]) {
           this.log('live: suppress assistant (human mode) sid', sid);
-          return;
+        } else {
+          // Append only if we already have the thread in memory; otherwise load later on demand
+          const existing = this.leadChats[sid];
+          if (existing) {
+            const append: ChatLog = { sid, role, text, timestamp };
+            this.leadChats[sid] = [...existing, append];
+
+            // auto-scroll if the takeover is open for this sid
+            setTimeout(() => {
+              if (this.takeoverOpen && this.takeoverLead?.id === sid) {
+                const el = document.getElementById('takeover-body');
+                if (el) el.scrollTop = el.scrollHeight;
+              }
+            }, 0);
+
+            if (this.activeTab === 'chats') this.fetchChats();
+            this.log('live: message.created appended', sid, role);
+          } else {
+            this.log('live: message.created (thread not loaded yet)', sid);
+          }
         }
 
-        // Append only if we already have the thread in memory; otherwise load later on demand
-        const existing = this.leadChats[sid];
-        if (existing) {
-          const text = payload?.text ?? '';
-          const timestamp = payload?.timestamp ?? Math.floor(Date.now() / 1000);
-          const append: ChatLog = { sid, role, text, timestamp };
-          this.leadChats[sid] = [...existing, append];
-
-          // auto-scroll if the takeover is open for this sid
-          setTimeout(() => {
-            if (this.takeoverOpen && this.takeoverLead?.id === sid) {
-              const el = document.getElementById('takeover-body');
-              if (el) el.scrollTop = el.scrollHeight;
-            }
-          }, 0);
-
-          if (this.activeTab === 'chats') this.fetchChats();
-          this.log('live: message.created appended', sid, role);
-        } else {
-          this.log('live: message.created (thread not loaded yet)', sid);
+        // ✅ ALWAYS update the lead row's "last message" + seen time for ANY role (user/assistant/staff)
+        const li = this.rankedLeads.findIndex(l => l.id === sid);
+        if (li >= 0) {
+          const lead = { ...this.rankedLeads[li] };
+          lead.lastMessage = text;
+          lead.lastSeenSec = timestamp;
+          this.rankedLeads = [
+            ...this.rankedLeads.slice(0, li),
+            lead,
+            ...this.rankedLeads.slice(li + 1),
+          ];
+          this.log('live: lead.lastMessage updated from message.created', sid);
         }
       }
     } catch (e) {
@@ -257,6 +270,7 @@ export class AppComponent implements OnInit, OnDestroy {
       next: data => {
         this.leadChats[sid] = data;
         this.log('loadChatsForLead ok', sid, 'count=', data.length);
+        // Auto-scroll if takeover open for this sid
         setTimeout(() => {
           if (this.takeoverOpen && this.takeoverLead?.id === sid) {
             const el = document.getElementById('takeover-body');
@@ -318,14 +332,30 @@ export class AppComponent implements OnInit, OnDestroy {
     // Mark human mode immediately for this SID (suppresses bot live events)
     this.humanMode[sid] = true;
 
-    // Optimistic append
+    const now = Math.floor(Date.now() / 1000);
+
+    // Optimistic append to thread
     const optimistic: ChatLog = {
       sid,
       role: 'staff',
       text,
-      timestamp: Math.floor(Date.now() / 1000),
+      timestamp: now,
     };
     this.leadChats[sid] = [...(this.leadChats[sid] || []), optimistic];
+
+    // ✅ Optimistically update the lead row "lastMessage" + "lastSeenSec"
+    const li = this.rankedLeads.findIndex(l => l.id === sid);
+    if (li >= 0) {
+      const lead = { ...this.rankedLeads[li] };
+      lead.lastMessage = text;
+      lead.lastSeenSec = now;
+      this.rankedLeads = [
+        ...this.rankedLeads.slice(0, li),
+        lead,
+        ...this.rankedLeads.slice(li + 1),
+      ];
+      this.log('optimistic: lead.lastMessage updated from staff send', sid);
+    }
 
     this.dashboardService.sendStaffMessage(sid, text).subscribe({
       next: res => {
