@@ -114,11 +114,8 @@
         "Hvala za informacije 🚀. Mislim, da bi ACE tu lahko veliko pomagal. Kaj je najboljši naslednji korak?",
         "Odlično, zdaj imam jasno sliko. Kako želiš nadaljevati?"
       ],
-      "choices": [
-        { "title": "Dogovorimo se za sestanek ta teden", "next": "end" },
-        { "title": "Zaženimo test ACE takoj", "next": "end" },
-        { "title": "Pošlji mi več informacij", "next": "end" }
-      ]
+      "openInput": true,
+      "inputType": "single"
     },
     {
       "id": "end",

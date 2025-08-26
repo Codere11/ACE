@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import random
 import time
@@ -60,15 +61,6 @@ def _trace(sid: str, stage: str, node_id: str | None, state: dict, msg: str = ""
     logger.info("[FLOW] sid=%s %s node=%s waiting_input=%s awaiting_node=%s msg='%s'",
                 sid, stage, node_id, state.get("waiting_input"), state.get("awaiting_node"), msg)
 
-def _publish_lead_event(sid: str, event: str, payload: dict):
-    """Fire cross-SID lead events without blocking (LP/SSE will pick them up)."""
-    try:
-        asyncio.create_task(event_bus.publish(sid, event, payload))
-        logger.info("lead_event published sid=%s event=%s keys=%s",
-                    sid, event, ",".join(sorted(payload.keys())))
-    except Exception:
-        logger.exception("lead_event schedule failed sid=%s event=%s", sid, event)
-
 def _ensure_lead(sid: str):
     leads = lead_service.get_all_leads()
     lead = next((l for l in leads if l.id == sid), None)
@@ -86,15 +78,12 @@ def _ensure_lead(sid: str):
         phone=False,
         email=False,
         adsExp=False,
-        lastMessage="",  # set by _touch_lead_message
+        lastMessage="",
         lastSeenSec=_now(),
         notes=""
     )
     lead_service.add_lead(lead)
     logger.info("lead_created sid=%s (ensure)", sid)
-    _publish_lead_event(sid, "lead.created", {
-        "sid": sid, "stage": lead.stage, "score": lead.score, "lastSeenSec": lead.lastSeenSec
-    })
     return lead
 
 def _touch_lead_message(sid: str, message: str | None):
@@ -102,17 +91,12 @@ def _touch_lead_message(sid: str, message: str | None):
     if message:
         lead.lastMessage = message
     lead.lastSeenSec = _now()
-    # publish non-blocking cross-SID event so dashboards refresh rows instantly
-    _publish_lead_event(sid, "lead.touched", {
-        "sid": sid, "lastMessage": lead.lastMessage, "lastSeenSec": lead.lastSeenSec
-    })
 
 def _append_lead_notes(sid: str, note: str):
     lead = _ensure_lead(sid)
     if not note:
         return
     lead.notes = (" | ".join([p for p in [lead.notes, note] if p])).strip(" |")
-    _publish_lead_event(sid, "lead.notes", {"sid": sid, "notes": lead.notes})
 
 def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
     pitch = (result or {}).get("pitch", "") if result else ""
@@ -124,8 +108,41 @@ def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
         _append_lead_notes(sid, f"Prompt: {prompt}")
     if summary:
         _append_lead_notes(sid, f"AI: {summary}")
-    # Also publish a dedicated AI summary event for dashboards
-    _publish_lead_event(sid, "lead.ai_summary", {"sid": sid, "pitch": pitch, "reasons": reasons})
+
+# ---------------- AI gating (only-once-per-open-answer) ----------------
+# We keep a small in-process memory to ensure we score *once* per open answer.
+_LAST_AI_HASH: Dict[str, str] = {}  # sid -> sha1 of last scored free-text
+
+def _hash_text(txt: str) -> str:
+    return hashlib.sha1((txt or "").strip().encode("utf-8")).hexdigest()
+
+def _human_takeover_active(sid: str) -> bool:
+    return bool(takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid))
+
+def _arm_ai_for_answer(sid: str, msg: str, flow_sessions: Dict[str, Dict[str, Any]]):
+    """
+    Mark that we have a new open answer worth scoring. We don't run DeepSeek here;
+    we just arm a flag that only the 'deepseek_score' action node will honor.
+    """
+    if _human_takeover_active(sid):
+        logger.info("AI skip (human takeover) sid=%s", sid)
+        return
+    msg_norm = (msg or "").strip()
+    if not msg_norm:
+        return
+    h = _hash_text(msg_norm)
+    if _LAST_AI_HASH.get(sid) == h:
+        logger.info("AI skip (duplicate answer) sid=%s", sid)
+        return
+    # Arm once; the action node will consume this and clear it.
+    fs = flow_sessions.setdefault(sid, {})
+    fs["ai_pending"] = {"hash": h, "text": msg_norm}
+    logger.info("AI armed sid=%s hash=%s", sid, h[:10])
+
+def _consume_ai_arm(sid: str, flow_sessions: Dict[str, Dict[str, Any]]) -> Optional[dict]:
+    fs = flow_sessions.get(sid, {})
+    pending = fs.pop("ai_pending", None)
+    return pending
 
 # ---------------- Flow engine ----------------
 def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
@@ -134,16 +151,30 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
     node_id = node.get("id")
 
     if action == "deepseek_score":
-        _trace(sid, "deepseek(start)", node_id, flow_sessions.get(sid, {}))
+        # ✅ Only run when explicitly armed by an open answer; never during human takeover.
+        if _human_takeover_active(sid):
+            logger.info("AI action suppressed (human takeover) sid=%s", sid)
+            flow_sessions[sid] = {"node": next_key or "done"}
+            next_node = get_node_by_id(next_key) if next_key else None
+            return format_node(next_node, story_complete=False)
 
+        arm = _consume_ai_arm(sid, flow_sessions)
+        if not arm:
+            logger.info("AI action skipped (not armed) sid=%s node=%s", sid, node_id)
+            flow_sessions[sid] = {"node": next_key or "done"}
+            next_node = get_node_by_id(next_key) if next_key else None
+            return format_node(next_node, story_complete=False)
+
+        # Run once per armed answer
+        _trace(sid, "deepseek(start)", node_id, flow_sessions.get(sid, {}), arm["text"])
         lead = _ensure_lead(sid)
         prompt_parts = []
         if getattr(lead, "notes", None):
             prompt_parts.append(f"Notes: {lead.notes}")
         if getattr(lead, "lastMessage", None):
             prompt_parts.append(f"Last: {lead.lastMessage}")
-        prompt = "\n".join(prompt_parts).strip() or \
-                 "No structured answers were captured. Score fit and generate a short pitch."
+        prompt_parts.append(f"FreeText: {arm['text']}")
+        prompt = "\n".join(prompt_parts).strip()
 
         try:
             result = deepseek_service.run_deepseek(prompt, sid)
@@ -152,26 +183,29 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
             _update_lead_with_deepseek(sid, prompt, {"pitch": "", "reasons": ""})
             flow_sessions[sid] = {"node": next_key or "done"}
             return make_response(
-                "⚠️ Prišlo je do težave pri ocenjevanju z DeepSeek. Predlagam, da rezervirava kratek termin.",
-                ui={"story_complete": True, "openInput": True},
+                "⚠️ Prišlo je do težave pri ocenjevanju z DeepSeek. Lahko nadaljujeva pogovor.",
+                ui={"openInput": True},
                 chat_mode="open",
-                story_complete=True,
+                story_complete=False,
             )
 
+        # Persist notes, update last scored hash and advance
         _update_lead_with_deepseek(sid, prompt, result)
+        _LAST_AI_HASH[sid] = arm["hash"]
         flow_sessions[sid] = {"node": next_key or "done"}
 
         pitch = (result or {}).get("pitch", "") or ""
         reasons = (result or {}).get("reasons", "") or ""
         reply = (f"{pitch} Razlogi: {reasons}").strip() or \
-                "Hitra ocena je pripravljena. Predlagam kratek test ACE ali termin za posvet."
+                "Hitra ocena je pripravljena. Lahko nadaljujeva z odprtim pogovorom."
         return make_response(
             reply,
-            ui={"story_complete": True, "openInput": True},
+            ui={"openInput": True},
             chat_mode="open",
             story_complete=True,
         )
 
+    # Default: other actions behave as before
     return format_node(node, story_complete=False)
 
 def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
@@ -231,6 +265,7 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             _trace(sid, "ask", current_id, state)
             return format_node(node, story_complete=False)
 
+        # We just received the user's free-text answer for an open input
         state.pop("waiting_input", None)
         _trace(sid, "answer", current_id, state, msg)
 
@@ -240,6 +275,8 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
         if node.get("action") == "store_answer":
             _append_lead_notes(sid, msg)
             _touch_lead_message(sid, msg)
+            # ✅ Arm AI scoring ONLY now (for open answers), once per unique text
+            _arm_ai_for_answer(sid, msg, flow_sessions)
 
         if next_key:
             next_node = get_node_by_id(next_key)
@@ -280,12 +317,13 @@ def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, 
     if not node:
         return make_response("⚠️ Manjka vozlišče v pogovornem toku.", ui={}, chat_mode="guided", story_complete=True)
 
-    if "choices" in node:
-        ui = {"type": "choices", "buttons": node["choices"]}
-        mode = "guided"
-    elif node.get("openInput"):
+    # 👇 PRIORITIZE openInput over choices so nodes may keep an input even if they also define choices
+    if node.get("openInput"):
         ui = {"openInput": True, "inputType": node.get("inputType", "single")}
         mode = "open"
+    elif "choices" in node:
+        ui = {"type": "choices", "buttons": node["choices"]}
+        mode = "guided"
     else:
         ui = {}
         mode = "guided"
@@ -317,7 +355,7 @@ async def _chat_impl(req: ChatRequest):
         raise
 
     # Human takeover short-circuit (if service exists)
-    if takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid):
+    if _human_takeover_active(sid):
         logger.info("human-mode active sid=%s -> skipping bot", sid)
         return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
@@ -366,7 +404,7 @@ async def _chat_stream_impl(req: ChatRequest):
         raise
 
     # Human takeover -> stream a notice and exit
-    if takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid):
+    if _human_takeover_active(sid):
         logger.info("human-mode active sid=%s -> streaming notice", sid)
         async def human_notice():
             yield "Agent je prevzel pogovor. 🤝\n"

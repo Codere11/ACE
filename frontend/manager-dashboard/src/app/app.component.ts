@@ -49,6 +49,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private liveSub?: Subscription;
   private pollTimer?: any;
 
+  // 👇 per-SID human mode: if true, suppress assistant messages on dashboard
+  private humanMode: Record<string, boolean> = {};
+
   constructor(
     private dashboardService: DashboardService,
     private live: LiveEventsService,
@@ -75,7 +78,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.fetchKPIs();
     }, 10000);
 
-    // 🔴 Live long-poll: cross-SID lead + message events
+    // Live long-poll: cross-SID lead + message events
     this.live.startAll();
     this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
       if (!evt) return;
@@ -114,7 +117,6 @@ export class AppComponent implements OnInit, OnDestroy {
           ];
           this.log('live: lead.touched applied', sid);
         } else {
-          // Unknown lead: fall back to a fresh list soon
           this.log('live: lead.touched for unknown sid -> refetch leads', sid);
           this.fetchLeads();
         }
@@ -127,7 +129,6 @@ export class AppComponent implements OnInit, OnDestroy {
           if (type === 'lead.notes' && payload?.notes != null) {
             lead.notes = payload.notes;
           } else if (type === 'lead.ai_summary') {
-            // Optionally surface AI pitch; here we append to notes if present
             const pitch = payload?.pitch ?? '';
             if (pitch) {
               lead.notes = (lead.notes ? `${lead.notes} | ` : '') + `AI:${pitch}`;
@@ -147,10 +148,23 @@ export class AppComponent implements OnInit, OnDestroy {
 
       // B) Message bubbles for selected takeover lead
       if (type === 'message.created') {
-        // If we already have the thread loaded in memory, append; else we’ll fetch on demand.
+        const role = payload?.role ?? 'assistant';
+
+        // If staff spoke (from any tab/agent), enter human mode for this SID
+        if (role === 'staff') {
+          this.humanMode[sid] = true;
+          this.log('live: human mode ON for sid', sid);
+        }
+
+        // 🔕 Suppress assistant messages while human mode is on for this SID
+        if (role === 'assistant' && this.humanMode[sid]) {
+          this.log('live: suppress assistant (human mode) sid', sid);
+          return;
+        }
+
+        // Append only if we already have the thread in memory; otherwise load later on demand
         const existing = this.leadChats[sid];
         if (existing) {
-          const role = payload?.role ?? 'assistant';
           const text = payload?.text ?? '';
           const timestamp = payload?.timestamp ?? Math.floor(Date.now() / 1000);
           const append: ChatLog = { sid, role, text, timestamp };
@@ -164,14 +178,9 @@ export class AppComponent implements OnInit, OnDestroy {
             }
           }, 0);
 
-          // if global "chats" tab mirrors latest, update optionally
-          if (this.activeTab === 'chats') {
-            // keep your global chats array in sync by refetching quickly
-            this.fetchChats();
-          }
+          if (this.activeTab === 'chats') this.fetchChats();
           this.log('live: message.created appended', sid, role);
         } else {
-          // Not loaded yet; no-op. When user opens/hover, we fetch canonically.
           this.log('live: message.created (thread not loaded yet)', sid);
         }
       }
@@ -186,7 +195,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.log('fetchLeads()');
     this.dashboardService.getLeads().subscribe({
       next: data => {
-        // keep stable selection if possible
         const prevSel = this.selectedLeadSid;
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
         this.log('fetchLeads ok ->', this.rankedLeads.length);
@@ -249,7 +257,6 @@ export class AppComponent implements OnInit, OnDestroy {
       next: data => {
         this.leadChats[sid] = data;
         this.log('loadChatsForLead ok', sid, 'count=', data.length);
-        // Auto-scroll if takeover open for this sid
         setTimeout(() => {
           if (this.takeoverOpen && this.takeoverLead?.id === sid) {
             const el = document.getElementById('takeover-body');
@@ -307,6 +314,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.takeoverSending = true;
     this.log('sendStaffMessage -> optimistic append', { sid, text });
+
+    // Mark human mode immediately for this SID (suppresses bot live events)
+    this.humanMode[sid] = true;
 
     // Optimistic append
     const optimistic: ChatLog = {

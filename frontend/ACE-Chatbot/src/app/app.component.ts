@@ -39,6 +39,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private pendingUserTexts = new Set<string>();
   private recentHashes: string[] = [];
 
+  /** When true, we’re in full human takeover: ignore assistant messages */
+  humanMode = false;
+
   constructor(
     private http: HttpClient,
     private live: LiveEventsService,
@@ -62,32 +65,49 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    if (!this.isBrowser) return;
+  if (!this.isBrowser) return;
 
-    this.live.start(this.sid);
-    this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
-      if (!evt) return;
-      if (evt.type !== 'message.created') return;
-      if (evt.sid !== this.sid) return;
+  // Start listening for live events for THIS SID
+  this.live.start(this.sid);
+  this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
+    if (!evt) return;
+    if (evt.type !== 'message.created') return;
+    if (evt.sid !== this.sid) return;
 
-      const role = (evt.payload?.role as 'user'|'assistant'|'staff') ?? 'assistant';
-      const text = (evt.payload?.text as string) ?? '';
+    const role = (evt.payload?.role as 'user'|'assistant'|'staff') ?? 'assistant';
+    const text = (evt.payload?.text as string) ?? '';
 
-      if (role === 'user' && this.pendingUserTexts.has(text)) {
-        this.pendingUserTexts.delete(text);
-        return;
-      }
+    // If staff speaks -> enable human takeover mode and keep an open composer
+    if (role === 'staff') {
+      this.humanMode = true;
+      this.chatMode = 'open';
+      this.ui = { inputType: 'single' };
+    }
 
-      const h = `${role}|${text}`;
-      if (this.recentHashes.includes(h)) return;
-      this._rememberHash(h);
+    // Skip our own just-sent user messages (already shown optimistically)
+    if (role === 'user' && this.pendingUserTexts.has(text)) {
+      this.pendingUserTexts.delete(text);
+      return;
+    }
 
-      this.messages.push({ role, text });
-      this._removeTrailingTypingIfNeeded();
-    });
+    // During human mode, suppress assistant messages entirely
+    if (this.humanMode && role === 'assistant') return;
 
+    // De-dupe
+    const h = `${role}|${text}`;
+    if (this.recentHashes.includes(h)) return;
+    this._rememberHash(h);
+
+    this.messages.push({ role, text });
+    this._removeTrailingTypingIfNeeded();
+  });
+
+  // ✅ Kick off the conversation (bot greeting) IF not already in human mode
+  if (!this.humanMode) {
     this.send('/start');
+    }
   }
+
 
   ngOnDestroy() {
     if (!this.isBrowser) return;
@@ -129,18 +149,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.startTyping();
     this.loading = true;
 
-    // ✅ Treat open mode as having an input; don't rely on ui.openInput
-    const isOpenInput = (this.chatMode === 'open');
-    console.debug('[FE] state before send', { chatMode: this.chatMode, isOpenInput, ui: this.ui });
-
-    if (this.chatMode === 'open' && !isOpenInput) {
-      // (This branch will never run now; kept for completeness)
-      console.debug('[FE] streaming /chat/stream', { rid, sid: this.sid, url: `${this.backendUrl}/chat/stream` });
-      console.groupEnd();
-      this.sendStream(text, rid);
-      return;
-    }
-
+    // When in human mode, backend will short-circuit with no assistant reply.
+    // We still POST so the message is persisted and the manager sees it live.
     const body = { message: text, sid: this.sid };
 
     this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
@@ -153,6 +163,13 @@ export class AppComponent implements OnInit, OnDestroy {
   async sendStream(text: string, ridOuter?: string) {
     if (!this.isBrowser) return;
     const rid = ridOuter || this.rid('STRM');
+
+    // If human mode is on, do not stream; fall back to normal POST.
+    if (this.humanMode) {
+      this.send(text);
+      return;
+    }
+
     console.groupCollapsed(`[FE] ${rid} sendStream() text='${text}'`);
     console.debug('[SID] using', { sid: this.sid });
 
@@ -180,7 +197,6 @@ export class AppComponent implements OnInit, OnDestroy {
       }
 
       this._rememberHash(`assistant|${buffer}`);
-
       this.loading = false;
       console.groupEnd();
     } catch (err) {
@@ -264,25 +280,37 @@ export class AppComponent implements OnInit, OnDestroy {
   clickQuickReply(q: any) { this.send(q.title); }
 
   private consume(res: ChatResponse) {
-    this.loading = false;
+  this.loading = false;
 
-    // default UI shape in open mode
-    if (res.ui == null && res.chatMode === 'open') {
-      res.ui = { inputType: 'single' };
-    } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
-      res.ui.inputType = 'single';
-    }
+  // Default UI shape when in open mode and backend didn't specify one
+  if (res.ui == null && res.chatMode === 'open') {
+    res.ui = { inputType: 'single' };
+  } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
+    res.ui.inputType = 'single';
+  }
 
-    if (res.reply !== undefined) {
-      this._rememberHash(`assistant|${res.reply}`);
-      this.stopTyping(res.reply);
-    }
+  // If human takeover is active, ignore assistant replies from POST responses.
+  if (!this.humanMode && res.reply !== undefined) {
+    this._rememberHash(`assistant|${res.reply}`);
+    this.stopTyping(res.reply);
+  } else {
+    // just remove typing indicator if present
+    this.stopTyping();
+  }
 
-    if (res.ui) this.ui = res.ui;
-    else if (res.quickReplies) this.ui = { type: 'choices', buttons: res.quickReplies };
-    else this.ui = null;
+  // In human mode keep an open composer and do not alter UI based on bot output
+  if (this.humanMode) {
+    this.chatMode = 'open';
+    this.ui = { inputType: 'single' };
+    return;
+  }
 
-    this.chatMode = res.chatMode;
+  // Normal (non-takeover) path
+  if (res.ui) this.ui = res.ui;
+  else if (res.quickReplies) this.ui = { type: 'choices', buttons: res.quickReplies };
+  else this.ui = null;
+
+  this.chatMode = res.chatMode;
   }
 
   private startTyping() {
