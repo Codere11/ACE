@@ -47,3 +47,16 @@
 {"sid": "LIVE_DEMO", "role": "user", "text": "hello from user (LP)", "timestamp": 1756209748}
 {"sid": "LIVE_DEMO", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756209748}
 {"sid": "LIVE_DEMO", "role": "staff", "text": "hello from staff (LP)", "timestamp": 1756209748}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "/start", "timestamp": 1756209996}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1756209996}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Tehnologija", "timestamp": 1756210000}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš.", "timestamp": 1756210000}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "€1k–€3k", "timestamp": 1756210001}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?", "timestamp": 1756210001}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Google Ads", "timestamp": 1756210001}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?", "timestamp": 1756210001}
+{"sid": "6xjuijr9d7r", "role": "user", "text": "Messenger/WhatsApp", "timestamp": 1756210002}
+{"sid": "6xjuijr9d7r", "role": "assistant", "text": "S čim se ukvarja vaše podjetje?", "timestamp": 1756210002}
+{"sid": "6xjuijr9d7r", "role": "staff", "text": "Kako smo?", "timestamp": 1756210031}
+{"sid": "LIVE_DEMO", "role": "user", "text": "health check msg", "timestamp": 1756211020}
+{"sid": "LIVE_DEMO", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756211020}

@@ -8,16 +8,15 @@ from typing import Any, Deque, Dict, List, Set, Tuple
 
 logger = logging.getLogger("ace.event_bus")
 
-# Subscribers for live SSE (topic = sid or "*")
+# Live subscribers for SSE (topic = sid or "*")
 _subscribers: Dict[str, Set[asyncio.Queue]] = {}
 _lock = asyncio.Lock()
 
-# --- Event history (enables long-polling) ------------------------------------
+# -------- Event history (for long-polling) -----------------------------------
 # Per-topic ring buffer of recent events: (seq, event_dict)
 _hist: Dict[str, Deque[Tuple[int, dict]]] = {}
 _seq: Dict[str, int] = {}
-# Simple global notifier (avoids complex per-topic conditions)
-_notify = asyncio.Event()
+_notify = asyncio.Event()  # global notifier to wake long-pollers
 
 HIST_MAX = 500  # keep the last N events per topic
 
@@ -38,8 +37,13 @@ def _push_history(topic: str, evt: dict) -> int:
     return seq
 
 
+# ----------------------------- Live subscribe API ----------------------------
+
 async def subscribe(topic: str) -> asyncio.Queue:
-    """Subscribe to live events (for SSE)."""
+    """
+    Subscribe to a topic (sid or "*") for SSE.
+    Returns an asyncio.Queue where events will be delivered.
+    """
     q: asyncio.Queue = asyncio.Queue(maxsize=1024)
     async with _lock:
         _subscribers.setdefault(topic, set()).add(q)
@@ -59,6 +63,8 @@ async def unsubscribe(topic: str, q: asyncio.Queue) -> None:
         logger.exception("event_bus: unsubscribe failed topic=%s", topic)
 
 
+# ------------------------------ Publish API ----------------------------------
+
 async def publish(sid: str, event_name: str, payload: Any) -> int:
     """
     Publish to sid-specific topic and to "*" topic.
@@ -67,9 +73,8 @@ async def publish(sid: str, event_name: str, payload: Any) -> int:
     """
     evt = {"type": event_name, "sid": sid, "ts": _now(), "payload": payload}
 
-    # History first (sid)
+    # History first (sid + broadcast)
     _push_history(sid, evt)
-    # History for broadcast topic
     _push_history("*", {**evt, "sid": sid})
 
     # Wake long-pollers
@@ -98,7 +103,7 @@ async def publish(sid: str, event_name: str, payload: Any) -> int:
 
 async def publish_all(event_name: str, payload: Any) -> int:
     evt = {"type": event_name, "sid": "*", "ts": _now(), "payload": payload}
-    _push_history("*", evt)  # only on broadcast topic
+    _push_history("*", evt)  # only broadcast topic gets it
     _notify.set()
     _notify.clear()
 
@@ -121,8 +126,10 @@ async def publish_all(event_name: str, payload: Any) -> int:
     return sent
 
 
+# --------------------------- Long-poll helpers --------------------------------
+
 def _collect_since_one(topic: str, since: int) -> List[dict]:
-    """Collect events from a single topic with seq > since, tagging seq."""
+    """Collect events from a single topic with seq > since, tagging seq & topic."""
     out: List[dict] = []
     for seq, evt in _hist.get(topic, ()):
         if seq > since:
@@ -130,41 +137,65 @@ def _collect_since_one(topic: str, since: int) -> List[dict]:
     return out
 
 
-def collect_since(sid: str, since: int, limit: int = 200) -> List[dict]:
+def collect_since(
+    sid: str,
+    since: int,
+    limit: int = 200,
+    include_broadcast: bool = False,
+) -> List[dict]:
     """
-    Immediate (non-blocking) fetch of recent events for:
-      - the sid topic
-      - the broadcast '*' topic
+    Immediate fetch of recent events.
+    Option B (no duplicates): by default we do NOT merge '*' unless explicitly asked.
+    - If sid == "*": read only broadcast topic.
+    - Else: read only `sid` topic; include '*' only if include_broadcast=True.
     """
-    items = _collect_since_one(sid, since) + _collect_since_one("*", since)
+    if sid == "*":
+        topics = ["*"]
+    else:
+        topics = [sid] + (["*"] if include_broadcast else [])
+
+    items: List[dict] = []
+    for t in topics:
+        items.extend(_collect_since_one(t, since))
+
     items.sort(key=lambda e: e["_seq"])
     if len(items) > limit:
         items = items[-limit:]
     return items
 
 
-async def long_poll(sid: str, since: int, timeout: float = 20.0, limit: int = 200) -> List[dict]:
+async def long_poll(
+    sid: str,
+    since: int,
+    timeout: float = 20.0,
+    limit: int = 200,
+    include_broadcast: bool = False,
+) -> List[dict]:
     """
     Long-poll: waits up to `timeout` seconds for new events beyond `since`.
     Always returns (possibly empty) list of events.
     """
-    items = collect_since(sid, since, limit=limit)
+    items = collect_since(sid, since, limit=limit, include_broadcast=include_broadcast)
     if items:
         return items
 
     try:
         await asyncio.wait_for(_notify.wait(), timeout=timeout)
     except asyncio.TimeoutError:
+        logger.info("event_bus: long_poll timeout sid=%s since=%d", sid, since)
         return []
     except Exception:
         logger.exception("event_bus: long_poll wait error sid=%s", sid)
         return []
 
     # After being notified, collect again
-    return collect_since(sid, since, limit=limit)
+    return collect_since(sid, since, limit=limit, include_broadcast=include_broadcast)
 
+
+# ------------------------------ Introspection --------------------------------
 
 def stats() -> Dict[str, int]:
+    """Current SSE subscriber counts per topic (live)."""
     per = {topic: len(qs) for topic, qs in _subscribers.items()}
     per["__total__"] = sum(per.values())
     return per

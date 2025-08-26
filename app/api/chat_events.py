@@ -24,7 +24,7 @@ class EmitRequest(BaseModel):
     payload: Any | None = None
 
 
-# ------------------------ SSE (kept, but optional) ----------------------------
+# ------------------------ SSE (kept, optional) -------------------------------
 
 async def _sse_stream(topic: str):
     q = await event_bus.subscribe(topic)
@@ -70,36 +70,48 @@ async def chat_events_stream_slash(sid: str = Query("*", min_length=1)):
     return await chat_events_stream(sid=sid)
 
 
-# ------------------------ LONG-POLL (robust fallback) ------------------------
+# ------------------------ LONG-POLL (no duplicates) --------------------------
 
 @router.get("/since", name="chat_events_since")
-def chat_events_since(sid: str = Query(..., min_length=1),
-                      since: int = Query(0, ge=0),
-                      limit: int = Query(200, ge=1, le=500)):
+def chat_events_since(
+    sid: str = Query(..., min_length=1),
+    since: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=500),
+):
     """
     Immediate fetch of events with seq > since.
-    Returns: {"events":[...], "next": last_seq_seen}
+    Option B: returns ONLY the SID topic (no '*' merge) unless sid='*'.
     """
-    items = event_bus.collect_since(sid, since, limit=limit)
+    include_broadcast = (sid == "*")
+    items = event_bus.collect_since(sid, since, limit=limit, include_broadcast=include_broadcast)
     next_seq = max([e.get("_seq", since) for e in items], default=since)
-    for e in items:  # strip internal fields from payload
+    for e in items:
         e.pop("_topic", None)
+    logger.info("GET /chat-events/since sid=%s since=%d -> %d ev, next=%d", sid, since, len(items), next_seq)
     return {"ok": True, "events": items, "next": next_seq}
 
 
 @router.get("/poll", name="chat_events_poll")
-async def chat_events_poll(sid: str = Query(..., min_length=1),
-                           since: int = Query(0, ge=0),
-                           timeout: float = Query(20.0, ge=0.0, le=60.0),
-                           limit: int = Query(200, ge=1, le=500)):
+async def chat_events_poll(
+    sid: str = Query(..., min_length=1),
+    since: int = Query(0, ge=0),
+    timeout: float = Query(20.0, ge=0.0, le=60.0),
+    limit: int = Query(200, ge=1, le=500),
+):
     """
     Long-poll: waits up to `timeout` seconds for new events with seq > since.
-    Always returns quickly with a bounded response.
+    Option B: returns ONLY the SID topic (no '*' merge) unless sid='*'.
+    Always completes quickly and never 'hangs the page'.
     """
-    items = await event_bus.long_poll(sid, since, timeout=timeout, limit=limit)
+    include_broadcast = (sid == "*")
+    items = await event_bus.long_poll(
+        sid, since, timeout=timeout, limit=limit, include_broadcast=include_broadcast
+    )
     next_seq = max([e.get("_seq", since) for e in items], default=since)
     for e in items:
         e.pop("_topic", None)
+    logger.info("GET /chat-events/poll sid=%s since=%d timeout=%.1f -> %d ev, next=%d",
+                sid, since, timeout, len(items), next_seq)
     return {"ok": True, "events": items, "next": next_seq}
 
 
@@ -132,6 +144,7 @@ async def chat_events_tick():
 
 @router.get("/debug", name="chat_events_debug")
 def chat_events_debug(sid: str = Query("*", min_length=1)):
+    # This debug page uses long-polling (so it never blocks page load)
     html = f"""<!doctype html>
 <meta charset="utf-8"/>
 <title>ACE Live Debug</title>
@@ -169,3 +182,8 @@ def chat_events_debug(sid: str = Query("*", min_length=1)):
   </script>
 </body>"""
     return HTMLResponse(html)
+
+
+@router.get("/debug/", include_in_schema=False, name="chat_events_debug_slash")
+def chat_events_debug_slash(sid: str = Query("*", min_length=1)):
+    return chat_events_debug(sid=sid)
