@@ -44,3 +44,6 @@
 {"sid": "TEST_DASH", "role": "user", "text": "hello from user", "timestamp": 1756150247}
 {"sid": "TEST_DASH", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1756150247}
 {"sid": "TEST_DASH", "role": "staff", "text": "hello from staff", "timestamp": 1756150247}
+{"sid": "LIVE_DEMO", "role": "user", "text": "hello from user (LP)", "timestamp": 1756209748}
+{"sid": "LIVE_DEMO", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756209748}
+{"sid": "LIVE_DEMO", "role": "staff", "text": "hello from staff (LP)", "timestamp": 1756209748}
