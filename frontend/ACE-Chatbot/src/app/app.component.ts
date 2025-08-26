@@ -28,7 +28,6 @@ export class AppComponent implements OnInit, OnDestroy {
   chatMode: 'guided'|'open' = 'guided';
   loading = false;
 
-  // NOTE: SID is created ONLY on the browser and stored in localStorage
   sid = 'SSR_NO_SID';
   backendUrl = 'http://localhost:8000';
 
@@ -36,12 +35,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private surveySubmitting = false;
   private isBrowser = false;
 
-  // Live events
   private liveSub?: Subscription;
-
-  // De-dupe: avoid echoing our own sends when server publishes message.created
-  private pendingUserTexts = new Set<string>();       // expires after short delay
-  private recentHashes: string[] = [];                // rolling window for any message (role|text)
+  private pendingUserTexts = new Set<string>();
+  private recentHashes: string[] = [];
 
   constructor(
     private http: HttpClient,
@@ -68,7 +64,6 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit() {
     if (!this.isBrowser) return;
 
-    // Start live long-poll for this SID (two-way updates)
     this.live.start(this.sid);
     this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
       if (!evt) return;
@@ -78,27 +73,19 @@ export class AppComponent implements OnInit, OnDestroy {
       const role = (evt.payload?.role as 'user'|'assistant'|'staff') ?? 'assistant';
       const text = (evt.payload?.text as string) ?? '';
 
-      // Skip our own just-sent user messages (will already be in the list)
       if (role === 'user' && this.pendingUserTexts.has(text)) {
-        // clear the marker
         this.pendingUserTexts.delete(text);
         return;
       }
 
-      // General de-dupe (avoid double-assistant/staff when we already appended)
       const h = `${role}|${text}`;
       if (this.recentHashes.includes(h)) return;
       this._rememberHash(h);
 
-      // Append live message
       this.messages.push({ role, text });
-      // Keep UI tidy if typing indicator is present
       this._removeTrailingTypingIfNeeded();
-
-      // (Optional) auto-scroll can be handled in CSS or here
     });
 
-    // Kick off conversation
     this.send('/start');
   }
 
@@ -108,29 +95,24 @@ export class AppComponent implements OnInit, OnDestroy {
     this.live.stop();
   }
 
-  // ---- Helpers --------------------------------------------------------------
-
+  // Helpers
   private rid(prefix: string) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   }
-
   private headers(rid: string) {
     return new HttpHeaders({ 'X-Req-Id': rid, 'X-Sid': this.sid, 'Content-Type': 'application/json' });
   }
-
   private _rememberHash(h: string) {
     this.recentHashes.push(h);
     if (this.recentHashes.length > 100) this.recentHashes.shift();
   }
-
   private _removeTrailingTypingIfNeeded() {
     const last = this.messages[this.messages.length - 1];
     const prev = this.messages[this.messages.length - 2];
     if (last && prev && prev.typing) this.messages.splice(this.messages.length - 2, 1);
   }
 
-  // ---- Send paths -----------------------------------------------------------
-
+  // Send paths
   send(text: string) {
     if (!this.isBrowser) return;
     if (!text.trim()) return;
@@ -139,20 +121,20 @@ export class AppComponent implements OnInit, OnDestroy {
     console.groupCollapsed(`[FE] ${rid} send() text='${text}'`);
     console.debug('[SID] using', { sid: this.sid });
 
-    // optimistic user bubble
     this.messages.push({ role: 'user', text });
     this._rememberHash(`user|${text}`);
     this.pendingUserTexts.add(text);
-    // expire the de-dupe marker shortly (server publish may arrive a bit later)
     setTimeout(() => this.pendingUserTexts.delete(text), 5000);
 
     this.startTyping();
     this.loading = true;
 
-    const isOpenInput = !!(this.ui && this.ui.openInput === true);
+    // ✅ Treat open mode as having an input; don't rely on ui.openInput
+    const isOpenInput = (this.chatMode === 'open');
     console.debug('[FE] state before send', { chatMode: this.chatMode, isOpenInput, ui: this.ui });
 
     if (this.chatMode === 'open' && !isOpenInput) {
+      // (This branch will never run now; kept for completeness)
       console.debug('[FE] streaming /chat/stream', { rid, sid: this.sid, url: `${this.backendUrl}/chat/stream` });
       console.groupEnd();
       this.sendStream(text, rid);
@@ -160,7 +142,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     const body = { message: text, sid: this.sid };
-    console.debug('[FE] POST /chat/ body', body);
 
     this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
       .subscribe({
@@ -188,7 +169,6 @@ export class AppComponent implements OnInit, OnDestroy {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      // replace typing bubble with assistant stream
       this.messages.pop();
       this.messages.push({ role: 'assistant', text: '' });
 
@@ -199,7 +179,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.messages[this.messages.length - 1].text = buffer;
       }
 
-      // De-dupe future publish of the same assistant text
       this._rememberHash(`assistant|${buffer}`);
 
       this.loading = false;
@@ -222,7 +201,6 @@ export class AppComponent implements OnInit, OnDestroy {
     console.groupCollapsed(`[FE] ${rid} sendSingle() answer='${answer}'`);
     console.debug('[SID] using', { sid: this.sid });
 
-    // optimistic user bubble
     this.messages.push({ role: 'user', text: answer });
     this._rememberHash(`user|${answer}`);
     this.pendingUserTexts.add(answer);
@@ -250,7 +228,6 @@ export class AppComponent implements OnInit, OnDestroy {
     console.groupCollapsed(`[FE] ${rid} sendSurvey() Q1='${ans1}' Q2='${ans2}'`);
     console.debug('[SID] using', { sid: this.sid });
 
-    // optimistic user bubble
     const combo = `Q1: ${ans1} | Q2: ${ans2}`;
     this.messages.push({ role: 'user', text: combo });
     this._rememberHash(`user|${combo}`);
@@ -288,14 +265,23 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private consume(res: ChatResponse) {
     this.loading = false;
+
+    // default UI shape in open mode
+    if (res.ui == null && res.chatMode === 'open') {
+      res.ui = { inputType: 'single' };
+    } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
+      res.ui.inputType = 'single';
+    }
+
     if (res.reply !== undefined) {
-      // De-dupe future publish of the same assistant text
       this._rememberHash(`assistant|${res.reply}`);
       this.stopTyping(res.reply);
     }
+
     if (res.ui) this.ui = res.ui;
     else if (res.quickReplies) this.ui = { type: 'choices', buttons: res.quickReplies };
     else this.ui = null;
+
     this.chatMode = res.chatMode;
   }
 
