@@ -1,9 +1,11 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { DashboardService, Lead, KPIs, Funnel, ChatLog } from './services/dashboard.service';
 import { NotesTableComponent } from './notes-table/notes-table.component';
+import { LiveEventsService, ChatEvent } from './services/live-events.service';
+import { Subscription } from 'rxjs';
 
 const SELECT_KEY = 'ace_notes_selected_lead_sid';
 
@@ -14,7 +16,7 @@ const SELECT_KEY = 'ace_notes_selected_lead_sid';
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   private LOG = true; // flip to false to silence logs
 
   activeTab: 'leads' | 'notes' | 'flow' | 'chats' = 'leads';
@@ -43,8 +45,13 @@ export class AppComponent implements OnInit {
 
   selectedLeadSid: string = '';
 
+  // live events
+  private liveSub?: Subscription;
+  private pollTimer?: any;
+
   constructor(
     private dashboardService: DashboardService,
+    private live: LiveEventsService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     if (isPlatformBrowser(this.platformId)) {
@@ -53,23 +60,124 @@ export class AppComponent implements OnInit {
   }
 
   ngOnInit() {
-    if (isPlatformBrowser(this.platformId)) {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    // Initial fetches (canonical state on load)
+    this.fetchLeads();
+    this.fetchKPIs();
+    this.fetchFunnel();
+    this.fetchObjections();
+    this.fetchChats();
+
+    // Periodic refresh (kept for safety / reconciliation)
+    this.pollTimer = setInterval(() => {
       this.fetchLeads();
       this.fetchKPIs();
-      this.fetchFunnel();
-      this.fetchObjections();
-      this.fetchChats();
+    }, 10000);
 
-      setInterval(() => {
-        this.fetchLeads();
-        this.fetchKPIs();
-      }, 10000);
-    }
+    // 🔴 Live long-poll: cross-SID lead + message events
+    this.live.startAll();
+    this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
+      if (!evt) return;
+      this.handleLiveEvent(evt);
+    });
+  }
+
+  ngOnDestroy() {
+    if (!isPlatformBrowser(this.platformId)) return;
+    this.liveSub?.unsubscribe();
+    this.live.stop();
+    if (this.pollTimer) clearInterval(this.pollTimer);
   }
 
   // -------- Logger --------
   private log(...args: any[]) {
     if (this.LOG) console.log('[ACE-DASH]', ...args);
+  }
+
+  // -------- Live events handler --------
+  private handleLiveEvent(evt: ChatEvent) {
+    try {
+      const { type, sid, payload } = evt;
+
+      // A) Lead row updates (fast path, no full refetch)
+      if (type === 'lead.touched') {
+        const idx = this.rankedLeads.findIndex(l => l.id === sid);
+        if (idx >= 0) {
+          const lead = { ...this.rankedLeads[idx] };
+          if (payload?.lastMessage != null) lead.lastMessage = payload.lastMessage;
+          if (payload?.lastSeenSec != null) lead.lastSeenSec = payload.lastSeenSec;
+          this.rankedLeads = [
+            ...this.rankedLeads.slice(0, idx),
+            lead,
+            ...this.rankedLeads.slice(idx + 1),
+          ];
+          this.log('live: lead.touched applied', sid);
+        } else {
+          // Unknown lead: fall back to a fresh list soon
+          this.log('live: lead.touched for unknown sid -> refetch leads', sid);
+          this.fetchLeads();
+        }
+      }
+
+      if (type === 'lead.notes' || type === 'lead.ai_summary') {
+        const idx = this.rankedLeads.findIndex(l => l.id === sid);
+        if (idx >= 0) {
+          const lead = { ...this.rankedLeads[idx] };
+          if (type === 'lead.notes' && payload?.notes != null) {
+            lead.notes = payload.notes;
+          } else if (type === 'lead.ai_summary') {
+            // Optionally surface AI pitch; here we append to notes if present
+            const pitch = payload?.pitch ?? '';
+            if (pitch) {
+              lead.notes = (lead.notes ? `${lead.notes} | ` : '') + `AI:${pitch}`;
+            }
+          }
+          this.rankedLeads = [
+            ...this.rankedLeads.slice(0, idx),
+            lead,
+            ...this.rankedLeads.slice(idx + 1),
+          ];
+          this.log('live:', type, 'applied', sid);
+        } else {
+          this.log('live:', type, 'for unknown sid -> refetch leads', sid);
+          this.fetchLeads();
+        }
+      }
+
+      // B) Message bubbles for selected takeover lead
+      if (type === 'message.created') {
+        // If we already have the thread loaded in memory, append; else we’ll fetch on demand.
+        const existing = this.leadChats[sid];
+        if (existing) {
+          const role = payload?.role ?? 'assistant';
+          const text = payload?.text ?? '';
+          const timestamp = payload?.timestamp ?? Math.floor(Date.now() / 1000);
+          const append: ChatLog = { sid, role, text, timestamp };
+          this.leadChats[sid] = [...existing, append];
+
+          // auto-scroll if the takeover is open for this sid
+          setTimeout(() => {
+            if (this.takeoverOpen && this.takeoverLead?.id === sid) {
+              const el = document.getElementById('takeover-body');
+              if (el) el.scrollTop = el.scrollHeight;
+            }
+          }, 0);
+
+          // if global "chats" tab mirrors latest, update optionally
+          if (this.activeTab === 'chats') {
+            // keep your global chats array in sync by refetching quickly
+            this.fetchChats();
+          }
+          this.log('live: message.created appended', sid, role);
+        } else {
+          // Not loaded yet; no-op. When user opens/hover, we fetch canonically.
+          this.log('live: message.created (thread not loaded yet)', sid);
+        }
+      }
+    } catch (e) {
+      this.log('live: handler error', e);
+    }
   }
 
   // -------- Data fetchers --------
@@ -78,14 +186,18 @@ export class AppComponent implements OnInit {
     this.log('fetchLeads()');
     this.dashboardService.getLeads().subscribe({
       next: data => {
+        // keep stable selection if possible
+        const prevSel = this.selectedLeadSid;
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
         this.log('fetchLeads ok ->', this.rankedLeads.length);
 
-        const exists = this.rankedLeads.some(l => l.id === this.selectedLeadSid);
+        const exists = this.rankedLeads.some(l => l.id === prevSel);
         if (!exists) {
           this.selectedLeadSid = this.rankedLeads.length ? this.rankedLeads[0].id : '';
           if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
           else localStorage.removeItem(SELECT_KEY);
+        } else {
+          this.selectedLeadSid = prevSel;
         }
 
         this.loadingLeads = false;
@@ -155,6 +267,8 @@ export class AppComponent implements OnInit {
     if (this.selectedLeadSid) localStorage.setItem(SELECT_KEY, this.selectedLeadSid);
     else localStorage.removeItem(SELECT_KEY);
     this.log('selectLeadSid', this.selectedLeadSid);
+    // Preload the selected thread for instant live appends
+    if (this.selectedLeadSid) this.loadChatsForLead(this.selectedLeadSid, false);
   }
 
   onLeadHover(sid: string) {

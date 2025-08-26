@@ -60,6 +60,15 @@ def _trace(sid: str, stage: str, node_id: str | None, state: dict, msg: str = ""
     logger.info("[FLOW] sid=%s %s node=%s waiting_input=%s awaiting_node=%s msg='%s'",
                 sid, stage, node_id, state.get("waiting_input"), state.get("awaiting_node"), msg)
 
+def _publish_lead_event(sid: str, event: str, payload: dict):
+    """Fire cross-SID lead events without blocking (LP/SSE will pick them up)."""
+    try:
+        asyncio.create_task(event_bus.publish(sid, event, payload))
+        logger.info("lead_event published sid=%s event=%s keys=%s",
+                    sid, event, ",".join(sorted(payload.keys())))
+    except Exception:
+        logger.exception("lead_event schedule failed sid=%s event=%s", sid, event)
+
 def _ensure_lead(sid: str):
     leads = lead_service.get_all_leads()
     lead = next((l for l in leads if l.id == sid), None)
@@ -77,12 +86,15 @@ def _ensure_lead(sid: str):
         phone=False,
         email=False,
         adsExp=False,
-        lastMessage="",
+        lastMessage="",  # set by _touch_lead_message
         lastSeenSec=_now(),
         notes=""
     )
     lead_service.add_lead(lead)
     logger.info("lead_created sid=%s (ensure)", sid)
+    _publish_lead_event(sid, "lead.created", {
+        "sid": sid, "stage": lead.stage, "score": lead.score, "lastSeenSec": lead.lastSeenSec
+    })
     return lead
 
 def _touch_lead_message(sid: str, message: str | None):
@@ -90,12 +102,17 @@ def _touch_lead_message(sid: str, message: str | None):
     if message:
         lead.lastMessage = message
     lead.lastSeenSec = _now()
+    # publish non-blocking cross-SID event so dashboards refresh rows instantly
+    _publish_lead_event(sid, "lead.touched", {
+        "sid": sid, "lastMessage": lead.lastMessage, "lastSeenSec": lead.lastSeenSec
+    })
 
 def _append_lead_notes(sid: str, note: str):
     lead = _ensure_lead(sid)
     if not note:
         return
     lead.notes = (" | ".join([p for p in [lead.notes, note] if p])).strip(" |")
+    _publish_lead_event(sid, "lead.notes", {"sid": sid, "notes": lead.notes})
 
 def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
     pitch = (result or {}).get("pitch", "") if result else ""
@@ -107,6 +124,8 @@ def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
         _append_lead_notes(sid, f"Prompt: {prompt}")
     if summary:
         _append_lead_notes(sid, f"AI: {summary}")
+    # Also publish a dedicated AI summary event for dashboards
+    _publish_lead_event(sid, "lead.ai_summary", {"sid": sid, "pitch": pitch, "reasons": reasons})
 
 # ---------------- Flow engine ----------------
 def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str, Dict[str, Any]]) -> dict:

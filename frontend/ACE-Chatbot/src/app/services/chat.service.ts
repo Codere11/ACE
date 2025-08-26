@@ -28,7 +28,7 @@ export interface ChatResponse {
 @Injectable({ providedIn: 'root' })
 export class ChatService {
   // FIX: add protocol so devtools show the actual full URL
-  private base = 'http://127.0.0.1:8000';
+  private base = 'http://localhost:8000';
 
   constructor(private http: HttpClient) {
     console.debug('[FE][ChatService] init', { base: this.base });
