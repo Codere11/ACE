@@ -7,6 +7,7 @@ from app.api import chat, chats, leads, kpis, funnel, objections
 from app.middleware.request_logger import RequestLoggerMiddleware
 from app.api import agent, chat_events
 from app.api import health
+from app.services.bootstrap_db import create_all
 
 # ---- Logging config ---------------------------------------------------------
 LOG_LEVEL = os.getenv("ACE_LOG_LEVEL", "INFO").upper()
@@ -52,3 +53,8 @@ app.include_router(chat_events.router, prefix="/chat-events", tags=["ChatEvents"
 app.include_router(health.router,      prefix="/health",      tags=["Health"])
 
 logger.info("Routers registered.")
+
+@app.on_event("startup")
+def _startup() -> None:
+    # Auto-create tables (safe to run repeatedly)
+    create_all()
