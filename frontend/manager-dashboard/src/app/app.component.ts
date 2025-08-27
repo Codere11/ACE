@@ -52,6 +52,12 @@ export class AppComponent implements OnInit, OnDestroy {
   // per-SID human mode: if true, suppress assistant messages on dashboard
   private humanMode: Record<string, boolean> = {};
 
+  // ➕ NEW: per-SID "fresh takeover" window start (unix seconds)
+  private takeoverSince: Record<string, number> = {};
+
+  // ➕ NEW: per-SID toggle for showing full history in takeover
+  showFullHistoryBySid: Record<string, boolean> = {};
+
   constructor(
     private dashboardService: DashboardService,
     private live: LiveEventsService,
@@ -183,7 +189,7 @@ export class AppComponent implements OnInit, OnDestroy {
           }
         }
 
-        // ✅ ALWAYS update the lead row's "last message" + seen time for ANY role (user/assistant/staff)
+        // ✅ ALWAYS update the lead row's "lastMessage" + seen time for ANY role
         const li = this.rankedLeads.findIndex(l => l.id === sid);
         if (li >= 0) {
           const lead = { ...this.rankedLeads[li] };
@@ -229,7 +235,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   fetchKPIs() {
     this.loadingKPIs = true;
-    this.log('fetchKPIs()');
+       this.log('fetchKPIs()');
     this.dashboardService.getKPIs().subscribe({
       next: data => { this.kpis = data; this.loadingKPIs = false; this.log('fetchKPIs ok', data); },
       error: (e) => { this.loadingKPIs = false; this.log('fetchKPIs err', e); },
@@ -282,6 +288,15 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  // -------- NEW: visible thread for takeover (filtered) --------
+  getVisibleThread(sid: string): ChatLog[] {
+    const all = this.leadChats[sid] || [];
+    if (this.showFullHistoryBySid[sid]) return all;
+    const since = this.takeoverSince[sid] || 0;
+    if (!since) return all; // fallback if not set
+    return all.filter(m => (m.timestamp || 0) >= since);
+  }
+
   // -------- UI helpers --------
   selectLeadSid(sid: string) {
     this.selectedLeadSid = sid || '';
@@ -307,6 +322,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.takeoverOpen = true;
     this.takeoverLoading = true;
     this.log('openTakeover', lead.id);
+
+    // ➕ mark fresh takeover start (unix seconds) for this SID
+    this.takeoverSince[lead.id] = Math.floor(Date.now() / 1000);
+    // default to "fresh only" view
+    this.showFullHistoryBySid[lead.id] = false;
+
     this.loadChatsForLead(lead.id, true);
     setTimeout(() => (this.takeoverLoading = false), 150);
   }
@@ -343,7 +364,7 @@ export class AppComponent implements OnInit, OnDestroy {
     };
     this.leadChats[sid] = [...(this.leadChats[sid] || []), optimistic];
 
-    // ✅ Optimistically update the lead row "lastMessage" + "lastSeenSec"
+    // Optimistically update the lead row "lastMessage" + "lastSeenSec"
     const li = this.rankedLeads.findIndex(l => l.id === sid);
     if (li >= 0) {
       const lead = { ...this.rankedLeads[li] };
@@ -379,10 +400,40 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  // -------- NEW: toggle helpers --------
+  showAllHistory() {
+    if (!this.takeoverLead) return;
+    this.showFullHistoryBySid[this.takeoverLead.id] = true;
+    setTimeout(() => {
+      const el = document.getElementById('takeover-body');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 0);
+  }
+  showOnlySinceTakeover() {
+    if (!this.takeoverLead) return;
+    this.showFullHistoryBySid[this.takeoverLead.id] = false;
+    setTimeout(() => {
+      const el = document.getElementById('takeover-body');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 0);
+  }
+
   formatAgo(timestamp: number): string {
     const seconds = Math.floor(Date.now() / 1000) - timestamp;
     if (seconds < 60) return `pred ${seconds}s`;
     const m = Math.floor(seconds / 60);
     return m === 1 ? 'pred 1 min' : `pred ${m} min`;
   }
+
+  onHistoryToggle(checked: boolean) {
+  if (!this.takeoverLead) return;
+  this.showFullHistoryBySid[this.takeoverLead.id] = checked;
+
+  // keep scroll at bottom after switching views
+  setTimeout(() => {
+    const el = document.getElementById('takeover-body');
+    if (el) el.scrollTop = el.scrollHeight;
+  }, 0);
+  }
+
 }

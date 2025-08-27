@@ -329,4 +329,5 @@ export class AppComponent implements OnInit, OnDestroy {
     const last = this.messages[this.messages.length - 1];
     return !!(last && last.typing);
   }
+  
 }

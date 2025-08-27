@@ -294,13 +294,6 @@
 .spinner { color: #9fb3c8; }
 .empty { color: #8b949e; }
 
-.inline-input {
-  display: flex;
-  gap: .6rem;
-  margin-top: .75rem;
-  padding-top: .6rem;
-  border-top: 1px solid rgba(255,255,255,0.08);
-
   input {
     flex: 1;
     background: #0b1220;
@@ -337,4 +330,27 @@
       border-color: rgba(46,160,67,0.4);
     }
   }
-}
+
+  /* --- Takeover toolbar (dark mode) --- */
+  .takeover-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .takeover-toolbar label {
+    color: #fff !important;   /* force white text */
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .takeover-toolbar input[type="checkbox"] {
+    accent-color: #fff;
+    cursor: pointer;
+  }
+
+  #pokazi-zgodovino-label { color: #fff !important; }
