@@ -45,7 +45,11 @@
 </div>
 
 <ng-template #typingTpl>
-  <div class="typing-dots">
-    <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+  <div class="typing-dots-wrap">
+    <span class="typing-label" *ngIf="typingLabel">{{ typingLabel }}</span>
+    <div class="typing-dots">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+    </div>
   </div>
 </ng-template>
+

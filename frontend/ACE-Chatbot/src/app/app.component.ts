@@ -41,6 +41,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   /** When true, we’re in full human takeover: ignore assistant messages */
   humanMode = false;
+  typingLabel: string | null = null;
 
   constructor(
     private http: HttpClient,
@@ -146,7 +147,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pendingUserTexts.add(text);
     setTimeout(() => this.pendingUserTexts.delete(text), 5000);
 
-    this.startTyping();
+    this.startTyping('Razmišljam…');
     this.loading = true;
 
     // When in human mode, backend will short-circuit with no assistant reply.
@@ -250,7 +251,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pendingUserTexts.add(combo);
     setTimeout(() => this.pendingUserTexts.delete(combo), 5000);
 
-    this.startTyping();
+    this.startTyping('Sestavljam odgovore…');
     this.loading = true;
 
     const body = { sid: this.sid, industry: '', budget: '', experience: '', question1: ans1, question2: ans2 };
@@ -313,8 +314,9 @@ export class AppComponent implements OnInit, OnDestroy {
   this.chatMode = res.chatMode;
   }
 
-  private startTyping() {
+  private startTyping(label?: string) {
     if (!this.isTypingActive()) this.messages.push({ role: 'assistant', typing: true });
+    this.typingLabel = label ?? this.typingLabel ?? 'Razmišljam…';
   }
 
   private stopTyping(replaceWith?: string) {
@@ -323,6 +325,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.messages.pop();
       if (replaceWith !== undefined) this.messages.push({ role: 'assistant', text: replaceWith });
     }
+    this.typingLabel = null; // clear label whenever typing stops
   }
 
   private isTypingActive(): boolean {
