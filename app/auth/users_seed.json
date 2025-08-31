@@ -1,0 +1,7 @@
+{
+  "users": [
+    { "username": "admin", "password": "admin123", "role": "admin", "tenant_slug": null },
+    { "username": "demo",  "password": "demo123",  "role": "manager", "tenant_slug": "demo-agency" },
+    { "username": "ana",   "password": "ana123",   "role": "manager", "tenant_slug": "another-client" }
+  ]
+}

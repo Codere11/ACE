@@ -1,1 +1,11 @@
 /* You can add global styles to this file, and also import other style files */
+*{box-sizing:border-box}
+body{font-family:system-ui,Arial;margin:0;padding:24px;background:#0b0b0b;color:#eee}
+.card{max-width:440px;margin:40px auto;background:#151515;border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+input,button{width:100%;padding:12px;border-radius:10px;border:1px solid #333;background:#1d1d1d;color:#eee}
+button{border:0;background:#4f46e5;margin-top:10px;cursor:pointer}
+h1,h2{margin:0 0 12px 0}
+a{color:#87cefa}
+.list{max-width:700px;margin:0 auto}
+.item{padding:12px;border:1px solid #333;border-radius:12px;margin:8px 0;background:#151515}
+.flex{display:flex;gap:12px;align-items:center;justify-content:space-between}

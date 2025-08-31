@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Another Client Chatbot</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      body { font-family: system-ui, Arial; margin: 0; padding: 24px; }
+      .chat { max-width: 720px; margin: 0 auto; }
+      .msg { padding: 10px 14px; border-radius: 12px; margin: 6px 0; }
+      .user { background: #e5f0ff; text-align: right; }
+      .bot { background: #f2f2f2; }
+      .row { display: flex; gap: 8px; margin-top: 12px; }
+      input { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #ccc; }
+      button { padding: 10px 14px; border: 0; border-radius: 8px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <div class="chat">
+      <h2>Another Client – Chatbot</h2>
+      <div id="log"></div>
+      <div class="row">
+        <input id="inp" placeholder="Napišite sporočilo..." />
+        <button onclick="send()">Pošlji</button>
+      </div>
+    </div>
+    <script>
+      const slug = location.pathname.split('/')[2];
+      const log = document.getElementById('log');
+      const inp = document.getElementById('inp');
+      let flow = null;
+
+      fetch(`/api/instances/${slug}/conversation_flow`)
+        .then(r => r.json())
+        .then(j => { flow = j; add('bot', flow.greetings?.[0] || 'Živjo!'); });
+
+      function add(role, text) {
+        const d = document.createElement('div');
+        d.className = 'msg ' + (role === 'user' ? 'user' : 'bot');
+        d.textContent = text;
+        log.appendChild(d);
+        window.scrollTo(0, document.body.scrollHeight);
+      }
+      function send() {
+        const t = inp.value.trim();
+        if (!t) return;
+        add('user', t);
+        inp.value = '';
+
+        const q = t.toLowerCase();
+        const pricing = (flow?.intents || []).find(i => i.name === 'pricing');
+        const hit = pricing?.examples?.some(e => q.includes(e.toLowerCase()));
+        add('bot', hit ? flow.responses.pricing : 'Kako vam lahko še pomagam?');
+      }
+    </script>
+  </body>
+</html>
