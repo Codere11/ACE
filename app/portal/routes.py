@@ -3,10 +3,13 @@ import json
 import logging
 import jwt
 import time
+import threading
 from typing import Optional
 from pathlib import Path
+
 from fastapi import APIRouter, HTTPException, Header
 from fastapi.staticfiles import StaticFiles
+
 from app.core import config as user_config
 
 logger = logging.getLogger("ace.portal")
@@ -20,6 +23,9 @@ USERS_FILE = ROOT_DIR / "app" / "portal" / "users_seed.json"
 SECRET_KEY = os.getenv("ACE_SECRET", "dev-secret-change-me")
 ALGO = "HS256"
 JWT_EXPIRE_MIN = int(os.getenv("ACE_JWT_EXPIRE_MIN", "1440"))  # 1 day
+
+# ----- Locks
+_users_lock = threading.Lock()
 
 def _create_token(payload: dict) -> str:
     now = int(time.time())
@@ -41,7 +47,7 @@ def _require_auth(authorization: Optional[str]) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
     return data
 
-# ----- User loading with safe fallback
+# ----- Users helpers (file-based)
 _DEFAULT_USERS = {
     "users": [
         { "username": "admin", "password": "admin123", "role": "admin", "tenant_slug": None },
@@ -49,33 +55,31 @@ _DEFAULT_USERS = {
     ]
 }
 
-def _load_users() -> dict:
-    # Optional override via env (JSON string)
-    env_json = os.getenv("ACE_DEFAULT_USERS_JSON")
-    if env_json:
+def _read_users_list() -> list[dict]:
+    if USERS_FILE.exists():
         try:
-            data = json.loads(env_json)
-            logger.warning("Using users from ACE_DEFAULT_USERS_JSON env var.")
-            return {u["username"]: u for u in data.get("users", [])}
-        except Exception as e:
-            logger.error("Invalid ACE_DEFAULT_USERS_JSON: %s", e)
-
-    # Load from seed file
-    try:
-        if USERS_FILE.exists():
             with open(USERS_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            users = {u["username"]: u for u in data.get("users", [])}
-            logger.info("Loaded %d users from %s", len(users), USERS_FILE)
-            return users
-        else:
-            logger.warning("users_seed.json not found at %s — using fallback users.", USERS_FILE)
-    except Exception as e:
-        logger.error("Failed to read users_seed.json: %s — using fallback users.", e)
+            users = data.get("users", [])
+            if isinstance(users, list):
+                return users
+        except Exception as e:
+            logger.error("Failed to read %s: %s", USERS_FILE, e)
+    logger.warning("Using fallback users (no users_seed.json found or invalid).")
+    return _DEFAULT_USERS["users"].copy()
 
-    # Fallback users (dev)
-    users = {u["username"]: u for u in _DEFAULT_USERS["users"]}
-    return users
+def _write_users_list(users: list[dict]) -> None:
+    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = USERS_FILE.with_suffix(".json.tmp")
+    with _users_lock:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({ "users": users }, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, USERS_FILE)  # atomic on POSIX
+    logger.info("Wrote %d users to %s", len(users), USERS_FILE)
+
+def _load_users_map() -> dict:
+    users = _read_users_list()
+    return {u["username"]: u for u in users}
 
 # ---------- Routers
 router = APIRouter()
@@ -87,7 +91,7 @@ public_router = APIRouter(tags=["PortalPublic"])
 def login(payload: dict):
     username = (payload or {}).get("username", "")
     password = (payload or {}).get("password", "")
-    users = _load_users()
+    users = _load_users_map()
     u = users.get(username)
     if not u or u.get("password") != password:
         logger.info("Portal login failed for '%s'", username)
@@ -101,19 +105,24 @@ def me(authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     return {"user": {"username": data["sub"], "role": data["role"], "tenant_slug": data.get("tenant_slug")}}
 
-# DEV ONLY helper — returns list of usernames it sees (no passwords)
 @auth_router.get("/debug-users")
 def debug_users():
-    users = _load_users()
-    return {"usernames": sorted(list(users.keys())), "source": str(USERS_FILE)}
+    users = _read_users_list()
+    return {"usernames": [u.get("username") for u in users], "source": str(USERS_FILE)}
 
-# ----- Admin / Manager endpoints using instances/* files
+# ----- Admin: customers list (extended to include usernames bound to tenant_slug)
 @router.get("/api/admin/customers", tags=["PortalAdmin"])
 def list_customers(authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     out = []
+    users_map = _load_users_map()
+    users_by_tenant: dict[str, list[str]] = {}
+    for u in users_map.values():
+        slug = u.get("tenant_slug")
+        if slug:
+            users_by_tenant.setdefault(slug, []).append(u["username"])
     if not INSTANCES_DIR.exists():
         return {"customers": out}
     for inst_dir in INSTANCES_DIR.glob("*"):
@@ -132,18 +141,17 @@ def list_customers(authorization: str | None = Header(default=None)):
             "display_name": profile.get("display_name", inst_dir.name),
             "last_paid": profile.get("last_paid"),
             "contact": profile.get("contact", {}),
+            "users": sorted(users_by_tenant.get(inst_dir.name, [])),
             "chatbot_url": f"/instances/{inst_dir.name}/chatbot/",
         })
     return {"customers": out}
 
-@router.get("/api/manager/my-instance", tags=["PortalManager"])
-def my_instance(authorization: str | None = Header(default=None)):
+# ----- Admin: update customer profile (business name, contact, last_paid)
+@router.patch("/api/admin/customers/{slug}/profile", tags=["PortalAdmin"])
+def update_customer_profile(slug: str, payload: dict, authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
-    if data.get("role") not in ("manager", "admin"):
-        raise HTTPException(status_code=403, detail="Manager or admin")
-    slug = data.get("tenant_slug")
-    if not slug:
-        raise HTTPException(status_code=400, detail="No tenant assigned")
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
     inst = INSTANCES_DIR / slug
     if not inst.exists():
         raise HTTPException(status_code=404, detail="Instance not found")
@@ -155,9 +163,104 @@ def my_instance(authorization: str | None = Header(default=None)):
                 profile = json.load(f)
         except Exception as e:
             logger.error("Failed to read %s: %s", profile_file, e)
-    return {"slug": slug, "display_name": profile.get("display_name", slug), "chatbot_url": f"/instances/{slug}/chatbot/"}
 
-# Public: per-instance flow for static chatbot
+    # Merge updates
+    display_name = payload.get("display_name")
+    last_paid = payload.get("last_paid")
+    contact = payload.get("contact") or {}
+
+    if display_name is not None:
+        profile["display_name"] = display_name
+    if last_paid is not None:
+        profile["last_paid"] = last_paid
+    if "contact" not in profile or not isinstance(profile.get("contact"), dict):
+        profile["contact"] = {}
+    for k in ("name", "email", "phone"):
+        if k in contact:
+            profile["contact"][k] = contact[k]
+
+    # Write back
+    inst.mkdir(parents=True, exist_ok=True)
+    with open(profile_file, "w", encoding="utf-8") as f:
+        json.dump(profile, f, ensure_ascii=False, indent=2)
+    logger.info("Updated profile for %s", slug)
+    return {"ok": True, "profile": profile}
+
+# ----- Admin: users CRUD
+@router.get("/api/admin/users", tags=["PortalAdmin"])
+def admin_list_users(authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    users = _read_users_list()
+    # Do not return passwords
+    sanitized = [{"username": u["username"], "role": u.get("role"), "tenant_slug": u.get("tenant_slug")} for u in users]
+    return {"users": sanitized}
+
+@router.post("/api/admin/users", tags=["PortalAdmin"])
+def admin_create_user(payload: dict, authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    username = (payload or {}).get("username")
+    password = (payload or {}).get("password")
+    role = (payload or {}).get("role", "manager")
+    tenant_slug = (payload or {}).get("tenant_slug")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="username and password are required")
+    if role not in ("admin", "manager"):
+        raise HTTPException(status_code=400, detail="role must be 'admin' or 'manager'")
+
+    users = _read_users_list()
+    if any(u["username"] == username for u in users):
+        raise HTTPException(status_code=409, detail="Username already exists")
+
+    users.append({"username": username, "password": password, "role": role, "tenant_slug": tenant_slug})
+    _write_users_list(users)
+    logger.info("Created user '%s' (role=%s, tenant=%s)", username, role, tenant_slug)
+    return {"ok": True}
+
+@router.patch("/api/admin/users/{username}", tags=["PortalAdmin"])
+def admin_update_user(username: str, payload: dict, authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    users = _read_users_list()
+    for u in users:
+        if u["username"] == username:
+            if "password" in payload and payload["password"]:
+                u["password"] = payload["password"]
+            if "role" in payload:
+                if payload["role"] not in ("admin", "manager"):
+                    raise HTTPException(status_code=400, detail="role must be 'admin' or 'manager'")
+                u["role"] = payload["role"]
+            if "tenant_slug" in payload:
+                u["tenant_slug"] = payload["tenant_slug"]
+            _write_users_list(users)
+            logger.info("Updated user '%s'", username)
+            return {"ok": True}
+    raise HTTPException(status_code=404, detail="User not found")
+
+@router.delete("/api/admin/users/{username}", tags=["PortalAdmin"])
+def admin_delete_user(username: str, authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    if username == "admin":
+        raise HTTPException(status_code=400, detail="Cannot delete built-in admin")
+
+    users = _read_users_list()
+    new_users = [u for u in users if u["username"] != username]
+    if len(new_users) == len(users):
+        raise HTTPException(status_code=404, detail="User not found")
+    _write_users_list(new_users)
+    logger.info("Deleted user '%s'", username)
+    return {"ok": True}
+
+# ----- Public: per-instance flow for static chatbot
 @public_router.get("/api/instances/{slug}/conversation_flow")
 def conversation_flow(slug: str):
     inst = INSTANCES_DIR / slug
