@@ -8,8 +8,26 @@ import { AuthService } from '../../services/auth.service';
   selector: 'app-login',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  template: `
+    <div class="card">
+      <h1>Prijava v ACE</h1>
+      <p style="opacity:.8;margin:0 0 12px">Vnesite podatke za dostop.</p>
+
+      <input [(ngModel)]="username" placeholder="Uporabniško ime" autofocus />
+      <div style="height:8px"></div>
+      <input [(ngModel)]="password" placeholder="Geslo" type="password" />
+
+      <button (click)="submit()" [disabled]="loading">
+        {{ loading ? 'Prijava...' : 'Prijava' }}
+      </button>
+
+      <div *ngIf="error" style="color:#ff7777;margin-top:10px">{{ error }}</div>
+
+      <div style="opacity:.6;font-size:.85rem;margin-top:12px">
+        Namig: <code>admin / admin123</code> ali <code>demo / demo123</code>
+      </div>
+    </div>
+  `
 })
 export class LoginComponent {
   username = '';
@@ -20,9 +38,10 @@ export class LoginComponent {
   constructor(private auth: AuthService, private router: Router) {}
 
   submit() {
-    this.error = ''; this.loading = true;
+    this.error = '';
+    this.loading = true;
     this.auth.login(this.username, this.password).subscribe({
-      next: () => this.router.navigateByUrl('/'),
+      next: () => this.router.navigateByUrl('/home'),
       error: (e) => { this.error = e?.error?.detail || 'Napaka pri prijavi'; this.loading = false; }
     });
   }
