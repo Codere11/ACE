@@ -4,10 +4,11 @@ import logging
 import jwt
 import time
 import threading
+import shutil
 from typing import Optional
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Query
 from fastapi.staticfiles import StaticFiles
 
 from app.core import config as user_config
@@ -110,6 +111,59 @@ def debug_users():
     users = _read_users_list()
     return {"usernames": [u.get("username") for u in users], "source": str(USERS_FILE)}
 
+# ----- Helpers for instance FS
+def _safe_slug(slug: str) -> str:
+    s = slug.strip().lower()
+    if not s or any(ch for ch in s if ch not in "abcdefghijklmnopqrstuvwxyz0123456789-_"):
+        raise HTTPException(status_code=400, detail="Invalid slug (use a-z, 0-9, -, _)")
+    return s
+
+_DEFAULT_FLOW = {
+    "greetings": ["Živjo! Kako vam lahko pomagam danes?"],
+    "intents": [],
+    "responses": {}
+}
+
+_DEFAULT_CHATBOT_HTML = """<!doctype html>
+<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>ACE Chatbot</title>
+<style>body{font-family:system-ui,Arial;margin:0;padding:24px} .chat{max-width:720px;margin:0 auto}
+.msg{padding:10px 14px;border-radius:12px;margin:6px 0}.user{background:#e5f0ff;text-align:right}.bot{background:#f2f2f2}
+.row{display:flex;gap:8px;margin-top:12px} input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
+button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer}</style></head>
+<body><div class="chat"><h2>ACE Chatbot</h2><div id="log"></div><div class="row">
+<input id="inp" placeholder="Napišite sporočilo..."/><button onclick="send()">Pošlji</button></div></div>
+<script>const slug=location.pathname.split('/')[2];const log=document.getElementById('log');const inp=document.getElementById('inp');let flow=null;
+fetch(`/api/instances/${slug}/conversation_flow`).then(r=>r.json()).then(j=>{flow=j;add('bot',flow.greetings?.[0]||'Živjo!')});
+function add(role,text){const d=document.createElement('div');d.className='msg '+(role==='user'?'user':'bot');d.textContent=text;log.appendChild(d);window.scrollTo(0,document.body.scrollHeight)}
+function send(){const t=inp.value.trim();if(!t)return;add('user',t);inp.value='';add('bot','Povejte več, prosim.')}}</script></body></html>
+"""
+
+def _create_instance_on_disk(slug: str, profile: dict):
+    slug = _safe_slug(slug)
+    inst = INSTANCES_DIR / slug
+    if inst.exists():
+        raise HTTPException(status_code=409, detail="Instance already exists")
+    (inst / "chatbot").mkdir(parents=True, exist_ok=True)
+    # profile.json
+    with open(inst / "profile.json", "w", encoding="utf-8") as f:
+        json.dump(profile, f, ensure_ascii=False, indent=2)
+    # conversation_flow.json
+    with open(inst / "conversation_flow.json", "w", encoding="utf-8") as f:
+        json.dump(_DEFAULT_FLOW, f, ensure_ascii=False, indent=2)
+    # chatbot/index.html
+    with open(inst / "chatbot" / "index.html", "w", encoding="utf-8") as f:
+        f.write(_DEFAULT_CHATBOT_HTML)
+    logger.info("Created instance at %s", inst)
+
+def _delete_instance_on_disk(slug: str):
+    slug = _safe_slug(slug)
+    inst = INSTANCES_DIR / slug
+    if not inst.exists():
+        raise HTTPException(status_code=404, detail="Instance not found")
+    shutil.rmtree(inst)
+    logger.info("Deleted instance %s", inst)
+
 # ----- Admin: customers list (extended to include usernames bound to tenant_slug)
 @router.get("/api/admin/customers", tags=["PortalAdmin"])
 def list_customers(authorization: str | None = Header(default=None)):
@@ -145,6 +199,72 @@ def list_customers(authorization: str | None = Header(default=None)):
             "chatbot_url": f"/instances/{inst_dir.name}/chatbot/",
         })
     return {"customers": out}
+
+# ----- Admin: create new customer (instance)
+@router.post("/api/admin/customers", tags=["PortalAdmin"])
+def create_customer(payload: dict, authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    slug = payload.get("slug")
+    if not slug:
+        raise HTTPException(status_code=400, detail="slug is required")
+    slug = _safe_slug(slug)
+
+    display_name = payload.get("display_name") or slug
+    last_paid = payload.get("last_paid")
+    contact = payload.get("contact") or {}
+    profile = {
+        "display_name": display_name,
+        "last_paid": last_paid,
+        "contact": {
+            "name": contact.get("name"),
+            "email": contact.get("email"),
+            "phone": contact.get("phone"),
+        },
+    }
+    _create_instance_on_disk(slug, profile)
+
+    # Optionally create a manager user in one go
+    create_user = (payload.get("create_user") or {}).copy() if isinstance(payload.get("create_user"), dict) else None
+    if create_user:
+        username = create_user.get("username")
+        password = create_user.get("password")
+        role = create_user.get("role", "manager")
+        if not username or not password:
+            raise HTTPException(status_code=400, detail="create_user.username and create_user.password required")
+        if role not in ("admin", "manager"):
+            raise HTTPException(status_code=400, detail="create_user.role must be 'admin' or 'manager'")
+        users = _read_users_list()
+        if any(u["username"] == username for u in users):
+            raise HTTPException(status_code=409, detail="Username already exists")
+        users.append({"username": username, "password": password, "role": role, "tenant_slug": slug})
+        _write_users_list(users)
+        logger.info("Created manager user '%s' for tenant '%s'", username, slug)
+
+    return {"ok": True}
+
+# ----- Admin: delete customer (instance). Cascade deletes users by default.
+@router.delete("/api/admin/customers/{slug}", tags=["PortalAdmin"])
+def delete_customer(
+    slug: str,
+    authorization: str | None = Header(default=None),
+    cascade_users: bool = Query(default=True)
+):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+    _delete_instance_on_disk(slug)
+
+    if cascade_users:
+        users = _read_users_list()
+        new_users = [u for u in users if u.get("tenant_slug") != slug]
+        if len(new_users) != len(users):
+            _write_users_list(new_users)
+            logger.info("Deleted %d users for tenant '%s'", len(users) - len(new_users), slug)
+
+    return {"ok": True}
 
 # ----- Admin: update customer profile (business name, contact, last_paid)
 @router.patch("/api/admin/customers/{slug}/profile", tags=["PortalAdmin"])
@@ -193,7 +313,6 @@ def admin_list_users(authorization: str | None = Header(default=None)):
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     users = _read_users_list()
-    # Do not return passwords
     sanitized = [{"username": u["username"], "role": u.get("role"), "tenant_slug": u.get("tenant_slug")} for u in users]
     return {"users": sanitized}
 

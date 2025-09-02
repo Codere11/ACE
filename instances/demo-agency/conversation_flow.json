@@ -1,9 +1,0 @@
-{
-  "greetings": ["Živjo! Kako vam lahko pomagam danes?"],
-  "intents": [
-    { "name": "book_call", "examples": ["Želim klic", "Lahko se slišimo?", "klic"] }
-  ],
-  "responses": {
-    "book_call": "Odlično! Povejte termin, ko vam ustreza, in kontakt."
-  }
-}

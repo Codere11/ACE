@@ -1,8 +1,8 @@
-import { Component, OnInit, signal, computed } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService, User } from './auth/services/auth.service';
 import { environment } from '../environments/environment';
-import { FormsModule } from '@angular/forms';
 
 type Customer = {
   slug: string;
@@ -15,15 +15,46 @@ type Customer = {
 
 type ListedUser = { username: string; role: 'admin'|'manager'; tenant_slug?: string|null };
 
+type ProfileForm = {
+  display_name: string;
+  last_paid: string;
+  contact: { name: string; email: string; phone: string };
+};
+
 @Component({
   standalone: true,
   selector: 'app-home',
   imports: [CommonModule, FormsModule],
   template: `
   <div class="list" *ngIf="role() === 'admin'">
-    <h2>Stranke</h2>
+    <h2>Dodaj novo stranko</h2>
+    <div class="item">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">
+        <input placeholder="slug (npr. my-agency)" [(ngModel)]="newCustomer.slug">
+        <input placeholder="Poslovno ime" [(ngModel)]="newCustomer.display_name">
+        <input placeholder="Kontakt ime" [(ngModel)]="newCustomer.contact.name">
+        <input placeholder="Email" [(ngModel)]="newCustomer.contact.email">
+        <input placeholder="Telefon" [(ngModel)]="newCustomer.contact.phone">
+        <input placeholder="Zadnje plačilo (YYYY-MM-DD)" [(ngModel)]="newCustomer.last_paid">
+      </div>
+      <div style="margin-top:10px"><b>Ustvari tudi uporabnika (opcijsko)</b></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px">
+        <input placeholder="username" [(ngModel)]="newCustomer.create_user.username">
+        <input placeholder="password" type="password" [(ngModel)]="newCustomer.create_user.password">
+        <select [(ngModel)]="newCustomer.create_user.role">
+          <option value="manager">manager</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <button (click)="createCustomer()">Ustvari stranko</button>
+        <button class="secondary" (click)="cancelNewCustomer()">Prekliči</button>
+      </div>
+    </div>
 
-    <div class="item" *ngFor="let c of customers()">
+    <h2 style="margin-top:24px">Stranke</h2>
+
+    <div class="item" *ngFor="let c of customers(); trackBy: trackBySlug">
       <div class="flex">
         <div>
           <div><b>{{c.display_name || c.slug}}</b> <small style="opacity:.7">({{c.slug}})</small></div>
@@ -31,33 +62,31 @@ type ListedUser = { username: string; role: 'admin'|'manager'; tenant_slug?: str
           <div style="opacity:.8">Uporabniki: {{ (c.users || []).join(', ') || '—' }}</div>
           <div><a [href]="c.chatbot_url" target="_blank">Odpri chatbot</a></div>
         </div>
+        <div style="display:flex;gap:8px">
+          <button class="danger" (click)="deleteCustomer(c.slug)">Izbriši stranko</button>
+        </div>
       </div>
 
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px">
         <label>Poslovno ime
-          <input [value]="editCache()[c.slug]?.display_name ?? c.display_name ?? ''"
-                 (input)="onCache(c.slug,'display_name',$any($event.target).value)">
+          <input [(ngModel)]="profileForms[c.slug].display_name">
         </label>
         <label>Kontakt ime
-          <input [value]="editCache()[c.slug]?.contact?.name ?? c.contact?.name ?? ''"
-                 (input)="onCacheContact(c.slug,'name',$any($event.target).value)">
+          <input [(ngModel)]="profileForms[c.slug].contact.name">
         </label>
         <label>Email
-          <input [value]="editCache()[c.slug]?.contact?.email ?? c.contact?.email ?? ''"
-                 (input)="onCacheContact(c.slug,'email',$any($event.target).value)">
+          <input [(ngModel)]="profileForms[c.slug].contact.email">
         </label>
         <label>Telefon
-          <input [value]="editCache()[c.slug]?.contact?.phone ?? c.contact?.phone ?? ''"
-                 (input)="onCacheContact(c.slug,'phone',$any($event.target).value)">
+          <input [(ngModel)]="profileForms[c.slug].contact.phone">
         </label>
         <label>Zadnje plačilo (YYYY-MM-DD)
-          <input [value]="editCache()[c.slug]?.last_paid ?? c.last_paid ?? ''"
-                 (input)="onCache(c.slug,'last_paid',$any($event.target).value)">
+          <input [(ngModel)]="profileForms[c.slug].last_paid">
         </label>
       </div>
-      <div style="margin-top:8px;display:flex;gap:8px">
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
         <button (click)="saveProfile(c.slug)">Shrani profil</button>
-        <button (click)="resetProfile(c.slug)">Prekliči</button>
+        <button class="secondary" (click)="cancelProfile(c.slug)">Prekliči</button>
       </div>
     </div>
 
@@ -76,14 +105,16 @@ type ListedUser = { username: string; role: 'admin'|'manager'; tenant_slug?: str
           <option *ngFor="let c of customers()" [ngValue]="c.slug">{{c.slug}}</option>
         </select>
         <button (click)="createUser()">Ustvari</button>
+        <button class="secondary" (click)="cancelCreateUser()">Prekliči</button>
       </div>
     </div>
 
     <div class="item" *ngFor="let u of users()">
       <div class="flex">
         <div><b>{{u.username}}</b> <small style="opacity:.7">({{u.role}})</small></div>
-        <div *ngIf="u.username!=='admin'">
-          <button (click)="deleteUser(u.username)">Izbriši</button>
+        <div style="display:flex;gap:8px">
+          <button class="secondary" (click)="cancelUserEdit(u.username)">Prekliči</button>
+          <button *ngIf="u.username!=='admin'" (click)="deleteUser(u.username)">Izbriši</button>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-top:8px">
@@ -109,6 +140,8 @@ type ListedUser = { username: string; role: 'admin'|'manager'; tenant_slug?: str
   styles: [`
     input, select, button { width:100%; padding:10px; border-radius:10px; border:1px solid #333; background:#1d1d1d; color:#eee }
     button { border:0; background:#4f46e5; cursor:pointer }
+    button.secondary { background:#2a2a2a; border:1px solid #3a3a3a }
+    button.danger { background:#b91c1c }
     h3 { margin: 0 0 10px 0 }
   `]
 })
@@ -116,10 +149,20 @@ export class HomeComponent implements OnInit {
   role = signal<'admin'|'manager'>('manager');
   customers = signal<Customer[]>([]);
   users = signal<ListedUser[]>([]);
-  editCache = signal<Record<string, any>>({});
+
+  profileForms: Record<string, ProfileForm> = {};
+
   userEdits: Record<string, { password?: string; role: 'admin'|'manager'; tenant_slug: string|null }> = {};
   newUser: { username: string; password: string; role: 'admin'|'manager'; tenant_slug: string|null } = {
     username: '', password: '', role: 'manager', tenant_slug: null
+  };
+
+  newCustomer = {
+    slug: '',
+    display_name: '',
+    last_paid: '',
+    contact: { name: '', email: '', phone: '' },
+    create_user: { username: '', password: '', role: 'manager' as 'manager'|'admin' }
   };
 
   private get token() { return this.auth.user?.token ?? ''; }
@@ -133,20 +176,16 @@ export class HomeComponent implements OnInit {
     const u = this.auth.user as User | null;
     if (!u) return;
     this.role.set(u.role);
-    if (u.role === 'admin') {
-      this.loadAll();
-    } else {
-      // manager view later
-    }
+    if (u.role === 'admin') this.loadAll();
   }
+
+  trackBySlug(_: number, c: Customer) { return c.slug; }
 
   // ------------ data loading
   private async loadAll() {
     await Promise.all([this.loadCustomers(), this.loadUsers()]);
-    // Init userEdits
-    const map: Record<string, { password?: string; role: 'admin'|'manager'; tenant_slug: string|null }> = {};
-    this.users().forEach(u => { map[u.username] = { role: u.role, tenant_slug: (u.tenant_slug ?? null) }; });
-    this.userEdits = map;
+    this.rebuildUserEditsFromServer();
+    this.rebuildProfileFormsFromServer();
   }
 
   private async loadCustomers() {
@@ -163,32 +202,98 @@ export class HomeComponent implements OnInit {
     this.users.set(j.users || []);
   }
 
-  // ------------ profile editing cache
-  onCache(slug: string, key: string, value: any) {
-    const copy = { ...this.editCache() };
-    copy[slug] = { ...(copy[slug] || {}), [key]: value };
-    this.editCache.set(copy);
+  private rebuildUserEditsFromServer() {
+    const map: Record<string, { password?: string; role: 'admin'|'manager'; tenant_slug: string|null }> = {};
+    this.users().forEach(u => { map[u.username] = { role: u.role, tenant_slug: (u.tenant_slug ?? null) }; });
+    this.userEdits = map;
   }
-  onCacheContact(slug: string, key: 'name'|'email'|'phone', value: any) {
-    const copy = { ...this.editCache() };
-    const cur = copy[slug] || {};
-    copy[slug] = { ...cur, contact: { ...(cur.contact || {}), [key]: value } };
-    this.editCache.set(copy);
+
+  private rebuildProfileFormsFromServer() {
+    const forms: Record<string, ProfileForm> = {};
+    for (const c of this.customers()) {
+      forms[c.slug] = {
+        display_name: (c.display_name ?? '') as string,
+        last_paid: (c.last_paid ?? '') as string,
+        contact: {
+          name: c.contact?.name ?? '',
+          email: c.contact?.email ?? '',
+          phone: c.contact?.phone ?? '',
+        }
+      };
+    }
+    this.profileForms = forms;
   }
-  resetProfile(slug: string) {
-    const copy = { ...this.editCache() }; delete copy[slug]; this.editCache.set(copy);
+
+  // ------------ customer create/delete
+  async createCustomer() {
+    const body = {
+      slug: this.newCustomer.slug.trim(),
+      display_name: this.newCustomer.display_name.trim() || this.newCustomer.slug.trim(),
+      last_paid: this.newCustomer.last_paid.trim() || null,
+      contact: { ...this.newCustomer.contact },
+      create_user: (this.newCustomer.create_user.username && this.newCustomer.create_user.password)
+        ? { ...this.newCustomer.create_user }
+        : undefined
+    };
+    const r = await fetch(`${environment.apiBase}/api/admin/customers`, {
+      method: 'POST', headers: this.headers, body: JSON.stringify(body)
+    });
+    if (r.ok) {
+      await this.loadAll();
+      this.cancelNewCustomer();
+    } else {
+      alert('Create customer failed: ' + await r.text());
+    }
   }
+
+  cancelNewCustomer() {
+    this.newCustomer = {
+      slug: '',
+      display_name: '',
+      last_paid: '',
+      contact: { name: '', email: '', phone: '' },
+      create_user: { username: '', password: '', role: 'manager' }
+    };
+  }
+
+  async deleteCustomer(slug: string) {
+    if (!confirm(`Izbrišem stranko "${slug}"? (uporabniki bodo izbrisani) `)) return;
+    const r = await fetch(`${environment.apiBase}/api/admin/customers/${encodeURIComponent(slug)}?cascade_users=true`, {
+      method: 'DELETE', headers: this.headers
+    });
+    if (r.ok) {
+      await this.loadAll();
+    } else {
+      alert('Delete customer failed: ' + await r.text());
+    }
+  }
+
+  // ------------ profile actions
+  async cancelProfile(slug: string) {
+    const c = this.customers().find(x => x.slug === slug);
+    if (!c) return;
+    this.profileForms[slug] = {
+      display_name: (c.display_name ?? '') as string,
+      last_paid: (c.last_paid ?? '') as string,
+      contact: {
+        name: c.contact?.name ?? '',
+        email: c.contact?.email ?? '',
+        phone: c.contact?.phone ?? '',
+      }
+    };
+  }
+
   async saveProfile(slug: string) {
-    const patch = this.editCache()[slug];
-    if (!patch) return;
+    const form = this.profileForms[slug];
+    if (!form) return;
     const r = await fetch(`${environment.apiBase}/api/admin/customers/${slug}/profile`, {
       method: 'PATCH',
       headers: this.headers,
-      body: JSON.stringify(patch)
+      body: JSON.stringify(form)
     });
     if (r.ok) {
       await this.loadCustomers();
-      this.resetProfile(slug);
+      this.rebuildProfileFormsFromServer();
     } else {
       console.error('Save profile failed', await r.text());
     }
@@ -201,13 +306,17 @@ export class HomeComponent implements OnInit {
       method: 'POST', headers: this.headers, body: JSON.stringify(body)
     });
     if (r.ok) {
-      this.newUser = { username: '', password: '', role: 'manager', tenant_slug: null };
+      this.cancelCreateUser();
       await this.loadUsers();
       await this.loadCustomers();
+      this.rebuildUserEditsFromServer();
     } else {
-      const t = await r.text();
-      alert('Create failed: ' + t);
+      alert('Create failed: ' + await r.text());
     }
+  }
+
+  cancelCreateUser() {
+    this.newUser = { username: '', password: '', role: 'manager', tenant_slug: null };
   }
 
   async updateUser(username: string) {
@@ -217,13 +326,12 @@ export class HomeComponent implements OnInit {
       method: 'PATCH', headers: this.headers, body: JSON.stringify(body)
     });
     if (r.ok) {
-      // Clear password field after update
       this.userEdits[username].password = '';
       await this.loadUsers();
       await this.loadCustomers();
+      this.rebuildUserEditsFromServer();
     } else {
-      const t = await r.text();
-      alert('Update failed: ' + t);
+      alert('Update failed: ' + await r.text());
     }
   }
 
@@ -235,9 +343,15 @@ export class HomeComponent implements OnInit {
     if (r.ok) {
       await this.loadUsers();
       await this.loadCustomers();
+      this.rebuildUserEditsFromServer();
     } else {
-      const t = await r.text();
-      alert('Delete failed: ' + t);
+      alert('Delete failed: ' + await r.text());
     }
+  }
+
+  async cancelUserEdit(username: string) {
+    const u = this.users().find(x => x.username === username);
+    if (u) this.userEdits[username] = { role: u.role, tenant_slug: (u.tenant_slug ?? null) };
+    if (this.userEdits[username]) this.userEdits[username].password = '';
   }
 }

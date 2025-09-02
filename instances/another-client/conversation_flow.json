@@ -1,9 +1,0 @@
-{
-  "greetings": ["Pozdravljeni! Veselim se vaših vprašanj."],
-  "intents": [
-    { "name": "pricing", "examples": ["cena", "koliko stane"] }
-  ],
-  "responses": {
-    "pricing": "Naše cene se začnejo pri 99 € / mesec. Želite ponudbo?"
-  }
-}
