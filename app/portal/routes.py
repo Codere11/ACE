@@ -3,30 +3,31 @@ import json
 import logging
 import jwt
 import time
-import threading
 import shutil
-from typing import Optional
+from datetime import date
 from pathlib import Path
+from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Header, Query
+from fastapi import APIRouter, HTTPException, Header
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core import config as user_config
+from app.services.db import SessionLocal
+from app.models import User, Tenant, ConversationFlow
+from app.services.security import hash_password, verify_password
 
 logger = logging.getLogger("ace.portal")
 
 # ----- Paths
-ROOT_DIR = Path(user_config.ROOT_DIR)  # ACE-Campaign/
+ROOT_DIR = Path(user_config.ROOT_DIR)   # ACE-Campaign/
 INSTANCES_DIR = ROOT_DIR / "instances"
-USERS_FILE = ROOT_DIR / "app" / "portal" / "users_seed.json"
 
 # ----- Auth settings
 SECRET_KEY = os.getenv("ACE_SECRET", "dev-secret-change-me")
 ALGO = "HS256"
 JWT_EXPIRE_MIN = int(os.getenv("ACE_JWT_EXPIRE_MIN", "1440"))  # 1 day
-
-# ----- Locks
-_users_lock = threading.Lock()
 
 def _create_token(payload: dict) -> str:
     now = int(time.time())
@@ -48,273 +49,195 @@ def _require_auth(authorization: Optional[str]) -> dict:
         raise HTTPException(status_code=401, detail="Invalid token")
     return data
 
-# ----- Users helpers (file-based)
-_DEFAULT_USERS = {
-    "users": [
-        { "username": "admin", "password": "admin123", "role": "admin", "tenant_slug": None },
-        { "username": "demo",  "password": "demo123",  "role": "manager", "tenant_slug": "demo-agency" }
-    ]
-}
-
-def _read_users_list() -> list[dict]:
-    if USERS_FILE.exists():
-        try:
-            with open(USERS_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            users = data.get("users", [])
-            if isinstance(users, list):
-                return users
-        except Exception as e:
-            logger.error("Failed to read %s: %s", USERS_FILE, e)
-    logger.warning("Using fallback users (no users_seed.json found or invalid).")
-    return _DEFAULT_USERS["users"].copy()
-
-def _write_users_list(users: list[dict]) -> None:
-    USERS_FILE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = USERS_FILE.with_suffix(".json.tmp")
-    with _users_lock:
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({ "users": users }, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, USERS_FILE)  # atomic on POSIX
-    logger.info("Wrote %d users to %s", len(users), USERS_FILE)
-
-def _load_users_map() -> dict:
-    users = _read_users_list()
-    return {u["username"]: u for u in users}
-
-# ---------- Routers
 router = APIRouter()
 auth_router = APIRouter(prefix="/api/auth", tags=["PortalAuth"])
 public_router = APIRouter(tags=["PortalPublic"])
 
-# ----- Auth endpoints (login + me + debug)
+# -------------------- AUTH (DB-backed) --------------------
 @auth_router.post("/login")
 def login(payload: dict):
     username = (payload or {}).get("username", "")
     password = (payload or {}).get("password", "")
-    users = _load_users_map()
-    u = users.get(username)
-    if not u or u.get("password") != password:
-        logger.info("Portal login failed for '%s'", username)
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = _create_token({"sub": u["username"], "role": u["role"], "tenant_slug": u.get("tenant_slug")})
-    logger.info("Portal login success for '%s' (role=%s)", u["username"], u["role"])
-    return {"token": token, "user": {"username": u["username"], "role": u["role"], "tenant_slug": u.get("tenant_slug")}}
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="Missing credentials")
+
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
+        if not u or not verify_password(password, u.password_hash):
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+
+        tenant_slug = None
+        if u.tenant_id:
+            t = db.get(Tenant, u.tenant_id)
+            tenant_slug = t.slug if t else None
+
+        token = _create_token({"sub": u.username, "role": u.role, "tenant_slug": tenant_slug})
+        logger.info("Portal login success for '%s' (role=%s)", u.username, u.role)
+        return {"token": token, "user": {"username": u.username, "role": u.role, "tenant_slug": tenant_slug}}
 
 @auth_router.get("/me")
 def me(authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     return {"user": {"username": data["sub"], "role": data["role"], "tenant_slug": data.get("tenant_slug")}}
 
-@auth_router.get("/debug-users")
-def debug_users():
-    users = _read_users_list()
-    return {"usernames": [u.get("username") for u in users], "source": str(USERS_FILE)}
-
-# ----- Helpers for instance FS
-def _safe_slug(slug: str) -> str:
-    s = slug.strip().lower()
-    if not s or any(ch for ch in s if ch not in "abcdefghijklmnopqrstuvwxyz0123456789-_"):
-        raise HTTPException(status_code=400, detail="Invalid slug (use a-z, 0-9, -, _)")
-    return s
-
-_DEFAULT_FLOW = {
-    "greetings": ["Živjo! Kako vam lahko pomagam danes?"],
-    "intents": [],
-    "responses": {}
-}
-
-_DEFAULT_CHATBOT_HTML = """<!doctype html>
-<html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>ACE Chatbot</title>
-<style>body{font-family:system-ui,Arial;margin:0;padding:24px} .chat{max-width:720px;margin:0 auto}
-.msg{padding:10px 14px;border-radius:12px;margin:6px 0}.user{background:#e5f0ff;text-align:right}.bot{background:#f2f2f2}
-.row{display:flex;gap:8px;margin-top:12px} input{flex:1;padding:10px;border-radius:8px;border:1px solid #ccc}
-button{padding:10px 14px;border:0;border-radius:8px;cursor:pointer}</style></head>
-<body><div class="chat"><h2>ACE Chatbot</h2><div id="log"></div><div class="row">
-<input id="inp" placeholder="Napišite sporočilo..."/><button onclick="send()">Pošlji</button></div></div>
-<script>const slug=location.pathname.split('/')[2];const log=document.getElementById('log');const inp=document.getElementById('inp');let flow=null;
-fetch(`/api/instances/${slug}/conversation_flow`).then(r=>r.json()).then(j=>{flow=j;add('bot',flow.greetings?.[0]||'Živjo!')});
-function add(role,text){const d=document.createElement('div');d.className='msg '+(role==='user'?'user':'bot');d.textContent=text;log.appendChild(d);window.scrollTo(0,document.body.scrollHeight)}
-function send(){const t=inp.value.trim();if(!t)return;add('user',t);inp.value='';add('bot','Povejte več, prosim.')}}</script></body></html>
-"""
-
-def _create_instance_on_disk(slug: str, profile: dict):
-    slug = _safe_slug(slug)
-    inst = INSTANCES_DIR / slug
-    if inst.exists():
-        raise HTTPException(status_code=409, detail="Instance already exists")
-    (inst / "chatbot").mkdir(parents=True, exist_ok=True)
-    # profile.json
-    with open(inst / "profile.json", "w", encoding="utf-8") as f:
-        json.dump(profile, f, ensure_ascii=False, indent=2)
-    # conversation_flow.json
-    with open(inst / "conversation_flow.json", "w", encoding="utf-8") as f:
-        json.dump(_DEFAULT_FLOW, f, ensure_ascii=False, indent=2)
-    # chatbot/index.html
-    with open(inst / "chatbot" / "index.html", "w", encoding="utf-8") as f:
-        f.write(_DEFAULT_CHATBOT_HTML)
-    logger.info("Created instance at %s", inst)
-
-def _delete_instance_on_disk(slug: str):
-    slug = _safe_slug(slug)
-    inst = INSTANCES_DIR / slug
-    if not inst.exists():
-        raise HTTPException(status_code=404, detail="Instance not found")
-    shutil.rmtree(inst)
-    logger.info("Deleted instance %s", inst)
-
-# ----- Admin: customers list (extended to include usernames bound to tenant_slug)
+# -------------------- Admin: CUSTOMERS (DB-backed Tenants) --------------------
 @router.get("/api/admin/customers", tags=["PortalAdmin"])
 def list_customers(authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
+
     out = []
-    users_map = _load_users_map()
-    users_by_tenant: dict[str, list[str]] = {}
-    for u in users_map.values():
-        slug = u.get("tenant_slug")
-        if slug:
-            users_by_tenant.setdefault(slug, []).append(u["username"])
-    if not INSTANCES_DIR.exists():
-        return {"customers": out}
-    for inst_dir in INSTANCES_DIR.glob("*"):
-        if not inst_dir.is_dir():
-            continue
-        profile_file = inst_dir / "profile.json"
-        profile = {}
-        if profile_file.exists():
-            try:
-                with open(profile_file, "r", encoding="utf-8") as f:
-                    profile = json.load(f)
-            except Exception as e:
-                logger.error("Failed to read %s: %s", profile_file, e)
-        out.append({
-            "slug": inst_dir.name,
-            "display_name": profile.get("display_name", inst_dir.name),
-            "last_paid": profile.get("last_paid"),
-            "contact": profile.get("contact", {}),
-            "users": sorted(users_by_tenant.get(inst_dir.name, [])),
-            "chatbot_url": f"/instances/{inst_dir.name}/chatbot/",
-        })
+    with SessionLocal() as db:
+        tenants = db.execute(select(Tenant)).scalars().all()
+        users = db.execute(select(User)).scalars().all()
+
+        users_by_tenant: dict[int, list[str]] = {}
+        for u in users:
+            if u.tenant_id:
+                users_by_tenant.setdefault(u.tenant_id, []).append(u.username)
+
+        for t in tenants:
+            out.append({
+                "slug": t.slug,
+                "display_name": t.display_name or t.slug,
+                "last_paid": t.last_paid.isoformat() if t.last_paid else None,
+                "contact": {"name": t.contact_name, "email": t.contact_email, "phone": t.contact_phone},
+                "users": sorted(users_by_tenant.get(t.id, [])),
+                "chatbot_url": f"/instances/{t.slug}/chatbot/",
+            })
     return {"customers": out}
 
-# ----- Admin: create new customer (instance)
 @router.post("/api/admin/customers", tags=["PortalAdmin"])
 def create_customer(payload: dict, authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
 
-    slug = payload.get("slug")
+    slug = (payload or {}).get("slug")
     if not slug:
         raise HTTPException(status_code=400, detail="slug is required")
-    slug = _safe_slug(slug)
+    slug = slug.strip().lower()
 
-    display_name = payload.get("display_name") or slug
-    last_paid = payload.get("last_paid")
-    contact = payload.get("contact") or {}
-    profile = {
-        "display_name": display_name,
-        "last_paid": last_paid,
-        "contact": {
-            "name": contact.get("name"),
-            "email": contact.get("email"),
-            "phone": contact.get("phone"),
-        },
-    }
-    _create_instance_on_disk(slug, profile)
+    display_name = (payload or {}).get("display_name") or slug
+    last_paid_str = (payload or {}).get("last_paid")
+    contact = (payload or {}).get("contact") or {}
 
-    # Optionally create a manager user in one go
-    create_user = (payload.get("create_user") or {}).copy() if isinstance(payload.get("create_user"), dict) else None
-    if create_user:
-        username = create_user.get("username")
-        password = create_user.get("password")
-        role = create_user.get("role", "manager")
-        if not username or not password:
-            raise HTTPException(status_code=400, detail="create_user.username and create_user.password required")
-        if role not in ("admin", "manager"):
-            raise HTTPException(status_code=400, detail="create_user.role must be 'admin' or 'manager'")
-        users = _read_users_list()
-        if any(u["username"] == username for u in users):
-            raise HTTPException(status_code=409, detail="Username already exists")
-        users.append({"username": username, "password": password, "role": role, "tenant_slug": slug})
-        _write_users_list(users)
-        logger.info("Created manager user '%s' for tenant '%s'", username, slug)
+    lp = None
+    if last_paid_str:
+        try:
+            y, m, d = [int(x) for x in last_paid_str.split("-")]
+            lp = date(y, m, d)
+        except Exception:
+            raise HTTPException(status_code=400, detail="last_paid must be YYYY-MM-DD")
 
+    with SessionLocal() as db:
+        t = Tenant(
+            slug=slug,
+            display_name=display_name,
+            last_paid=lp,
+            contact_name=contact.get("name"),
+            contact_email=contact.get("email"),
+            contact_phone=contact.get("phone"),
+        )
+        db.add(t)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Tenant slug already exists")
+
+        # optional manager user
+        cu = (payload or {}).get("create_user")
+        if isinstance(cu, dict) and cu.get("username") and cu.get("password"):
+            u = User(
+                username=cu["username"],
+                password_hash=hash_password(cu["password"]),
+                role=cu.get("role", "manager"),
+                tenant_id=t.id
+            )
+            db.add(u)
+            try:
+                db.commit()
+            except IntegrityError:
+                db.rollback()
+                raise HTTPException(status_code=409, detail="Username already exists")
+
+        # default flow in DB
+        default_flow = {"greetings": ["Živjo! Kako vam lahko pomagam danes?"], "intents": [], "responses": {}}
+        db.add(ConversationFlow(tenant_id=t.id, flow=default_flow))
+        db.commit()
+
+    _ensure_instance_static(slug)  # keep static chatbot folder so link works
     return {"ok": True}
 
-# ----- Admin: delete customer (instance). Cascade deletes users by default.
-@router.delete("/api/admin/customers/{slug}", tags=["PortalAdmin"])
-def delete_customer(
-    slug: str,
-    authorization: str | None = Header(default=None),
-    cascade_users: bool = Query(default=True)
-):
-    data = _require_auth(authorization)
-    if data.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    _delete_instance_on_disk(slug)
-
-    if cascade_users:
-        users = _read_users_list()
-        new_users = [u for u in users if u.get("tenant_slug") != slug]
-        if len(new_users) != len(users):
-            _write_users_list(new_users)
-            logger.info("Deleted %d users for tenant '%s'", len(users) - len(new_users), slug)
-
-    return {"ok": True}
-
-# ----- Admin: update customer profile (business name, contact, last_paid)
 @router.patch("/api/admin/customers/{slug}/profile", tags=["PortalAdmin"])
 def update_customer_profile(slug: str, payload: dict, authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
-    inst = INSTANCES_DIR / slug
-    if not inst.exists():
-        raise HTTPException(status_code=404, detail="Instance not found")
-    profile_file = inst / "profile.json"
-    profile = {}
-    if profile_file.exists():
-        try:
-            with open(profile_file, "r", encoding="utf-8") as f:
-                profile = json.load(f)
-        except Exception as e:
-            logger.error("Failed to read %s: %s", profile_file, e)
 
-    # Merge updates
-    display_name = payload.get("display_name")
-    last_paid = payload.get("last_paid")
-    contact = payload.get("contact") or {}
+    with SessionLocal() as db:
+        t = db.execute(select(Tenant).where(Tenant.slug == slug)).scalar_one_or_none()
+        if not t:
+            raise HTTPException(status_code=404, detail="Tenant not found")
 
-    if display_name is not None:
-        profile["display_name"] = display_name
-    if last_paid is not None:
-        profile["last_paid"] = last_paid
-    if "contact" not in profile or not isinstance(profile.get("contact"), dict):
-        profile["contact"] = {}
-    for k in ("name", "email", "phone"):
-        if k in contact:
-            profile["contact"][k] = contact[k]
+        if "display_name" in payload:
+            t.display_name = payload.get("display_name")
+        if "last_paid" in payload:
+            val = payload.get("last_paid")
+            if val:
+                try:
+                    y, m, d = [int(x) for x in val.split("-")]
+                    t.last_paid = date(y, m, d)
+                except Exception:
+                    raise HTTPException(status_code=400, detail="last_paid must be YYYY-MM-DD")
+            else:
+                t.last_paid = None
+        if "contact" in payload and isinstance(payload["contact"], dict):
+            c = payload["contact"]
+            if "name" in c: t.contact_name = c.get("name")
+            if "email" in c: t.contact_email = c.get("email")
+            if "phone" in c: t.contact_phone = c.get("phone")
+        db.commit()
 
-    # Write back
-    inst.mkdir(parents=True, exist_ok=True)
-    with open(profile_file, "w", encoding="utf-8") as f:
-        json.dump(profile, f, ensure_ascii=False, indent=2)
-    logger.info("Updated profile for %s", slug)
-    return {"ok": True, "profile": profile}
+    return {"ok": True}
 
-# ----- Admin: users CRUD
+@router.delete("/api/admin/customers/{slug}", tags=["PortalAdmin"])
+def delete_customer(slug: str, authorization: str | None = Header(default=None)):
+    data = _require_auth(authorization)
+    if data.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admin only")
+
+    with SessionLocal() as db:
+        t = db.execute(select(Tenant).where(Tenant.slug == slug)).scalar_one_or_none()
+        if not t:
+            raise HTTPException(status_code=404, detail="Tenant not found")
+        db.delete(t)  # cascades to users/flows
+        db.commit()
+
+    inst_dir = INSTANCES_DIR / slug
+    if inst_dir.exists():
+        shutil.rmtree(inst_dir)
+    return {"ok": True}
+
+# -------------------- Admin: USERS (DB-backed) --------------------
 @router.get("/api/admin/users", tags=["PortalAdmin"])
 def admin_list_users(authorization: str | None = Header(default=None)):
     data = _require_auth(authorization)
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
-    users = _read_users_list()
-    sanitized = [{"username": u["username"], "role": u.get("role"), "tenant_slug": u.get("tenant_slug")} for u in users]
-    return {"users": sanitized}
+
+    with SessionLocal() as db:
+        rows = db.execute(select(User)).scalars().all()
+        out = []
+        for u in rows:
+            slug = None
+            if u.tenant_id:
+                t = db.get(Tenant, u.tenant_id)
+                slug = t.slug if t else None
+            out.append({"username": u.username, "role": u.role, "tenant_slug": slug})
+        return {"users": out}
 
 @router.post("/api/admin/users", tags=["PortalAdmin"])
 def admin_create_user(payload: dict, authorization: str | None = Header(default=None)):
@@ -332,13 +255,22 @@ def admin_create_user(payload: dict, authorization: str | None = Header(default=
     if role not in ("admin", "manager"):
         raise HTTPException(status_code=400, detail="role must be 'admin' or 'manager'")
 
-    users = _read_users_list()
-    if any(u["username"] == username for u in users):
-        raise HTTPException(status_code=409, detail="Username already exists")
+    with SessionLocal() as db:
+        tenant_id = None
+        if tenant_slug:
+            t = db.execute(select(Tenant).where(Tenant.slug == tenant_slug)).scalar_one_or_none()
+            if not t:
+                raise HTTPException(status_code=404, detail="tenant_slug not found")
+            tenant_id = t.id
 
-    users.append({"username": username, "password": password, "role": role, "tenant_slug": tenant_slug})
-    _write_users_list(users)
-    logger.info("Created user '%s' (role=%s, tenant=%s)", username, role, tenant_slug)
+        u = User(username=username, password_hash=hash_password(password), role=role, tenant_id=tenant_id)
+        db.add(u)
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            raise HTTPException(status_code=409, detail="Username already exists")
+
     return {"ok": True}
 
 @router.patch("/api/admin/users/{username}", tags=["PortalAdmin"])
@@ -347,39 +279,31 @@ def admin_update_user(username: str, payload: dict, authorization: str | None = 
     if data.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
 
-    users = _read_users_list()
-    for u in users:
-        if u["username"] == username:
-            if "password" in payload and payload["password"]:
-                u["password"] = payload["password"]
-            if "role" in payload:
-                if payload["role"] not in ("admin", "manager"):
-                    raise HTTPException(status_code=400, detail="role must be 'admin' or 'manager'")
-                u["role"] = payload["role"]
-            if "tenant_slug" in payload:
-                u["tenant_slug"] = payload["tenant_slug"]
-            _write_users_list(users)
-            logger.info("Updated user '%s'", username)
-            return {"ok": True}
-    raise HTTPException(status_code=404, detail="User not found")
+    with SessionLocal() as db:
+        u = db.execute(select(User).where(User.username == username)).scalar_one_or_none()
+        if not u:
+            raise HTTPException(status_code=404, detail="User not found")
 
-@router.delete("/api/admin/users/{username}", tags=["PortalAdmin"])
-def admin_delete_user(username: str, authorization: str | None = Header(default=None)):
-    data = _require_auth(authorization)
-    if data.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
-    if username == "admin":
-        raise HTTPException(status_code=400, detail="Cannot delete built-in admin")
+        if "password" in payload and payload["password"]:
+            u.password_hash = hash_password(payload["password"])
+        if "role" in payload:
+            if payload["role"] not in ("admin", "manager"):
+                raise HTTPException(status_code=400, detail="role must be 'admin' or 'manager'")
+            u.role = payload["role"]
+        if "tenant_slug" in payload:
+            slug = payload["tenant_slug"]
+            if slug:
+                t = db.execute(select(Tenant).where(Tenant.slug == slug)).scalar_one_or_none()
+                if not t:
+                    raise HTTPException(status_code=404, detail="tenant_slug not found")
+                u.tenant_id = t.id
+            else:
+                u.tenant_id = None
+        db.commit()
 
-    users = _read_users_list()
-    new_users = [u for u in users if u["username"] != username]
-    if len(new_users) == len(users):
-        raise HTTPException(status_code=404, detail="User not found")
-    _write_users_list(new_users)
-    logger.info("Deleted user '%s'", username)
     return {"ok": True}
 
-# ----- Public: per-instance flow for static chatbot
+# -------------------- Public: per-instance flow from FS (unchanged) --------------------
 @public_router.get("/api/instances/{slug}/conversation_flow")
 def conversation_flow(slug: str):
     inst = INSTANCES_DIR / slug
@@ -395,10 +319,18 @@ def conversation_flow(slug: str):
         logger.error("Failed to read %s: %s", flow_file, e)
         raise HTTPException(status_code=500, detail="Failed to read flow")
 
-# helper to mount static chatbots, called from main
+# -------------------- Static mounting helpers --------------------
+def _ensure_instance_static(slug: str):
+    inst = INSTANCES_DIR / slug
+    (inst / "chatbot").mkdir(parents=True, exist_ok=True)
+    index = inst / "chatbot" / "index.html"
+    if not index.exists():
+        index.write_text(
+            f"<!doctype html><html><body><h3>ACE Chatbot for {slug}</h3></body></html>", encoding="utf-8"
+        )
+
 def mount_instance_chatbots(app):
     if not INSTANCES_DIR.exists():
-        logger.warning("Instances dir not found: %s", INSTANCES_DIR)
         return
     for inst_dir in INSTANCES_DIR.glob("*"):
         chatbot_path = inst_dir / "chatbot"

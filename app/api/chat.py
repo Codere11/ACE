@@ -13,16 +13,11 @@ from fastapi.responses import StreamingResponse
 
 from app.core.config import FLOW
 from app.core import sessions  # legacy memory store
-from app.models import chat as chat_models  # proves centralized models
+from app.models import chat as chat_models
 from app.models.chat import ChatRequest, SurveyRequest, StaffMessage
 from app.services import deepseek_service, lead_service
 from app.services import chat_store, event_bus
-
-# Optional human takeover service (if present)
-try:
-    from app.services import session_service as takeover
-except Exception:
-    takeover = None  # type: ignore
+from app.services import takeover  # <-- single source for human mode
 
 logger = logging.getLogger("ace.api.chat")
 router = APIRouter()
@@ -110,14 +105,17 @@ def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
         _append_lead_notes(sid, f"AI: {summary}")
 
 # ---------------- AI gating (only-once-per-open-answer) ----------------
-# We keep a small in-process memory to ensure we score *once* per open answer.
 _LAST_AI_HASH: Dict[str, str] = {}  # sid -> sha1 of last scored free-text
 
 def _hash_text(txt: str) -> str:
     return hashlib.sha1((txt or "").strip().encode("utf-8")).hexdigest()
 
 def _human_takeover_active(sid: str) -> bool:
-    return bool(takeover and getattr(takeover, "is_human_mode", None) and takeover.is_human_mode(sid))
+    # single authoritative check
+    try:
+        return bool(sid) and takeover.is_active(sid)
+    except Exception:
+        return False
 
 def _arm_ai_for_answer(sid: str, msg: str, flow_sessions: Dict[str, Dict[str, Any]]):
     """
@@ -134,7 +132,6 @@ def _arm_ai_for_answer(sid: str, msg: str, flow_sessions: Dict[str, Dict[str, An
     if _LAST_AI_HASH.get(sid) == h:
         logger.info("AI skip (duplicate answer) sid=%s", sid)
         return
-    # Arm once; the action node will consume this and clear it.
     fs = flow_sessions.setdefault(sid, {})
     fs["ai_pending"] = {"hash": h, "text": msg_norm}
     logger.info("AI armed sid=%s hash=%s", sid, h[:10])
@@ -189,7 +186,6 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
                 story_complete=False,
             )
 
-        # Persist notes, update last scored hash and advance
         _update_lead_with_deepseek(sid, prompt, result)
         _LAST_AI_HASH[sid] = arm["hash"]
         flow_sessions[sid] = {"node": next_key or "done"}
@@ -317,7 +313,7 @@ def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, 
     if not node:
         return make_response("⚠️ Manjka vozlišče v pogovornem toku.", ui={}, chat_mode="guided", story_complete=True)
 
-    # 👇 PRIORITIZE openInput over choices so nodes may keep an input even if they also define choices
+    # Prioritize openInput over choices
     if node.get("openInput"):
         ui = {"openInput": True, "inputType": node.get("inputType", "single")}
         mode = "open"
@@ -354,7 +350,7 @@ async def _chat_impl(req: ChatRequest):
         logger.exception("persist/publish user message failed sid=%s", sid)
         raise
 
-    # Human takeover short-circuit (if service exists)
+    # Human takeover short-circuit
     if _human_takeover_active(sid):
         logger.info("human-mode active sid=%s -> skipping bot", sid)
         return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
@@ -456,17 +452,22 @@ async def _survey_impl(body: SurveyRequest):
     sid = body.sid
     logger.info("POST /chat/survey sid=%s", sid)
 
+    # Human mode: don't engage bot logic
+    if _human_takeover_active(sid):
+        return {"ok": True, "human_mode": True}
+
     parts = []
-    if body.industry:   parts.append(f"Industry: {body.industry}")
-    if body.budget:     parts.append(f"Budget: {body.budget}")
-    if body.experience: parts.append(f"Experience: {body.experience}")
-    if body.question1:  parts.append(f"Q1: {body.question1}")
-    if body.question2:  parts.append(f"Q2: {body.question2}")
+    # These fields may arrive as extras; our model allows extras.
+    if getattr(body, "industry", None):   parts.append(f"Industry: {body.industry}")
+    if getattr(body, "budget", None):     parts.append(f"Budget: {body.budget}")
+    if getattr(body, "experience", None): parts.append(f"Experience: {body.experience}")
+    if getattr(body, "question1", None):  parts.append(f"Q1: {body.question1}")
+    if getattr(body, "question2", None):  parts.append(f"Q2: {body.question2}")
     survey_text = " | ".join(parts) if parts else "No answers provided."
 
     _ensure_lead(sid)
     _append_lead_notes(sid, survey_text)
-    _touch_lead_message(sid, body.question2 or body.question1 or body.industry or "")
+    _touch_lead_message(sid, getattr(body, "question2", None) or getattr(body, "question1", None) or getattr(body, "industry", None) or "")
 
     # Persist & publish USER (survey as a message)
     try:
@@ -475,7 +476,7 @@ async def _survey_impl(body: SurveyRequest):
     except Exception:
         logger.exception("persist/publish survey message failed sid=%s", sid)
 
-    # DeepSeek summary → notes only (never overwrite lastMessage)
+    # DeepSeek summary → notes only
     try:
         lead = _ensure_lead(sid)
         prompt_parts = []
@@ -535,6 +536,10 @@ async def _staff_impl(body: StaffMessage):
     """Persist a staff message from the dashboard takeover UI (dual-write for legacy)."""
     sid = body.sid
     text = (body.text or "").strip()
+
+    # Enable/refresh human mode TTL for this sid
+    takeover.enable(sid)
+
     if not text:
         return {"ok": False}
 

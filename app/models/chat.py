@@ -1,93 +1,98 @@
 # app/models/chat.py
 from __future__ import annotations
+from typing import Optional, Dict, Any, Mapping
+import hashlib
+import json
 
-from typing import Literal, Optional
-from pydantic import BaseModel, Field
-import json, hashlib
+SCHEMA_VERSION: int = 1
+SUPPORTED_SCHEMA_VERSIONS = {1}
 
-# ---- Version this schema bundle so we can detect drift in logs/health
-SCHEMA_VERSION = "1.0.1-step1-pydantic-compat"
-
-# Roles we persist and render
-ChatRole = Literal["user", "assistant", "staff"]
-
-
-class ChatRequest(BaseModel):
-    """Standard chat message coming from the visitor/browser."""
-    sid: str = Field(min_length=3)
-    message: Optional[str] = ""
-
-
-class SurveyRequest(BaseModel):
-    """Structured answers submitted via the survey form."""
-    sid: str = Field(min_length=3)
-    industry: Optional[str] = ""
-    budget: Optional[str] = ""
-    experience: Optional[str] = ""
-    question1: Optional[str] = ""
-    question2: Optional[str] = ""
-
-
-class StaffMessage(BaseModel):
-    """Message sent by an internal agent via the dashboard takeover UI."""
-    sid: str = Field(min_length=3)
-    text: str = Field(min_length=1)
-
-
-class ChatMessage(BaseModel):
-    """Canonical stored chat message (what chat_store returns)."""
-    sid: str
-    role: ChatRole
-    text: str
-    timestamp: int  # epoch seconds
-
-
-# ---- Pydantic v1/v2 compatibility helpers
-def _model_schema(model_cls: type[BaseModel]) -> dict:
-    """
-    Return a JSON-serializable schema for a Pydantic model across v1/v2.
-    - v2: model_json_schema()
-    - v1: schema()
-    """
-    getter = getattr(model_cls, "model_json_schema", None)
-    if callable(getter):  # pydantic v2
-        return getter()
-    return model_cls.schema()  # pydantic v1
-
+def is_schema_supported(v: int | None) -> bool:
+    return v in SUPPORTED_SCHEMA_VERSIONS if v is not None else True
 
 def schema_fingerprint() -> str:
-    """Stable fingerprint of these models for quick integrity checks."""
-    payload = {
+    layout = {
         "version": SCHEMA_VERSION,
-        "roles": ["user", "assistant", "staff"],
-        "ChatRequest": _model_schema(ChatRequest),
-        "SurveyRequest": _model_schema(SurveyRequest),
-        "StaffMessage": _model_schema(StaffMessage),
-        "ChatMessage": _model_schema(ChatMessage),
-        # include whether v2 API exists to avoid collisions across installs
-        "pydantic_v2": hasattr(BaseModel, "model_json_schema"),
+        "models": {
+            "ChatRequest": ["message", "sid", "tenant_slug", "context", "meta"],
+            "SurveyRequest": ["answers", "sid", "form_id", "tenant_slug", "meta"],
+            "StaffMessage": ["sid", "text", "tenant_slug", "meta"],
+            "ChatMessage": ["role", "text", "timestamp", "sid", "meta"],
+            "ChatEvent": ["type", "sid", "payload", "timestamp"],
+        },
+        "roles": ["user", "assistant", "staff", "system"],
     }
-    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha1(raw.encode("utf-8")).hexdigest()
+    raw = json.dumps(layout, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
+ROLE_USER = "user"
+ROLE_ASSISTANT = "assistant"
+ROLE_STAFF = "staff"
+ROLE_SYSTEM = "system"
+MESSAGE_ROLES = {ROLE_USER, ROLE_ASSISTANT, ROLE_STAFF, ROLE_SYSTEM}
+MESSAGE_TYPES = MESSAGE_ROLES
 
-def model_modules() -> dict:
-    """Where each model is actually being imported from (should be app.models.chat)."""
+def sanitize_role(role: Optional[str]) -> str:
+    return role if role in MESSAGE_ROLES else ROLE_USER
+
+try:
+    from pydantic import BaseModel, Field, ConfigDict  # type: ignore
+    class _FlexibleModel(BaseModel):
+        model_config = ConfigDict(extra="allow")
+except Exception:
+    from pydantic import BaseModel, Field  # type: ignore
+    class _FlexibleModel(BaseModel):
+        class Config:
+            extra = "allow"
+
+class ChatRequest(_FlexibleModel):
+    message: str
+    sid: Optional[str] = None
+    tenant_slug: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
+    meta: Optional[Dict[str, Any]] = None
+
+class SurveyRequest(_FlexibleModel):
+    answers: Dict[str, Any] = {}
+    sid: Optional[str] = None
+    form_id: Optional[str] = None
+    tenant_slug: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+class StaffMessage(_FlexibleModel):
+    sid: str
+    text: str
+    tenant_slug: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+class ChatMessage(_FlexibleModel):
+    role: str = ROLE_USER
+    text: str
+    timestamp: Optional[int] = None
+    sid: Optional[str] = None
+    meta: Optional[Dict[str, Any]] = None
+
+class ChatEvent(_FlexibleModel):
+    type: str
+    sid: str
+    payload: Optional[Dict[str, Any]] = None
+    timestamp: Optional[int] = None
+
+def model_modules() -> Mapping[str, Any]:
     return {
-        "ChatRequest": ChatRequest.__module__,
-        "SurveyRequest": SurveyRequest.__module__,
-        "StaffMessage": StaffMessage.__module__,
-        "ChatMessage": ChatMessage.__module__,
+        "ChatRequest": ChatRequest,
+        "SurveyRequest": SurveyRequest,
+        "StaffMessage": StaffMessage,
+        "ChatMessage": ChatMessage,
+        "ChatEvent": ChatEvent,
     }
 
+from .core import Tenant, User, ConversationFlow  # noqa: E402,F401
 
 __all__ = [
-    "SCHEMA_VERSION",
-    "ChatRole",
-    "ChatRequest",
-    "SurveyRequest",
-    "StaffMessage",
-    "ChatMessage",
-    "schema_fingerprint",
+    "SCHEMA_VERSION","SUPPORTED_SCHEMA_VERSIONS","is_schema_supported","schema_fingerprint",
+    "ROLE_USER","ROLE_ASSISTANT","ROLE_STAFF","ROLE_SYSTEM","MESSAGE_ROLES","MESSAGE_TYPES","sanitize_role",
+    "ChatRequest","SurveyRequest","StaffMessage","ChatMessage","ChatEvent",
     "model_modules",
+    "Tenant","User","ConversationFlow",
 ]
