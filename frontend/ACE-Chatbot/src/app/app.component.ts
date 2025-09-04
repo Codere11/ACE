@@ -15,6 +15,8 @@ interface ChatResponse {
   imageUrl?: string|null;
 }
 
+type Channel = 'email'|'phone'|'whatsapp'|'sms';
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -39,9 +41,15 @@ export class AppComponent implements OnInit, OnDestroy {
   private pendingUserTexts = new Set<string>();
   private recentHashes: string[] = [];
 
-  /** When true, we’re in full human takeover: ignore assistant messages */
+  /** Full human takeover: ignore assistant messages */
   humanMode = false;
   typingLabel: string | null = null;
+
+  /** Contact-first capture gate */
+  contactPending = true;
+  contact: { name: string; email: string; phone: string; channel: Channel } = {
+    name: '', email: '', phone: '', channel: 'email'
+  };
 
   constructor(
     private http: HttpClient,
@@ -59,56 +67,58 @@ export class AppComponent implements OnInit, OnDestroy {
         localStorage.setItem('ace_sid', this.sid);
       }
       console.debug('[SID] init(browser)', { sid: this.sid });
+
+      // Restore contact gate status if previously completed
+      const captured = localStorage.getItem('ace_contact_captured');
+      this.contactPending = captured !== 'true';
     } else {
       this.sid = 'SSR_NO_SID';
-      console.debug('[SID] init(ssr) — no network calls, no SID creation');
+      console.debug('[SID] init(ssr)');
+      this.contactPending = false; // avoid SSR mismatches
     }
   }
 
   ngOnInit() {
-  if (!this.isBrowser) return;
+    if (!this.isBrowser) return;
 
-  // Start listening for live events for THIS SID
-  this.live.start(this.sid);
-  this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
-    if (!evt) return;
-    if (evt.type !== 'message.created') return;
-    if (evt.sid !== this.sid) return;
+    // Start listening for live events for THIS SID
+    this.live.start(this.sid);
+    this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
+      if (!evt) return;
+      if (evt.type !== 'message.created') return;
+      if (evt.sid !== this.sid) return;
 
-    const role = (evt.payload?.role as 'user'|'assistant'|'staff') ?? 'assistant';
-    const text = (evt.payload?.text as string) ?? '';
+      const role = (evt.payload?.role as 'user'|'assistant'|'staff') ?? 'assistant';
+      const text = (evt.payload?.text as string) ?? '';
 
-    // If staff speaks -> enable human takeover mode and keep an open composer
-    if (role === 'staff') {
-      this.humanMode = true;
-      this.chatMode = 'open';
-      this.ui = { inputType: 'single' };
-    }
+      if (role === 'staff') {
+        // when staff joins, switch to 1-on-1
+        this.humanMode = true;
+        this.chatMode = 'open';
+        this.ui = { inputType: 'single' };
+        this.contactPending = false; // ensure gate is hidden
+      }
 
-    // Skip our own just-sent user messages (already shown optimistically)
-    if (role === 'user' && this.pendingUserTexts.has(text)) {
-      this.pendingUserTexts.delete(text);
-      return;
-    }
+      if (role === 'user' && this.pendingUserTexts.has(text)) {
+        this.pendingUserTexts.delete(text);
+        return;
+      }
 
-    // During human mode, suppress assistant messages entirely
-    if (this.humanMode && role === 'assistant') return;
+      if (this.humanMode && role === 'assistant') return;
 
-    // De-dupe
-    const h = `${role}|${text}`;
-    if (this.recentHashes.includes(h)) return;
-    this._rememberHash(h);
+      const h = `${role}|${text}`;
+      if (this.recentHashes.includes(h)) return;
+      this._rememberHash(h);
 
-    this.messages.push({ role, text });
-    this._removeTrailingTypingIfNeeded();
-  });
+      this.messages.push({ role, text });
+      this._removeTrailingTypingIfNeeded();
+    });
 
-  // ✅ Kick off the conversation (bot greeting) IF not already in human mode
-  if (!this.humanMode) {
-    this.send('/start');
+    // Kick off bot greeting only AFTER contact gate is cleared
+    if (!this.humanMode && !this.contactPending) {
+      this.send('/start');
     }
   }
-
 
   ngOnDestroy() {
     if (!this.isBrowser) return;
@@ -116,7 +126,80 @@ export class AppComponent implements OnInit, OnDestroy {
     this.live.stop();
   }
 
-  // Helpers
+  // ---------- Contact-first handlers ----------
+  onContactSave() {
+    // Minimal validation: require at least one of email or phone
+    const hasEmail = !!this.contact.email.trim();
+    const hasPhone = !!this.contact.phone.trim();
+    if (!hasEmail && !hasPhone) {
+      this.messages.push({ role: 'assistant', text: 'Dodaj vsaj e-pošto ali telefon, prosim. 🙏' });
+      return;
+    }
+
+    this.loading = true;
+    this.startTyping('Shranjujem kontakt…');
+
+    const rid = this.rid('CONTACT');
+    const payload = {
+      type: 'contact',
+      sid: this.sid,
+      contact: {
+        name: this.contact.name?.trim() || '',
+        email: this.contact.email?.trim() || '',
+        phone: this.contact.phone?.trim() || '',
+        channel: this.contact.channel
+      }
+    };
+
+    // Send as a normal chat message with a clear prefix (backend can parse)
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { sid: this.sid, message: `/contact ${JSON.stringify(payload.contact)}` }, { headers: this.headers(rid) })
+      .subscribe({
+        next: (res) => {
+          localStorage.setItem('ace_contact_captured', 'true');
+          this.contactPending = false;
+          this.stopTyping('Hvala! Nadaljujva. 🔥');
+          this.loading = false;
+
+          // Kick off the regular guided flow
+          this.send('/start');
+        },
+        error: (err) => {
+          console.error('[FE] contact save ERR', { rid, err });
+          this.loading = false;
+          this.stopTyping('⚠️ Ni uspelo shraniti. Poskusi znova ali preskoči v klepet.');
+        }
+      });
+  }
+
+  onContactSkip() {
+    // Log skip server-side and move to human 1-on-1
+    this.skipToHuman(true);
+  }
+
+  // ---------- Global Skip → human 1-on-1 ----------
+  skipToHuman(fromGate = false) {
+    if (!this.isBrowser) return;
+    const rid = this.rid('SKIP');
+
+    // Mark UI state
+    this.humanMode = true;
+    this.chatMode = 'open';
+    this.ui = { inputType: 'single' };
+    this.contactPending = false;
+    localStorage.setItem('ace_contact_captured', fromGate ? 'skipped' : (localStorage.getItem('ace_contact_captured') || 'true'));
+
+    // Show local notice
+    this.messages.push({ role: 'assistant', text: 'Povezujem te z agentom. Piši vprašanje kar tukaj 👇' });
+
+    // Notify backend (for analytics / takeover trigger)
+    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { sid: this.sid, message: '/skip_to_human' }, { headers: this.headers(rid) })
+      .subscribe({
+        next: () => {},
+        error: (err) => console.error('[FE] skip notify ERR', { rid, err })
+      });
+  }
+
+  // ---------- Helpers ----------
   private rid(prefix: string) {
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
   }
@@ -133,14 +216,11 @@ export class AppComponent implements OnInit, OnDestroy {
     if (last && prev && prev.typing) this.messages.splice(this.messages.length - 2, 1);
   }
 
-  // Send paths
+  // ---------- Send paths ----------
   send(text: string) {
     if (!this.isBrowser) return;
     if (!text.trim()) return;
     const rid = this.rid('SEND');
-
-    console.groupCollapsed(`[FE] ${rid} send() text='${text}'`);
-    console.debug('[SID] using', { sid: this.sid });
 
     this.messages.push({ role: 'user', text });
     this._rememberHash(`user|${text}`);
@@ -150,14 +230,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.startTyping('Razmišljam…');
     this.loading = true;
 
-    // When in human mode, backend will short-circuit with no assistant reply.
-    // We still POST so the message is persisted and the manager sees it live.
     const body = { message: text, sid: this.sid };
 
     this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
       .subscribe({
-        next: res => { console.debug('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
-        error: err => { console.error('[FE] /chat/ ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri komunikaciji s strežnikom.'); }
+        next: res => { this.consume(res); },
+        error: err => { console.error('[FE] /chat/ ERR', { rid, err }); this.loading = false; this.stopTyping('⚠️ Napaka pri komunikaciji s strežnikom.'); }
       });
   }
 
@@ -165,14 +243,10 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.isBrowser) return;
     const rid = ridOuter || this.rid('STRM');
 
-    // If human mode is on, do not stream; fall back to normal POST.
     if (this.humanMode) {
       this.send(text);
       return;
     }
-
-    console.groupCollapsed(`[FE] ${rid} sendStream() text='${text}'`);
-    console.debug('[SID] using', { sid: this.sid });
 
     try {
       const response = await fetch(`${this.backendUrl}/chat/stream`, {
@@ -199,12 +273,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
       this._rememberHash(`assistant|${buffer}`);
       this.loading = false;
-      console.groupEnd();
     } catch (err) {
       console.error('[FE] stream ERR', { rid, err });
       this.loading = false;
       this.stopTyping('⚠️ Napaka pri pretakanju odgovora.');
-      console.groupEnd();
     }
   }
 
@@ -215,8 +287,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.singleSubmitting = true;
 
     const rid = this.rid('SINGLE');
-    console.groupCollapsed(`[FE] ${rid} sendSingle() answer='${answer}'`);
-    console.debug('[SID] using', { sid: this.sid });
 
     this.messages.push({ role: 'user', text: answer });
     this._rememberHash(`user|${answer}`);
@@ -230,8 +300,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, body, { headers: this.headers(rid) })
       .subscribe({
-        next: res => { this.singleSubmitting = false; console.debug('[FE] /chat/ OK', { rid, res }); console.groupEnd(); this.consume(res); },
-        error: err => { this.singleSubmitting = false; console.error('[FE] /chat/ ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju odgovora.'); }
+        next: res => { this.singleSubmitting = false; this.consume(res); },
+        error: err => { this.singleSubmitting = false; console.error('[FE] /chat/ ERR', { rid, err }); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju odgovora.'); }
       });
   }
 
@@ -242,8 +312,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.surveySubmitting = true;
 
     const rid = this.rid('SURVEY');
-    console.groupCollapsed(`[FE] ${rid} sendSurvey() Q1='${ans1}' Q2='${ans2}'`);
-    console.debug('[SID] using', { sid: this.sid });
 
     const combo = `Q1: ${ans1} | Q2: ${ans2}`;
     this.messages.push({ role: 'user', text: combo });
@@ -258,8 +326,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
     this.http.post<ChatResponse>(`${this.backendUrl}/chat/survey`, body, { headers: this.headers(rid) })
       .subscribe({
-        next: res => { this.surveySubmitting = false; console.debug('[FE] /chat/survey OK', { rid, res }); console.groupEnd(); this.consume(res); },
-        error: err => { this.surveySubmitting = false; console.error('[FE] /chat/survey ERR', { rid, err }); console.groupEnd(); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju ankete.'); }
+        next: res => { this.surveySubmitting = false; this.consume(res); },
+        error: err => { this.surveySubmitting = false; console.error('[FE] /chat/survey ERR', { rid, err }); this.loading = false; this.stopTyping('⚠️ Napaka pri pošiljanju ankete.'); }
       });
   }
 
@@ -281,37 +349,32 @@ export class AppComponent implements OnInit, OnDestroy {
   clickQuickReply(q: any) { this.send(q.title); }
 
   private consume(res: ChatResponse) {
-  this.loading = false;
+    this.loading = false;
 
-  // Default UI shape when in open mode and backend didn't specify one
-  if (res.ui == null && res.chatMode === 'open') {
-    res.ui = { inputType: 'single' };
-  } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
-    res.ui.inputType = 'single';
-  }
+    if (res.ui == null && res.chatMode === 'open') {
+      res.ui = { inputType: 'single' };
+    } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
+      res.ui.inputType = 'single';
+    }
 
-  // If human takeover is active, ignore assistant replies from POST responses.
-  if (!this.humanMode && res.reply !== undefined) {
-    this._rememberHash(`assistant|${res.reply}`);
-    this.stopTyping(res.reply);
-  } else {
-    // just remove typing indicator if present
-    this.stopTyping();
-  }
+    if (!this.humanMode && res.reply !== undefined) {
+      this._rememberHash(`assistant|${res.reply}`);
+      this.stopTyping(res.reply);
+    } else {
+      this.stopTyping();
+    }
 
-  // In human mode keep an open composer and do not alter UI based on bot output
-  if (this.humanMode) {
-    this.chatMode = 'open';
-    this.ui = { inputType: 'single' };
-    return;
-  }
+    if (this.humanMode) {
+      this.chatMode = 'open';
+      this.ui = { inputType: 'single' };
+      return;
+    }
 
-  // Normal (non-takeover) path
-  if (res.ui) this.ui = res.ui;
-  else if (res.quickReplies) this.ui = { type: 'choices', buttons: res.quickReplies };
-  else this.ui = null;
+    if (res.ui) this.ui = res.ui;
+    else if (res.quickReplies) this.ui = { type: 'choices', buttons: res.quickReplies };
+    else this.ui = null;
 
-  this.chatMode = res.chatMode;
+    this.chatMode = res.chatMode;
   }
 
   private startTyping(label?: string) {
@@ -325,12 +388,11 @@ export class AppComponent implements OnInit, OnDestroy {
       this.messages.pop();
       if (replaceWith !== undefined) this.messages.push({ role: 'assistant', text: replaceWith });
     }
-    this.typingLabel = null; // clear label whenever typing stops
+    this.typingLabel = null;
   }
 
   private isTypingActive(): boolean {
     const last = this.messages[this.messages.length - 1];
     return !!(last && last.typing);
   }
-  
 }

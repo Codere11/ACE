@@ -1,8 +1,8 @@
 {
-  "welcome": {
+  "start": {
     "texts": [
-      "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
-      "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?"
+      "Živjo 👋 — ko zaključiva, ti pošljem povzetek in demo. Če si preskočil kontakt, še vedno lahko pogovarjava naprej.",
+      "Kako ti lahko ACE najhitreje pomaga: tehnologija ali takoj več povpraševanj?"
     ],
     "choices": [
       { "title": "Tehnologija", "next": "budget" },
@@ -11,8 +11,7 @@
   },
   "budget": {
     "texts": [
-      "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
-      "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš."
+      "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?"
     ],
     "choices": [
       { "title": "< €1k", "next": "platform_small" },
@@ -21,7 +20,6 @@
       { "title": "€10k+", "next": "platform_premium" }
     ]
   },
-
   "platform_small": {
     "texts": [
       "Pri manjšem proračunu je učinek omejen, ampak ACE lahko pomaga maksimizirati vsako povpraševanje. Na katerih platformah trenutno oglašujete?"
@@ -66,11 +64,9 @@
       { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
     ]
   },
-
   "ads_dest": {
     "texts": [
-      "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?",
-      "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?"
+      "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?"
     ],
     "choices": [
       { "title": "Landing page/obrazec", "next": "open_question" },
@@ -79,23 +75,19 @@
       { "title": "Drugo", "next": "open_question" }
     ]
   },
-
   "open_question": {
     "texts": [
-      "Super 👍. Se zadnji dve vprasanji: S cim se vase podjetje ukvarja? Pri katerem produktu "
+      "Super 👍. Še zadnji dve: s čim se podjetje ukvarja in pri katerem produktu/storitvi želiš več povpraševanj?"
     ],
     "openInput": true,
     "next": "deepseek"
   },
-
   "deepseek": {
     "action": "deepseek_score"
   },
-
   "closing": {
     "texts": [
-      "Hvala za informacije 🚀. Mislim, da bi ACE tu lahko veliko pomagal. Kaj je najboljši naslednji korak?",
-      "Odlično, zdaj imam jasno sliko. Kako želiš nadaljevati?"
+      "Hvala za informacije 🚀. ACE lahko tu veliko pomaga. Kaj je najboljši naslednji korak?"
     ],
     "choices": [
       { "title": "Dogovorimo se za sestanek ta teden", "next": "end" },
@@ -103,11 +95,9 @@
       { "title": "Pošlji mi več informacij", "next": "end" }
     ]
   },
-
   "end": {
     "texts": [
-      "Odlično 👍. Naša ekipa bo kmalu v stiku!",
-      "Super, hvala za pogovor – kmalu se slišimo!"
+      "Odlično 👍. Naša ekipa bo kmalu v stiku!"
     ]
   }
 }
