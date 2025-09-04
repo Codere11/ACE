@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 // Types
 export type Lead = {
@@ -11,6 +11,10 @@ export type Lead = {
   stage: string;
   compatibility: boolean;
   interest: 'High' | 'Medium' | 'Low';
+  /** NEW: actual strings coming from backend (may be empty). */
+  phoneText?: string;
+  emailText?: string;
+  /** Back-compat flags for UI conditions. */
   phone: boolean;
   email: boolean;
   adsExp: boolean;
@@ -50,7 +54,16 @@ export class DashboardService {
   constructor(private http: HttpClient) {}
 
   getLeads(): Observable<Lead[]> {
-    return this.http.get<Lead[]>(`${this.baseUrl}/leads/`);
+    return this.http.get<Lead[]>(`${this.baseUrl}/leads/`).pipe(
+      map(list =>
+        list.map(l => ({
+          ...l,
+          // ensure booleans exist even if backend only sends strings
+          phone: !!(l as any).phone || !!l.phoneText,
+          email: !!(l as any).email || !!l.emailText,
+        }))
+      )
+    );
   }
 
   getKPIs(): Observable<KPIs> {

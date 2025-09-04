@@ -1,10 +1,43 @@
 import time
-from typing import List
+from typing import List, Optional
 from collections import Counter
 from app.models.lead import Lead
 
 # In-memory lead store
 _leads: List[Lead] = []
+
+
+def _now() -> int:
+    return int(time.time())
+
+
+def _find(sid: Optional[str]) -> Optional[Lead]:
+    if not sid:
+        return None
+    return next((l for l in _leads if l.id == sid), None)
+
+
+def _ensure(sid: str) -> Lead:
+    lead = _find(sid)
+    if lead:
+        return lead
+    lead = Lead(
+        id=sid,
+        name="Unknown",
+        industry="Unknown",
+        score=50,
+        stage="Pogovori",
+        compatibility=True,
+        interest="Medium",
+        phone=False,
+        email=False,
+        adsExp=False,
+        lastMessage="",
+        lastSeenSec=_now(),
+        notes=""
+    )
+    _leads.append(lead)
+    return lead
 
 
 # -------------------
@@ -25,7 +58,7 @@ def ingest_from_deepseek(user_message: str, classification: dict, sid: str = Non
                "Medium" if classification["category"] == "could_fit" else "Low"
 
     # prevent duplicates
-    existing = next((l for l in _leads if l.id == sid), None)
+    existing = _find(sid) if sid else None
     if existing:
         return existing
 
@@ -40,6 +73,8 @@ def ingest_from_deepseek(user_message: str, classification: dict, sid: str = Non
         phone=False,
         email=False,
         adsExp=False,
+        phoneText="",          # NEW
+        emailText="",          # NEW
         lastMessage=user_message,
         lastSeenSec=int(time.time()),
         notes=classification.get("reasons", "")
@@ -52,6 +87,35 @@ def add_lead(lead: Lead):
     """Append a lead to the global store if not already present."""
     if not any(l.id == lead.id for l in _leads):
         _leads.append(lead)
+    return lead
+
+
+# -------------------
+# Contact upsert (NEW)
+# -------------------
+def upsert_contact(sid: str, *, name: str = "", email: str = "", phone: str = "", channel: str = "email") -> Lead:
+    """
+    Store phone/email strings and set legacy flags for compatibility.
+    Also bumps stage/score minimally.
+    """
+    lead = _ensure(sid)
+    if name and (not lead.name or lead.name == "Unknown"):
+        lead.name = name
+
+    if email:
+        lead.emailText = email.strip()
+        lead.email = True
+    if phone:
+        lead.phoneText = phone.strip()
+        lead.phone = True
+
+    # Simple promotion if contact present
+    if lead.email or lead.phone:
+        lead.stage = "Interested" if lead.stage in ("Awareness", "Cold", "Discovery") else lead.stage
+        if lead.score < 50:
+            lead.score = 50
+
+    lead.lastSeenSec = _now()
     return lead
 
 

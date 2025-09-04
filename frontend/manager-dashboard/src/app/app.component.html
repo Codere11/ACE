@@ -39,8 +39,26 @@
               <div class="tags">
                 <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
                 <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
-                <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+
+                <!-- NEW: render actual phone/email text if present, otherwise fall back to badges -->
+                <ng-container *ngIf="lead.phoneText?.trim(); else phoneBadge">
+                <a class="tag good" [href]="'tel:' + lead.phoneText!.trim()">
+                📞 {{ lead.phoneText }}
+                </a>
+                </ng-container>
+                <ng-template #phoneBadge>
+                  <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+                </ng-template>
+
+                <ng-container *ngIf="lead.emailText?.trim(); else emailBadge">
+                  <a class="tag good" [href]="'mailto:' + lead.emailText!.trim()">
+                  📧 {{ lead.emailText }}
+                  </a>
+                </ng-container>
+                <ng-template #emailBadge>
                 <span class="tag" [class.good]="lead.email">📧 Email</span>
+                </ng-template>
+
                 <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
               </div>
             </div>

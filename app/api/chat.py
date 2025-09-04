@@ -1,4 +1,3 @@
-# app/api/chat.py
 from __future__ import annotations
 
 import asyncio
@@ -6,6 +5,7 @@ import hashlib
 import logging
 import random
 import time
+import json
 from typing import Any, Dict, Optional
 
 from fastapi import APIRouter
@@ -272,7 +272,7 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             _append_lead_notes(sid, msg)
             _touch_lead_message(sid, msg)
             # ✅ Arm AI scoring ONLY now (for open answers), once per unique text
-            _arm_ai_for_answer(sid, msg, flow_sessions)
+            _arm_ai_for_answer(sid, msg, FLOW_SESSIONS)
 
         if next_key:
             next_node = get_node_by_id(next_key)
@@ -281,14 +281,14 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             if next_node and next_node.get("openInput"):
                 flow_sessions[sid]["waiting_input"] = True
                 flow_sessions[sid]["awaiting_node"] = next_key
-                _trace(sid, "armed_next_openInput", next_key, flow_sessions[sid])
+                _trace(sid, "armed_next_openInput", next_key, FLOW_SESSIONS[sid])
                 return format_node(next_node, story_complete=False)
 
             if next_node and next_node.get("action"):
-                _trace(sid, "goto_next->action(exec)", next_key, flow_sessions[sid])
-                return _execute_action_node(sid, next_node, flow_sessions)
+                _trace(sid, "goto_next->action(exec)", next_key, FLOW_SESSIONS[sid])
+                return _execute_action_node(sid, next_node, FLOW_SESSIONS)
 
-            _trace(sid, "goto_next", next_key, flow_sessions[sid])
+            _trace(sid, "goto_next", next_key, FLOW_SESSIONS[sid])
             return format_node(next_node, story_complete=False)
 
         _trace(sid, "dup_or_mismatch", current_id, state, msg)
@@ -296,15 +296,15 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             next_node = get_node_by_id(next_key)
             flow_sessions[sid] = {"node": next_key}
             if next_node and next_node.get("action"):
-                _trace(sid, "dup_or_mismatch->action(exec)", next_key, flow_sessions[sid])
-                return _execute_action_node(sid, next_node, flow_sessions)
+                _trace(sid, "dup_or_mismatch->action(exec)", next_key, FLOW_SESSIONS[sid])
+                return _execute_action_node(sid, next_node, FLOW_SESSIONS)
             return format_node(next_node, story_complete=False)
 
         return make_response("", ui={}, chat_mode="guided", story_complete=False)
 
     if node.get("action"):
         _trace(sid, "action(exec at enter)", node_key, state, msg)
-        return _execute_action_node(sid, node, flow_sessions)
+        return _execute_action_node(sid, node, FLOW_SESSIONS)
 
     _trace(sid, "default", node_key, state)
     return format_node(node, story_complete=False)
@@ -339,6 +339,60 @@ async def _chat_impl(req: ChatRequest):
     sid = req.sid
     message = (req.message or "").strip()
     logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
+
+    # ---- NEW: handle contact command BEFORE touching/storing message
+    # Accept: /contact {"name":"...","email":"...","phone":"...","channel":"email"}
+    if message.startswith("/contact"):
+        try:
+            json_str = message[len("/contact"):].strip()
+            data = json.loads(json_str) if json_str else {}
+            name = (data.get("name") or "").strip()
+            email = (data.get("email") or "").strip()
+            phone = (data.get("phone") or "").strip()
+            channel = (data.get("channel") or "email").strip()
+
+            lead = lead_service.upsert_contact(sid, name=name, email=email, phone=phone, channel=channel)
+
+            # Notify dashboards live (lead row update)
+            try:
+                await event_bus.publish(sid, "lead.touched", {
+                    "lastMessage": "Kontakt posodobljen",
+                    "lastSeenSec": lead.lastSeenSec,
+                    "phone": bool(lead.phone),
+                    "email": bool(lead.email),
+                    "phoneText": lead.phoneText,
+                    "emailText": lead.emailText,
+                })
+            except Exception:
+                logger.exception("lead.touched publish failed sid=%s", sid)
+
+            # Friendly reply and exit (do not store /contact as a chat line)
+            return make_response(
+                reply="Kontakt shranjen ✅ — nadaljujeva. 🔥",
+                ui=None,
+                chat_mode="guided",
+                story_complete=False
+            )
+        except Exception:
+            logger.exception("contact parse/save failed sid=%s", sid)
+            return make_response(
+                reply="⚠️ Ni uspelo shraniti kontakta. Poskusi znova ali preskoči v klepet.",
+                ui=None,
+                chat_mode="guided",
+                story_complete=False
+            )
+
+    # Optional: allow FE to flip to human mode explicitly
+    if message.strip() == "/skip_to_human":
+        try:
+            takeover.enable(sid)
+            await event_bus.publish(sid, "lead.touched", {
+                "lastMessage": "Uporabnik želi 1-na-1 pogovor",
+                "lastSeenSec": _now(),
+            })
+        except Exception:
+            logger.exception("skip_to_human publish failed sid=%s", sid)
+        return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
     _touch_lead_message(sid, message)
 
@@ -389,6 +443,53 @@ async def _chat_stream_impl(req: ChatRequest):
     message = (req.message or "").strip()
     logger.info("POST /chat/stream sid=%s len=%d", sid, len(message or ""))
 
+    # We don't expect /contact over stream, but if it happens, handle it similarly.
+    if message.startswith("/contact"):
+        try:
+            json_str = message[len("/contact"):].strip()
+            data = json.loads(json_str) if json_str else {}
+            name = (data.get("name") or "").strip()
+            email = (data.get("email") or "").strip()
+            phone = (data.get("phone") or "").strip()
+            channel = (data.get("channel") or "email").strip()
+
+            lead = lead_service.upsert_contact(sid, name=name, email=email, phone=phone, channel=channel)
+
+            try:
+                await event_bus.publish(sid, "lead.touched", {
+                    "lastMessage": "Kontakt posodobljen",
+                    "lastSeenSec": lead.lastSeenSec,
+                    "phone": bool(lead.phone),
+                    "email": bool(lead.email),
+                    "phoneText": lead.phoneText,
+                    "emailText": lead.emailText,
+                })
+            except Exception:
+                logger.exception("lead.touched publish failed (stream) sid=%s", sid)
+
+            async def ok():
+                yield "Kontakt shranjen ✅ — nadaljujeva. 🔥"
+            return StreamingResponse(ok(), media_type="text/plain; charset=utf-8")
+        except Exception:
+            logger.exception("contact parse/save failed (stream) sid=%s", sid)
+            async def err():
+                yield "⚠️ Ni uspelo shraniti kontakta. Poskusi znova ali preskoči v klepet."
+            return StreamingResponse(err(), media_type="text/plain; charset=utf-8")
+
+    if message.strip() == "/skip_to_human":
+        try:
+            takeover.enable(sid)
+            await event_bus.publish(sid, "lead.touched", {
+                "lastMessage": "Uporabnik želi 1-na-1 pogovor",
+                "lastSeenSec": _now(),
+            })
+        except Exception:
+            logger.exception("skip_to_human publish failed (stream) sid=%s", sid)
+
+        async def human_notice():
+            yield "Agent je prevzel pogovor. 🤝\n"
+        return StreamingResponse(human_notice(), media_type="text/plain; charset=utf-8")
+
     _touch_lead_message(sid, message)
 
     # Persist & publish USER
@@ -397,14 +498,12 @@ async def _chat_stream_impl(req: ChatRequest):
         await event_bus.publish(sid, "message.created", user_msg)
     except Exception:
         logger.exception("persist/publish user message failed (stream) sid=%s", sid)
-        raise
-
     # Human takeover -> stream a notice and exit
     if _human_takeover_active(sid):
         logger.info("human-mode active sid=%s -> streaming notice", sid)
-        async def human_notice():
+        async def human_notice2():
             yield "Agent je prevzel pogovor. 🤝\n"
-        return StreamingResponse(human_notice(), media_type="text/plain; charset=utf-8")
+        return StreamingResponse(human_notice2(), media_type="text/plain; charset=utf-8")
 
     # Bot flow
     try:
