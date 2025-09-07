@@ -331,3 +331,11 @@
 {"sid": "6xjuijr9d7r", "role": "user", "text": "Dober dan!", "timestamp": 1756983855}
 {"sid": "6xjuijr9d7r", "role": "user", "text": "/start", "timestamp": 1756989528}
 {"sid": "6xjuijr9d7r", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1756989528}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757177791}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1757177791}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Dober dan!", "timestamp": 1757177978}
+{"sid": "rk50m1701mp", "role": "user", "text": "Dober dan!", "timestamp": 1757177982}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757195214}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?", "timestamp": 1757195214}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757242491}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?", "timestamp": 1757242491}

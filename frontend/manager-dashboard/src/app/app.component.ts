@@ -21,7 +21,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   activeTab: 'leads' | 'notes' | 'flow' | 'chats' = 'leads';
 
+  // --- Logos + menu (NEW) ---
+  clientLogoUrl = '/assets/client-logo.png';
+  agentLogoUrl = '/assets/agent-avatar.png';
+  agentMenuOpen = false;
+
   rankedLeads: Lead[] = [];
+  // list shown after filters/search (NEW)
+  displayedLeads: Lead[] = [];
+
   kpis: KPIs | null = null;
   funnel: Funnel | null = null;
   objections: string[] = [];
@@ -57,6 +65,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // ➕ NEW: per-SID toggle for showing full history in takeover
   showFullHistoryBySid: Record<string, boolean> = {};
+
+  interestFilter: 'All' | 'High' | 'Medium' | 'Low' = 'All';
+  minScore = 0;
+  maxScore = 100;  // NEW
+  mustHavePhone = false;
+  mustHaveEmail = false;
+  dateFrom: string = '';
+  dateTo: string = '';
+  searchName: string = '';
+
+  // ------- TAGS state (NEW) -------
+  aiTags: string[] = ['money', 'ready'];
+  newTag = '';
 
   constructor(
     private dashboardService: DashboardService,
@@ -121,6 +142,7 @@ export class AppComponent implements OnInit, OnDestroy {
             lead,
             ...this.rankedLeads.slice(idx + 1),
           ];
+          this.applyFilters(); // keep displayed list in sync
           this.log('live: lead.touched applied', sid);
         } else {
           this.log('live: lead.touched for unknown sid -> refetch leads', sid);
@@ -145,6 +167,7 @@ export class AppComponent implements OnInit, OnDestroy {
             lead,
             ...this.rankedLeads.slice(idx + 1),
           ];
+          this.applyFilters();
           this.log('live:', type, 'applied', sid);
         } else {
           this.log('live:', type, 'for unknown sid -> refetch leads', sid);
@@ -200,6 +223,7 @@ export class AppComponent implements OnInit, OnDestroy {
             lead,
             ...this.rankedLeads.slice(li + 1),
           ];
+          this.applyFilters();
           this.log('live: lead.lastMessage updated from message.created', sid);
         }
       }
@@ -228,6 +252,7 @@ export class AppComponent implements OnInit, OnDestroy {
         }
 
         this.loadingLeads = false;
+        this.applyFilters(); // ensure displayedLeads is set
       },
       error: (e) => { this.loadingLeads = false; this.log('fetchLeads err', e); },
     });
@@ -235,7 +260,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   fetchKPIs() {
     this.loadingKPIs = true;
-       this.log('fetchKPIs()');
+    this.log('fetchKPIs()');
     this.dashboardService.getKPIs().subscribe({
       next: data => { this.kpis = data; this.loadingKPIs = false; this.log('fetchKPIs ok', data); },
       error: (e) => { this.loadingKPIs = false; this.log('fetchKPIs err', e); },
@@ -287,6 +312,17 @@ export class AppComponent implements OnInit, OnDestroy {
       error: (e) => { this.log('loadChatsForLead err', sid, e); },
     });
   }
+
+  onMinScoreChange(val: number) {
+    this.minScore = Math.max(0, Math.min(100, Number(val)));
+    if (this.minScore > this.maxScore) this.maxScore = this.minScore;
+  }
+
+  onMaxScoreChange(val: number) {
+    this.maxScore = Math.max(0, Math.min(100, Number(val)));
+    if (this.maxScore < this.minScore) this.minScore = this.maxScore;
+  }
+
 
   // -------- NEW: visible thread for takeover (filtered) --------
   getVisibleThread(sid: string): ChatLog[] {
@@ -375,6 +411,7 @@ export class AppComponent implements OnInit, OnDestroy {
         lead,
         ...this.rankedLeads.slice(li + 1),
       ];
+      this.applyFilters();
       this.log('optimistic: lead.lastMessage updated from staff send', sid);
     }
 
@@ -426,14 +463,72 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   onHistoryToggle(checked: boolean) {
-  if (!this.takeoverLead) return;
-  this.showFullHistoryBySid[this.takeoverLead.id] = checked;
-
-  // keep scroll at bottom after switching views
-  setTimeout(() => {
-    const el = document.getElementById('takeover-body');
-    if (el) el.scrollTop = el.scrollHeight;
-  }, 0);
+    if (!this.takeoverLead) return;
+    this.showFullHistoryBySid[this.takeoverLead.id] = checked;
+    // keep scroll at bottom after switching views
+    setTimeout(() => {
+      const el = document.getElementById('takeover-body');
+      if (el) el.scrollTop = el.scrollHeight;
+    }, 0);
   }
 
+  // -------- FILTERING (NEW) --------
+  applyFilters() {
+  let list = [...this.rankedLeads];
+
+  if (this.interestFilter !== 'All') {
+    list = list.filter(l => (l.interest || '') === this.interestFilter);
+  }
+
+  // NEW: between minScore and maxScore (inclusive)
+  list = list.filter(l => {
+    const s = l.score || 0;
+    return s >= this.minScore && s <= this.maxScore;
+  });
+
+  if (this.mustHavePhone) list = list.filter(l => !!l.phone);
+  if (this.mustHaveEmail) list = list.filter(l => !!l.email);
+
+  if (this.dateFrom) {
+    const from = Math.floor(new Date(this.dateFrom).getTime() / 1000);
+    list = list.filter(l => (l.lastSeenSec || 0) >= from);
+  }
+  if (this.dateTo) {
+    const to = Math.floor(new Date(this.dateTo).getTime() / 1000) + 86400; // inclusive
+    list = list.filter(l => (l.lastSeenSec || 0) <= to);
+  }
+
+  if ((this.searchName || '').trim()) {
+    const q = this.searchName.toLowerCase();
+    list = list.filter(l => (l.name || '').toLowerCase().includes(q));
+  }
+
+    this.displayedLeads = list.sort((a, b) => b.score - a.score);
+  }
+
+
+  // -------- TAGS controls (NEW) --------
+  addTag() {
+    const t = (this.newTag || '').trim();
+    if (!t) return;
+    if (!this.aiTags.includes(t)) this.aiTags = [...this.aiTags, t];
+    this.newTag = '';
+  }
+  removeTag(i: number) {
+    this.aiTags = this.aiTags.filter((_, idx) => idx !== i);
+  }
+
+  // -------- Logo fallbacks (NEW) --------
+  onClientLogoError(e: Event) {
+    (e.target as HTMLImageElement).src =
+      'data:image/svg+xml;charset=UTF-8,' +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><rect width="44" height="44" rx="22" fill="#161b22"/><text x="50%" y="54%" text-anchor="middle" font-family="Arial" font-size="14" fill="#8b949e">Logo</text></svg>');
+  }
+  onAgentLogoError(e: Event) {
+    (e.target as HTMLImageElement).src =
+      'data:image/svg+xml;charset=UTF-8,' +
+      encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><rect width="44" height="44" rx="22" fill="#161b22"/><text x="50%" y="54%" text-anchor="middle" font-family="Arial" font-size="14" fill="#8b949e">Me</text></svg>');
+  }
+  onChangeAccount() { this.log('Change Account clicked'); }
+  onLogout() { this.log('Logout clicked'); }
 }
