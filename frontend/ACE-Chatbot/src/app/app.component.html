@@ -69,10 +69,10 @@
         class="composer dual-input"
         (ngSubmit)="onSubmitSurvey(msgInput1, msgInput2)">
     <input #msgInput1 type="text"
-           placeholder="Kako običajno pridobivate stranke?"
+           placeholder="Odgovor na 1. vprasanje"
            [disabled]="loading" />
     <input #msgInput2 type="text"
-           placeholder="Kdo običajno odgovarja na nove kontakte?"
+           placeholder="Odgovor na 2. vprasanje"
            [disabled]="loading" />
     <div class="composer-actions">
       <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>

@@ -3,91 +3,88 @@
     {
       "id": "welcome",
       "texts": [
-        "Živjo 👋, tukaj ACE! Najbrž si me pravkar videl v oglasu :). Te bolj zanima tehnologija ACE ali kako ti lahko pripelje več strank?",
-        "Pozdravljen 👋, tukaj ACE. Zanima te bolj tehnična plat ali kako ACE konkretno prinese nove stranke?"
+        "Pozdravljeni 👋, tukaj ACE za predstavitev izbrane nepremičnine. Želite hitro pregled ključnih podatkov ali takoj rezervirati ogled?"
       ],
       "choices": [
-        { "title": "Tehnologija", "next": "budget" },
-        { "title": "Več strank", "next": "budget" }
+        { "title": "Ključni podatki", "next": "budget" },
+        { "title": "Rezerviraj ogled", "next": "budget" }
       ]
     },
     {
       "id": "budget",
       "texts": [
-        "Super 👍. Kolikšen je približen mesečni proračun za oglase v tvojem podjetju?",
-        "Odlično, povej mi še proračun za mesečne oglase, da vidimo kam spadaš."
+        "Odlično. Kateri cenovni razpon vam ustreza?"
       ],
       "choices": [
-        { "title": "< €1k", "next": "platform_small" },
-        { "title": "€1k–€3k", "next": "platform_mid" },
-        { "title": "€3k–€10k", "next": "platform_high" },
-        { "title": "€10k+", "next": "platform_premium" }
+        { "title": "< €150k", "next": "platform_small" },
+        { "title": "€150k–€300k", "next": "platform_mid" },
+        { "title": "€300k–€600k", "next": "platform_high" },
+        { "title": "€600k+", "next": "platform_premium" }
       ]
     },
     {
       "id": "platform_small",
       "texts": [
-        "Pri manjšem proračunu je učinek omejen, ampak ACE lahko pomaga maksimizirati vsako povpraševanje. Na katerih platformah trenutno oglašujete?"
+        "Jasno. Katera vrsta nepremičnine vas zanima?"
       ],
       "choices": [
-        { "title": "Facebook/Instagram", "next": "ads_dest" },
-        { "title": "Google Ads", "next": "ads_dest" },
-        { "title": "TikTok/Drugo", "next": "ads_dest" },
-        { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+        { "title": "Stanovanje", "next": "ads_dest" },
+        { "title": "Hiša", "next": "ads_dest" },
+        { "title": "Vila/Luksuzno", "next": "ads_dest" },
+        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
       ]
     },
     {
       "id": "platform_mid",
       "texts": [
-        "To je razpon, kjer ACE začne pokazati zelo konkretne rezultate. Na katerih platformah trenutno oglašujete?"
+        "Super. Katera vrsta nepremičnine vas zanima?"
       ],
       "choices": [
-        { "title": "Facebook/Instagram", "next": "ads_dest" },
-        { "title": "Google Ads", "next": "ads_dest" },
-        { "title": "TikTok/Drugo", "next": "ads_dest" },
-        { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+        { "title": "Stanovanje", "next": "ads_dest" },
+        { "title": "Hiša", "next": "ads_dest" },
+        { "title": "Vila/Luksuzno", "next": "ads_dest" },
+        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
       ]
     },
     {
       "id": "platform_high",
       "texts": [
-        "To je močan budget – ACE poskrbi, da se izkoristi vsaka priložnost. Na katerih platformah trenutno oglašujete?"
+        "Odlično. Katera vrsta nepremičnine vas zanima?"
       ],
       "choices": [
-        { "title": "Facebook/Instagram", "next": "ads_dest" },
-        { "title": "Google Ads", "next": "ads_dest" },
-        { "title": "TikTok/Drugo", "next": "ads_dest" },
-        { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+        { "title": "Stanovanje", "next": "ads_dest" },
+        { "title": "Hiša", "next": "ads_dest" },
+        { "title": "Vila/Luksuzno", "next": "ads_dest" },
+        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
       ]
     },
     {
       "id": "platform_premium",
       "texts": [
-        "Odlično! Na tem nivoju je hitra odzivnost ključna – ACE pokrije tisto, kar ljudje sami težko. Na katerih platformah trenutno oglašujete?"
+        "Odlično! Katera vrsta nepremičnine vas zanima?"
       ],
       "choices": [
-        { "title": "Facebook/Instagram", "next": "ads_dest" },
-        { "title": "Google Ads", "next": "ads_dest" },
-        { "title": "TikTok/Drugo", "next": "ads_dest" },
-        { "title": "Trenutno ne oglašujemo", "next": "ads_dest" }
+        { "title": "Stanovanje", "next": "ads_dest" },
+        { "title": "Hiša", "next": "ads_dest" },
+        { "title": "Vila/Luksuzno", "next": "ads_dest" },
+        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
       ]
     },
     {
       "id": "ads_dest",
       "texts": [
-        "Odlično, ACE ima že dokazane rezultate na tej platformi. Kam običajno vodijo vaši oglasi?",
-        "Super, ACE se dobro obnese na takih kanalih. Povej mi še, kam usmerjate obiskovalce po kliku?"
+        "Kako želite nadaljevati z ogledom informacij o nepremičnini?"
       ],
       "choices": [
-        { "title": "Landing page/obrazec", "next": "open_question_1" },
-        { "title": "Spletna stran", "next": "open_question_1" },
-        { "title": "Messenger/WhatsApp", "next": "open_question_1" },
+        { "title": "Fotografije in opis", "next": "open_question_1" },
+        { "title": "Tloris/energetska izkaznica", "next": "open_question_1" },
+        { "title": "Video/virtualni ogled", "next": "open_question_1" },
         { "title": "Drugo", "next": "open_question_1" }
       ]
     },
     {
       "id": "open_question_1",
-      "texts": ["S čim se ukvarja vaše podjetje?"],
+      "texts": ["Katero lokacijo ali sosesko preferirate? (npr. Vič, Bežigrad, center…)"],
       "openInput": true,
       "inputType": "single",
       "action": "store_answer",
@@ -96,7 +93,7 @@
     {
       "id": "open_question_2",
       "texts": [
-        "Super 👍. Še zadnji dve vprašanji: Kako običajno pridobivate stranke? Kdo običajno odgovarja na nove kontakte?"
+        "Super 👍. Še zadnji dve vprašanji: Kdaj bi vam okvirno ustrezal ogled? Kateri kontakt je najboljši za potrditev (telefon/e-pošta)?"
       ],
       "openInput": true,
       "inputType": "dual",
@@ -111,8 +108,8 @@
     {
       "id": "closing",
       "texts": [
-        "Hvala za informacije 🚀. Mislim, da bi ACE tu lahko veliko pomagal. Kaj je najboljši naslednji korak?",
-        "Odlično, zdaj imam jasno sliko. Kako želiš nadaljevati?"
+        "Hvala za informacije 🚀. Predlagam: (1) rezerviramo termin ogleda ali (2) pošljem brošuro s tlorisom in dodatnimi podatki. Kaj vam ustreza?",
+        "Odlično, zdaj imam jasno sliko. Želite termin ogleda, klic ali več informacij po e-pošti?"
       ],
       "openInput": true,
       "inputType": "single"
@@ -120,8 +117,8 @@
     {
       "id": "end",
       "texts": [
-        "Odlično 👍. Naša ekipa bo kmalu v stiku!",
-        "Super, hvala za pogovor – kmalu se slišimo!"
+        "Odlično 👍. Potrditev in podrobnosti pošljemo kmalu.",
+        "Super, hvala za pogovor – slišimo se v kratkem!"
       ]
     }
   ]

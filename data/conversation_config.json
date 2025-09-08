@@ -1,19 +1,18 @@
 {
-  "product": "Omsoft ACE",
-  "description": "ACE is an advanced conversational agent replacing landing pages and forms. It qualifies leads directly in chat, captures objections, and provides real-time insights.",
+  "product": "Vila Zelena – 4-sobna hiša z vrtom (Vič, Ljubljana)",
+  "description": "Svetla, energetsko varčna hiša (180 m² + terasa/vrt), 2 kopalnici, 2 parkirni mesti, mirna ulica blizu LPP in šole. Cena: €685.000.",
   "ideal_clients": [
-    "real estate agencies",
-    "private health clinics",
-    "digital marketing firms",
-    "SMEs spending > €1000/month on ads"
+    "družine, ki iščejo hišo v Ljubljani",
+    "pari, ki želijo mirno lokacijo z vrtom",
+    "investitorji, ki iščejo kakovostno hišo na dobri mikrolokaciji"
   ],
   "bad_fit_clients": [
-    "hobby projects spending < €500/month",
-    "businesses with no digital advertising"
+    "kupci z budžetom pod €400.000",
+    "iskalci garsonjer ali poslovnih prostorov"
   ],
   "core_value": [
-    "more conversions vs landing pages",
-    "real-time objection capture",
-    "automatic qualification and handover"
+    "jasna predstavitev ključnih podatkov",
+    "hitro zbiranje kontakta in terminov ogledov",
+    "alternativni predlogi, če listing ne ustreza"
   ]
 }
