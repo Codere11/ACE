@@ -3,113 +3,133 @@
     {
       "id": "welcome",
       "texts": [
-        "Pozdravljeni 👋, tukaj ACE za predstavitev izbrane nepremičnine. Želite hitro pregled ključnih podatkov ali takoj rezervirati ogled?"
+        "Preden začnemo, prosim vnesite kontakt za povratni info 👇\n• E-pošta\n• Telefon (lahko pustite samo eno polje)"
       ],
-      "choices": [
-        { "title": "Ključni podatki", "next": "budget" },
-        { "title": "Rezerviraj ogled", "next": "budget" }
-      ]
+      "openInput": true,
+      "inputType": "dual-contact",
+      "next": "listing_highlights"
     },
     {
-      "id": "budget",
+      "id": "listing_highlights",
       "texts": [
-        "Odlično. Kateri cenovni razpon vam ustreza?"
+        "✅ Ključni podatki izbrane nepremičnine\n📍 Vič, Ljubljana\n💶 Cena: €685.000\n📐 Površina: 180 m² bivalno (+ terasa/vrt)\n🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti\n\nŽelite videti slike, tloris ali lokacijo?"
       ],
       "choices": [
-        { "title": "< €150k", "next": "platform_small" },
-        { "title": "€150k–€300k", "next": "platform_mid" },
-        { "title": "€300k–€600k", "next": "platform_high" },
-        { "title": "€600k+", "next": "platform_premium" }
+        { "title": "Pokaži slike", "next": "listing_gallery" },
+        { "title": "Pokaži tloris", "next": "floorplan" },
+        { "title": "Lokacija na zemljevidu", "next": "map" },
+        { "title": "Naprej", "next": "fit_check" }
       ]
     },
     {
-      "id": "platform_small",
+      "id": "listing_gallery",
+      "texts": ["Galerija nepremičnine 📸"],
+      "action": "show_gallery",
+      "payload": { "images": ["vila.png"] },
+      "next": "fit_check"
+    },
+    {
+      "id": "floorplan",
       "texts": [
-        "Jasno. Katera vrsta nepremičnine vas zanima?"
+        "Tloris nepremičnine 🗺️ (lahko pošljemo tudi PDF na e-pošto, ki ste jo navedli)."
       ],
+      "action": "show_image",
+      "payload": { "image": "vila.png", "label": "Tloris (predogled)" },
       "choices": [
-        { "title": "Stanovanje", "next": "ads_dest" },
-        { "title": "Hiša", "next": "ads_dest" },
-        { "title": "Vila/Luksuzno", "next": "ads_dest" },
-        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
+        { "title": "Pošlji PDF tlorisa", "next": "send_brochure" },
+        { "title": "Nazaj", "next": "listing_highlights" }
       ]
     },
     {
-      "id": "platform_mid",
+      "id": "map",
+      "texts": [ "Okvirna lokacija na zemljevidu 🗺️ – Vič, Ljubljana." ],
+      "action": "show_map",
+      "payload": { "address": "Vič, Ljubljana" },
+      "next": "fit_check"
+    },
+    {
+      "id": "fit_check",
       "texts": [
-        "Super. Katera vrsta nepremičnine vas zanima?"
+        "Ali okvirno ustreza vašim željam glede lokacije, cene in velikosti?"
       ],
       "choices": [
-        { "title": "Stanovanje", "next": "ads_dest" },
-        { "title": "Hiša", "next": "ads_dest" },
-        { "title": "Vila/Luksuzno", "next": "ads_dest" },
-        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
+        { "title": "Da, izgleda super", "next": "timeline" },
+        { "title": "Mogoče – imam vprašanja", "next": "open_question" },
+        { "title": "Ne – iščem nekaj drugega", "next": "fallback_prefs" }
       ]
     },
     {
-      "id": "platform_high",
-      "texts": [
-        "Odlično. Katera vrsta nepremičnine vas zanima?"
-      ],
-      "choices": [
-        { "title": "Stanovanje", "next": "ads_dest" },
-        { "title": "Hiša", "next": "ads_dest" },
-        { "title": "Vila/Luksuzno", "next": "ads_dest" },
-        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
-      ]
-    },
-    {
-      "id": "platform_premium",
-      "texts": [
-        "Odlično! Katera vrsta nepremičnine vas zanima?"
-      ],
-      "choices": [
-        { "title": "Stanovanje", "next": "ads_dest" },
-        { "title": "Hiša", "next": "ads_dest" },
-        { "title": "Vila/Luksuzno", "next": "ads_dest" },
-        { "title": "Zemljišče/Drugo", "next": "ads_dest" }
-      ]
-    },
-    {
-      "id": "ads_dest",
-      "texts": [
-        "Kako želite nadaljevati z ogledom informacij o nepremičnini?"
-      ],
-      "choices": [
-        { "title": "Fotografije in opis", "next": "open_question_1" },
-        { "title": "Tloris/energetska izkaznica", "next": "open_question_1" },
-        { "title": "Video/virtualni ogled", "next": "open_question_1" },
-        { "title": "Drugo", "next": "open_question_1" }
-      ]
-    },
-    {
-      "id": "open_question_1",
-      "texts": ["Katero lokacijo ali sosesko preferirate? (npr. Vič, Bežigrad, center…)"],
+      "id": "open_question",
+      "texts": [ "Odlično – kaj vas zanima?" ],
       "openInput": true,
       "inputType": "single",
       "action": "store_answer",
-      "next": "open_question_2"
+      "next": "answer_and_progress"
     },
     {
-      "id": "open_question_2",
+      "id": "answer_and_progress",
+      "action": "deepseek_answer",
+      "next": "timeline"
+    },
+    {
+      "id": "timeline",
       "texts": [
-        "Super 👍. Še zadnji dve vprašanji: Kdaj bi vam okvirno ustrezal ogled? Kateri kontakt je najboljši za potrditev (telefon/e-pošta)?"
+        "Kdaj bi vam okvirno ustrezal ogled? (ta teden, naslednji teden, vikend?)"
+      ],
+      "choices": [
+        { "title": "Ta teden", "next": "schedule_intro" },
+        { "title": "Naslednji teden", "next": "schedule_intro" },
+        { "title": "Vikend", "next": "schedule_intro" },
+        { "title": "Kasneje / nisem prepričan", "next": "closing" }
+      ]
+    },
+    {
+      "id": "schedule_intro",
+      "texts": [
+        "Super. Upoštevali bomo vaš termin in vam pošljemo predlog ogleda na posredovani kontakt."
+      ],
+      "next": "end"
+    },
+    {
+      "id": "send_brochure",
+      "texts": [
+        "Pošiljam PDF brošuro s tlorisom na vaš vnešeni e-mail. Če želite še informativni izračun mesečnega obroka, napišite polog (npr. 20%)."
       ],
       "openInput": true,
-      "inputType": "dual",
-      "action": "store_answer",
-      "next": "survey_done"
+      "inputType": "single",
+      "action": "mortgage_quote",
+      "next": "end"
     },
     {
-      "id": "survey_done",
-      "action": "deepseek_score",
-      "next": "closing"
+      "id": "fallback_prefs",
+      "texts": [
+        "Brez skrbi – napišite še: lokacija, proračun in tip (stanovanje/hiša), da predlagam boljše alternative."
+      ],
+      "openInput": true,
+      "inputType": "single",
+      "action": "store_answer",
+      "next": "alt_suggest"
+    },
+    {
+      "id": "alt_suggest",
+      "texts": [ "Našel sem nekaj alternativ, ki ustrezajo vašim željam 👇" ],
+      "action": "deepseek_suggest_alternatives",
+      "next": "closing_alt"
+    },
+    {
+      "id": "closing_alt",
+      "texts": [
+        "Želite, da za izbrano nepremičnino uredimo ogled ali pošljemo več informacij na vaš kontakt?"
+      ],
+      "choices": [
+        { "title": "Uredi ogled", "next": "end" },
+        { "title": "Pošlji več informacij", "next": "end" }
+      ]
     },
     {
       "id": "closing",
       "texts": [
-        "Hvala za informacije 🚀. Predlagam: (1) rezerviramo termin ogleda ali (2) pošljem brošuro s tlorisom in dodatnimi podatki. Kaj vam ustreza?",
-        "Odlično, zdaj imam jasno sliko. Želite termin ogleda, klic ali več informacij po e-pošti?"
+        "Hvala za informacije 🚀. Predlagam: (1) rezerviramo termin ogleda ali (2) pošljem brošuro s tlorisom in dodatnimi podatki. Kaj vam ustreza?"
       ],
       "openInput": true,
       "inputType": "single"
@@ -118,7 +138,7 @@
       "id": "end",
       "texts": [
         "Odlično 👍. Potrditev in podrobnosti pošljemo kmalu.",
-        "Super, hvala za pogovor – slišimo se v kratkem!"
+        "Hvala za zanimanje – slišimo se v kratkem!"
       ]
     }
   ]

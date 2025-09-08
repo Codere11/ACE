@@ -366,7 +366,22 @@ async def _chat_impl(req: ChatRequest):
             except Exception:
                 logger.exception("lead.touched publish failed sid=%s", sid)
 
-            # Friendly reply and exit (do not store /contact as a chat line)
+            # >>> NEW: if we are currently on an openInput dual contact node, advance to its 'next'
+            curr = FLOW_SESSIONS.get(sid) or {}
+            curr_node_id = curr.get("node")
+            curr_node = get_node_by_id(curr_node_id) if curr_node_id else None
+            if curr_node and curr_node.get("openInput") and curr_node.get("inputType") in ("dual-contact", "contact"):
+                next_key = curr_node.get("next") or "done"
+                FLOW_SESSIONS[sid] = {"node": next_key}
+                next_node = get_node_by_id(next_key)
+                if next_node and next_node.get("openInput"):
+                    FLOW_SESSIONS[sid]["waiting_input"] = True
+                    FLOW_SESSIONS[sid]["awaiting_node"] = next_key
+                _trace(sid, "contact->advance", next_key, FLOW_SESSIONS[sid], "advance after /contact")
+                return format_node(next_node, story_complete=False)
+            # <<< NEW
+
+            # Friendly reply and exit (legacy)
             return make_response(
                 reply="Kontakt shranjen ✅ — nadaljujeva. 🔥",
                 ui=None,
@@ -467,9 +482,28 @@ async def _chat_stream_impl(req: ChatRequest):
             except Exception:
                 logger.exception("lead.touched publish failed (stream) sid=%s", sid)
 
-            async def ok():
+            # >>> NEW: advance if on dual-contact node
+            curr = FLOW_SESSIONS.get(sid) or {}
+            curr_node_id = curr.get("node")
+            curr_node = get_node_by_id(curr_node_id) if curr_node_id else None
+            if curr_node and curr_node.get("openInput") and curr_node.get("inputType") in ("dual-contact", "contact"):
+                next_key = curr_node.get("next") or "done"
+                FLOW_SESSIONS[sid] = {"node": next_key}
+                next_node = get_node_by_id(next_key)
+                if next_node and next_node.get("openInput"):
+                    FLOW_SESSIONS[sid]["waiting_input"] = True
+                    FLOW_SESSIONS[sid]["awaiting_node"] = next_key
+                _trace(sid, "contact->advance(stream)", next_key, FLOW_SESSIONS[sid], "advance after /contact")
+                reply_text = (format_node(next_node, story_complete=False).get("reply") or "").strip()
+
+                async def ok():
+                    yield reply_text or "Nadaljujva. 🔥"
+                return StreamingResponse(ok(), media_type="text/plain; charset=utf-8")
+            # <<< NEW
+
+            async def ok_fallback():
                 yield "Kontakt shranjen ✅ — nadaljujeva. 🔥"
-            return StreamingResponse(ok(), media_type="text/plain; charset=utf-8")
+            return StreamingResponse(ok_fallback(), media_type="text/plain; charset=utf-8")
         except Exception:
             logger.exception("contact parse/save failed (stream) sid=%s", sid)
             async def err():

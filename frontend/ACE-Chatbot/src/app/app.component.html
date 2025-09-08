@@ -1,43 +1,4 @@
 <div class="chat-container">
-  <!-- Contact-first capture gate -->
-  <form *ngIf="contactPending" class="contact-card" (ngSubmit)="onContactSave()">
-    <h3>Preden začnemo – kam ti pošljem povzetek ali demo?</h3>
-
-    <div class="field-grid">
-      <label>
-        <span>Ime (neobvezno)</span>
-        <input type="text" [(ngModel)]="contact.name" name="name" [disabled]="loading" />
-      </label>
-
-      <label>
-        <span>E-pošta</span>
-        <input type="email" [(ngModel)]="contact.email" name="email" placeholder="ime@podjetje.si" [disabled]="loading" />
-      </label>
-
-      <label>
-        <span>Telefon</span>
-        <input type="tel" [(ngModel)]="contact.phone" name="phone" placeholder="+386 ..." [disabled]="loading" />
-      </label>
-
-      <label>
-        <span>Preferiran kanal</span>
-        <select [(ngModel)]="contact.channel" name="channel" [disabled]="loading">
-          <option value="email">Email</option>
-          <option value="phone">Telefon</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="sms">SMS</option>
-        </select>
-      </label>
-    </div>
-
-    <div class="contact-actions">
-      <button class="primary" type="submit" [disabled]="loading">Shrani & Nadaljuj</button>
-      <button class="skip" type="button" (click)="onContactSkip()" [disabled]="loading">Preskoči → klepet z agentom</button>
-    </div>
-
-    <p class="hint">Lahko pustiš samo email ali samo telefon — dovolj je eno polje.</p>
-  </form>
-
   <!-- Messages -->
   <div class="messages">
     <div *ngFor="let m of messages" class="msg" [class.user]="m.role==='user'" [class.typing]="m.typing">
@@ -47,7 +8,7 @@
     </div>
   </div>
 
-  <!-- Quick replies + global Skip -->
+  <!-- Quick replies -->
   <div *ngIf="ui && ($any(ui).type === 'choices')" class="choices">
     <button
       *ngFor="let q of $any(ui).buttons"
@@ -60,20 +21,28 @@
     </button>
 
     <button type="button" class="chip alt-skip" (click)="skipToHuman()" [disabled]="loading">
-      Preskoči vprašanja → 1-na-1
+      Preskoči → 1-na-1
     </button>
   </div>
 
-  <!-- Dual open input (survey Q1+Q2) -->
+  <!-- Dual-contact composer (FIRST STEP) -->
+  <form *ngIf="chatMode==='open' && ui?.inputType==='dual-contact'"
+        class="composer dual-input"
+        (ngSubmit)="sendContactDual(contactEmail.value, contactPhone.value)">
+    <input #contactEmail type="email" placeholder="Vaš e-mail" [disabled]="loading" />
+    <input #contactPhone type="tel" placeholder="Telefon (+386 ...)" [disabled]="loading" />
+    <div class="composer-actions">
+      <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
+      <button type="submit" [disabled]="loading">Pošlji</button>
+    </div>
+  </form>
+
+  <!-- Dual open input (for 2 free-text answers elsewhere) -->
   <form *ngIf="chatMode==='open' && ui?.inputType==='dual'"
         class="composer dual-input"
         (ngSubmit)="onSubmitSurvey(msgInput1, msgInput2)">
-    <input #msgInput1 type="text"
-           placeholder="Odgovor na 1. vprasanje"
-           [disabled]="loading" />
-    <input #msgInput2 type="text"
-           placeholder="Odgovor na 2. vprasanje"
-           [disabled]="loading" />
+    <input #msgInput1 type="text" placeholder="Odgovor 1" [disabled]="loading" />
+    <input #msgInput2 type="text" placeholder="Odgovor 2" [disabled]="loading" />
     <div class="composer-actions">
       <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
       <button type="submit" [disabled]="loading">Pošlji</button>
@@ -81,12 +50,10 @@
   </form>
 
   <!-- Single open input -->
-  <form *ngIf="chatMode==='open' && ui?.type!=='choices' && ui?.inputType!=='dual'"
+  <form *ngIf="chatMode==='open' && ui?.type!=='choices' && ui?.inputType!=='dual' && ui?.inputType!=='dual-contact'"
         class="composer"
         (ngSubmit)="onSubmitSingle(msgInput)">
-    <input #msgInput type="text"
-           placeholder="Vnesite odgovor..."
-           [disabled]="loading" />
+    <input #msgInput type="text" placeholder="Vnesite odgovor..." [disabled]="loading" />
     <div class="composer-actions">
       <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
       <button type="submit" [disabled]="loading">Pošlji</button>

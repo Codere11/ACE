@@ -45,8 +45,9 @@ export class AppComponent implements OnInit, OnDestroy {
   humanMode = false;
   typingLabel: string | null = null;
 
-  /** Contact-first capture gate */
-  contactPending = true;
+  /** We no longer show the old gate form; the flow itself asks for dual contact first. */
+  contactPending = false;
+
   contact: { name: string; email: string; phone: string; channel: Channel } = {
     name: '', email: '', phone: '', channel: 'email'
   };
@@ -67,14 +68,9 @@ export class AppComponent implements OnInit, OnDestroy {
         localStorage.setItem('ace_sid', this.sid);
       }
       console.debug('[SID] init(browser)', { sid: this.sid });
-
-      // Restore contact gate status if previously completed
-      const captured = localStorage.getItem('ace_contact_captured');
-      this.contactPending = captured !== 'true';
     } else {
       this.sid = 'SSR_NO_SID';
       console.debug('[SID] init(ssr)');
-      this.contactPending = false; // avoid SSR mismatches
     }
   }
 
@@ -96,7 +92,6 @@ export class AppComponent implements OnInit, OnDestroy {
         this.humanMode = true;
         this.chatMode = 'open';
         this.ui = { inputType: 'single' };
-        this.contactPending = false; // ensure gate is hidden
       }
 
       if (role === 'user' && this.pendingUserTexts.has(text)) {
@@ -114,8 +109,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this._removeTrailingTypingIfNeeded();
     });
 
-    // Kick off bot greeting only AFTER contact gate is cleared
-    if (!this.humanMode && !this.contactPending) {
+    // Kick off bot greeting -> welcome node (dual-contact)
+    if (!this.humanMode) {
       this.send('/start');
     }
   }
@@ -126,54 +121,32 @@ export class AppComponent implements OnInit, OnDestroy {
     this.live.stop();
   }
 
-  // ---------- Contact-first handlers ----------
-  onContactSave() {
-    // Minimal validation: require at least one of email or phone
-    const hasEmail = !!this.contact.email.trim();
-    const hasPhone = !!this.contact.phone.trim();
-    if (!hasEmail && !hasPhone) {
+  // ---------- Dual contact sender ----------
+  sendContactDual(email: string, phone: string) {
+    const e = (email || '').trim();
+    const p = (phone || '').trim();
+    if (!e && !p) {
       this.messages.push({ role: 'assistant', text: 'Dodaj vsaj e-pošto ali telefon, prosim. 🙏' });
       return;
     }
+    const rid = this.rid('CONTACT2');
+    const payload = { email: e, phone: p, channel: e ? 'email' : 'phone' };
 
-    this.loading = true;
     this.startTyping('Shranjujem kontakt…');
+    this.loading = true;
 
-    const rid = this.rid('CONTACT');
-    const payload = {
-      type: 'contact',
-      sid: this.sid,
-      contact: {
-        name: this.contact.name?.trim() || '',
-        email: this.contact.email?.trim() || '',
-        phone: this.contact.phone?.trim() || '',
-        channel: this.contact.channel
+    this.http.post<ChatResponse>(
+      `${this.backendUrl}/chat/`,
+      { sid: this.sid, message: `/contact ${JSON.stringify(payload)}` },
+      { headers: this.headers(rid) }
+    ).subscribe({
+      next: (res) => { this.loading = false; this.consume(res); },
+      error: (err) => {
+        console.error('[FE] contact dual ERR', { rid, err });
+        this.loading = false;
+        this.stopTyping('⚠️ Ni uspelo shraniti. Poskusi znova.');
       }
-    };
-
-    // Send as a normal chat message with a clear prefix (backend can parse)
-    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { sid: this.sid, message: `/contact ${JSON.stringify(payload.contact)}` }, { headers: this.headers(rid) })
-      .subscribe({
-        next: (res) => {
-          localStorage.setItem('ace_contact_captured', 'true');
-          this.contactPending = false;
-          this.stopTyping('Hvala! Nadaljujva. 🔥');
-          this.loading = false;
-
-          // Kick off the regular guided flow
-          this.send('/start');
-        },
-        error: (err) => {
-          console.error('[FE] contact save ERR', { rid, err });
-          this.loading = false;
-          this.stopTyping('⚠️ Ni uspelo shraniti. Poskusi znova ali preskoči v klepet.');
-        }
-      });
-  }
-
-  onContactSkip() {
-    // Log skip server-side and move to human 1-on-1
-    this.skipToHuman(true);
+    });
   }
 
   // ---------- Global Skip → human 1-on-1 ----------
@@ -185,18 +158,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.humanMode = true;
     this.chatMode = 'open';
     this.ui = { inputType: 'single' };
-    this.contactPending = false;
-    localStorage.setItem('ace_contact_captured', fromGate ? 'skipped' : (localStorage.getItem('ace_contact_captured') || 'true'));
 
     // Show local notice
     this.messages.push({ role: 'assistant', text: 'Povezujem te z agentom. Piši vprašanje kar tukaj 👇' });
 
-    // Notify backend (for analytics / takeover trigger)
-    this.http.post<ChatResponse>(`${this.backendUrl}/chat/`, { sid: this.sid, message: '/skip_to_human' }, { headers: this.headers(rid) })
-      .subscribe({
-        next: () => {},
-        error: (err) => console.error('[FE] skip notify ERR', { rid, err })
-      });
+    // Notify backend (analytics / takeover trigger)
+    fetch(`${this.backendUrl}/chat/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Req-Id': rid, 'X-Sid': this.sid },
+      body: JSON.stringify({ sid: this.sid, message: '/skip_to_human' })
+    }).catch(err => console.error('[FE] skip notify ERR', { rid, err }));
   }
 
   // ---------- Helpers ----------
@@ -354,7 +325,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (res.ui == null && res.chatMode === 'open') {
       res.ui = { inputType: 'single' };
     } else if (res.ui && res.chatMode === 'open' && !res.ui.inputType && res.ui.type !== 'choices') {
-      res.ui.inputType = 'single';
+      res.ui = { ...(res.ui || {}), inputType: 'single' };
     }
 
     if (!this.humanMode && res.reply !== undefined) {

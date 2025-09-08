@@ -373,3 +373,11 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Super 👍. Še zadnji dve vprašanji: Kdaj bi vam okvirno ustrezal ogled? Kateri kontakt je najboljši za potrditev (telefon/e-pošta)?", "timestamp": 1757356104}
 {"sid": "rk50m1701mp", "role": "user", "text": "[Survey] No answers provided.", "timestamp": 1757356113}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Hvala za vaš interes! Ogled lahko omogočim že v naslednjih dneh – predlagam, da se dogovorimo po telefonu za hitrejšo koordinacijo. Kateri dan in ura vam najbolj ustrezata? Razlogi: Zainteresirana stranka je aktivno sodelovala v pogovoru, izrazila zadovoljstvo (Super 👍) in postavila konkretna vprašanja glede termina ogleda in preferenc stika, kar kaže na resno namero.", "timestamp": 1757356124}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757357183}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo: prosim vnesite kontakt za povratni info 👇\n\n• E-pošta\n• Telefon", "timestamp": 1757357183}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757360094}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757360094}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757360431}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757360431}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Dober dan!", "timestamp": 1757360540}
+{"sid": "rk50m1701mp", "role": "user", "text": "Dober dan!", "timestamp": 1757360545}
