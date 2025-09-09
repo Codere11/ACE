@@ -1,64 +1,79 @@
-<div class="chat-container">
-  <!-- Messages -->
-  <div class="messages">
-    <div *ngFor="let m of messages" class="msg" [class.user]="m.role==='user'" [class.typing]="m.typing">
-      <ng-container *ngIf="!m.typing; else typingTpl">
-        {{ m.text }}
-      </ng-container>
+<!-- Agent hero (Slovenian, centered, large) -->
+<section class="agent-hero">
+  <img class="agent-hero__photo" [src]="agentPhotoUrl" alt="{{agentName}}" />
+  <h1 class="agent-hero__title">Govoriš z {{agentName}}ovim AI asistentom</h1>
+  <p class="agent-hero__subtitle">
+    Vsebina tega pogovora se analizira, da ocenimo, ali imamo za vas pravo ponudbo.
+  </p>
+</section>
+
+<!-- Screen-fitted page: header (auto) / chat (1fr grid: messages, quick replies, composer) -->
+<div class="agent-page">
+  <div class="chat-shell">
+    <!-- 1) Scrollable messages -->
+    <div class="messages">
+      <div *ngFor="let m of messages" class="msg" [class.user]="m.role==='user'" [class.typing]="m.typing">
+        <ng-container *ngIf="!m.typing; else typingTpl">
+          {{ m.text }}
+        </ng-container>
+      </div>
     </div>
+
+    <!-- 2) Quick replies (non-scrolling, sits above composer; sticks if few messages) -->
+    <div *ngIf="ui && ($any(ui).type === 'choices')" class="choices-row">
+      <div class="choices">
+        <button
+          *ngFor="let q of $any(ui).buttons"
+          type="button"
+          class="chip"
+          (click)="clickQuickReply(q)"
+          [disabled]="loading"
+        >
+          {{ q.title }}
+        </button>
+
+        <button type="button" class="chip alt-skip" (click)="skipToHuman()" [disabled]="loading">
+          Preskoči → 1-na-1
+        </button>
+      </div>
+    </div>
+
+    <!-- 3) Composer (always at bottom) -->
+    <!-- Dual-contact composer -->
+    <form *ngIf="chatMode==='open' && ui?.inputType==='dual-contact'"
+          class="composer dual-input"
+          (ngSubmit)="sendContactDual(contactEmail.value, contactPhone.value)">
+      <div class="contact-capture"><input #contactEmail type="email" placeholder="Vaš e-mail" [disabled]="loading"/></div>
+      <div class="contact-capture"><input #contactPhone type="tel" placeholder="Telefon (+386 ...)" [disabled]="loading" class="contact-capture"/></div>
+      <div class="composer-actions">
+        <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
+        <button type="submit" [disabled]="loading">Pošlji</button>
+      </div>
+    </form>
+
+    <!-- Dual open input -->
+    <form *ngIf="chatMode==='open' && ui?.inputType==='dual'"
+          class="composer dual-input"
+          (ngSubmit)="onSubmitSurvey(msgInput1, msgInput2)">
+      <input #msgInput1 type="text" placeholder="Odgovor 1" [disabled]="loading" />
+      <input #msgInput2 type="text" placeholder="Odgovor 2" [disabled]="loading" />
+      <div class="composer-actions">
+        <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
+        <button type="submit" [disabled]="loading">Pošlji</button>
+      </div>
+    </form>
+
+    <!-- Single open input -->
+    <form *ngIf="chatMode==='open' && ui?.type!=='choices' && ui?.inputType!=='dual' && ui?.inputType!=='dual-contact'"
+          class="composer"
+          (ngSubmit)="onSubmitSingle(msgInput)">
+      <input #msgInput type="text" placeholder="Vnesite odgovor..." [disabled]="loading" />
+      <div class="composer-actions">
+        <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
+        <button type="submit" [disabled]="loading">Pošlji</button>
+      </div>
+    </form>
   </div>
-
-  <!-- Quick replies -->
-  <div *ngIf="ui && ($any(ui).type === 'choices')" class="choices">
-    <button
-      *ngFor="let q of $any(ui).buttons"
-      type="button"
-      class="chip"
-      (click)="clickQuickReply(q)"
-      [disabled]="loading"
-    >
-      {{ q.title }}
-    </button>
-
-    <button type="button" class="chip alt-skip" (click)="skipToHuman()" [disabled]="loading">
-      Preskoči → 1-na-1
-    </button>
-  </div>
-
-  <!-- Dual-contact composer (FIRST STEP) -->
-  <form *ngIf="chatMode==='open' && ui?.inputType==='dual-contact'"
-        class="composer dual-input"
-        (ngSubmit)="sendContactDual(contactEmail.value, contactPhone.value)">
-    <input #contactEmail type="email" placeholder="Vaš e-mail" [disabled]="loading" />
-    <input #contactPhone type="tel" placeholder="Telefon (+386 ...)" [disabled]="loading" />
-    <div class="composer-actions">
-      <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
-      <button type="submit" [disabled]="loading">Pošlji</button>
-    </div>
-  </form>
-
-  <!-- Dual open input (for 2 free-text answers elsewhere) -->
-  <form *ngIf="chatMode==='open' && ui?.inputType==='dual'"
-        class="composer dual-input"
-        (ngSubmit)="onSubmitSurvey(msgInput1, msgInput2)">
-    <input #msgInput1 type="text" placeholder="Odgovor 1" [disabled]="loading" />
-    <input #msgInput2 type="text" placeholder="Odgovor 2" [disabled]="loading" />
-    <div class="composer-actions">
-      <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
-      <button type="submit" [disabled]="loading">Pošlji</button>
-    </div>
-  </form>
-
-  <!-- Single open input -->
-  <form *ngIf="chatMode==='open' && ui?.type!=='choices' && ui?.inputType!=='dual' && ui?.inputType!=='dual-contact'"
-        class="composer"
-        (ngSubmit)="onSubmitSingle(msgInput)">
-    <input #msgInput type="text" placeholder="Vnesite odgovor..." [disabled]="loading" />
-    <div class="composer-actions">
-      <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
-      <button type="submit" [disabled]="loading">Pošlji</button>
-    </div>
-  </form>
 </div>
 
 <ng-template #typingTpl>

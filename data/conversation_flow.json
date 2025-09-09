@@ -1,18 +1,64 @@
 {
+  "version": "1.0.0",
+  "locale": "sl-SI",
+
+  "product": "Vila Zelena – 4-sobna hiša z vrtom (Vič, Ljubljana)",
+  "description": "Svetla, energetsko varčna hiša (180 m² + terasa/vrt), 2 kopalnici, 2 parkirni mesti, mirna ulica blizu LPP in šole. Cena: €685.000.",
+  "ideal_clients": [
+    "družine, ki iščejo hišo v Ljubljani",
+    "pari, ki želijo mirno lokacijo z vrtom",
+    "investitorji, ki iščejo kakovostno hišo na dobri mikrolokaciji"
+  ],
+  "bad_fit_clients": [
+    "kupci s proračunom pod €400.000",
+    "iskalci garsonjer ali poslovnih prostorov"
+  ],
+  "core_value": [
+    "jasna predstavitev ključnih podatkov",
+    "hitro zbiranje kontakta in terminov ogledov",
+    "alternativni predlogi, če listing ne ustreza"
+  ],
+
+  "system_prompt": "Ti si prijazen, konkreten AI asistent nepremičninske agencije. Povzameš bistvo, ne dolgoveziš. Vedno spoštuješ izbiro uporabnika in predlagaš naslednji korak (ogled ali več informacij). Odgovarjaj v slovenščini.",
+  "start": "welcome",
+
+  "assets": {
+    "gallery": [
+      "/listings/vila-zelena.png"
+    ],
+    "floorplan": "/listings/tloris.png",
+    "map_address": "Vič, Ljubljana"
+  },
+
+  "validations": {
+    "email_regex": "^\\S+@\\S+\\.\\S+$",
+    "phone_hint": "+386 ..."
+  },
+
   "nodes": [
     {
       "id": "welcome",
       "texts": [
-        "Preden začnemo, prosim vnesite kontakt za povratni info 👇\n• E-pošta\n• Telefon (lahko pustite samo eno polje)"
+        "Preden začnemo, prosim vnesite kontakt za povratni info 👇",
+        "• E-pošta",
+        "• Telefon (lahko pustite samo eno polje)"
       ],
       "openInput": true,
       "inputType": "dual-contact",
+      "action": "store_contact",
       "next": "listing_highlights"
     },
+
     {
       "id": "listing_highlights",
       "texts": [
-        "✅ Ključni podatki izbrane nepremičnine\n📍 Vič, Ljubljana\n💶 Cena: €685.000\n📐 Površina: 180 m² bivalno (+ terasa/vrt)\n🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti\n\nŽelite videti slike, tloris ali lokacijo?"
+        "✅ Ključni podatki izbrane nepremičnine",
+        "📍 Vič, Ljubljana",
+        "💶 Cena: €685.000",
+        "📐 Površina: 180 m² bivalno (+ terasa/vrt)",
+        "🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti",
+        "",
+        "Želite videti slike, tloris ali lokacijo?"
       ],
       "choices": [
         { "title": "Pokaži slike", "next": "listing_gallery" },
@@ -21,75 +67,81 @@
         { "title": "Naprej", "next": "fit_check" }
       ]
     },
+
     {
       "id": "listing_gallery",
       "texts": ["Galerija nepremičnine 📸"],
       "action": "show_gallery",
-      "payload": { "images": ["vila.png"] },
+      "payload": { "images": "{{assets.gallery}}" },
       "next": "fit_check"
     },
+
     {
       "id": "floorplan",
       "texts": [
         "Tloris nepremičnine 🗺️ (lahko pošljemo tudi PDF na e-pošto, ki ste jo navedli)."
       ],
       "action": "show_image",
-      "payload": { "image": "vila.png", "label": "Tloris (predogled)" },
+      "payload": { "image": "{{assets.floorplan}}", "label": "Tloris (predogled)" },
       "choices": [
         { "title": "Pošlji PDF tlorisa", "next": "send_brochure" },
         { "title": "Nazaj", "next": "listing_highlights" }
       ]
     },
+
     {
       "id": "map",
-      "texts": [ "Okvirna lokacija na zemljevidu 🗺️ – Vič, Ljubljana." ],
+      "texts": ["Okvirna lokacija na zemljevidu 🗺️ – Vič, Ljubljana."],
       "action": "show_map",
-      "payload": { "address": "Vič, Ljubljana" },
+      "payload": { "address": "{{assets.map_address}}" },
       "next": "fit_check"
     },
+
     {
       "id": "fit_check",
-      "texts": [
-        "Ali okvirno ustreza vašim željam glede lokacije, cene in velikosti?"
-      ],
+      "texts": ["Ali okvirno ustreza vašim željam glede lokacije, cene in velikosti?"],
       "choices": [
         { "title": "Da, izgleda super", "next": "timeline" },
         { "title": "Mogoče – imam vprašanja", "next": "open_question" },
         { "title": "Ne – iščem nekaj drugega", "next": "fallback_prefs" }
       ]
     },
+
     {
       "id": "open_question",
-      "texts": [ "Odlično – kaj vas zanima?" ],
+      "texts": ["Odlično – kaj vas zanima?"],
       "openInput": true,
       "inputType": "single",
       "action": "store_answer",
       "next": "answer_and_progress"
     },
+
     {
       "id": "answer_and_progress",
       "action": "deepseek_answer",
       "next": "timeline"
     },
+
     {
       "id": "timeline",
-      "texts": [
-        "Kdaj bi vam okvirno ustrezal ogled? (ta teden, naslednji teden, vikend?)"
-      ],
+      "texts": ["Kdaj bi vam okvirno ustrezal ogled? (ta teden, naslednji teden, vikend?)"],
       "choices": [
-        { "title": "Ta teden", "next": "schedule_intro" },
+        { "title": "Ta teden",        "next": "schedule_intro" },
         { "title": "Naslednji teden", "next": "schedule_intro" },
-        { "title": "Vikend", "next": "schedule_intro" },
+        { "title": "Vikend",          "next": "schedule_intro" },
         { "title": "Kasneje / nisem prepričan", "next": "closing" }
       ]
     },
+
     {
       "id": "schedule_intro",
       "texts": [
         "Super. Upoštevali bomo vaš termin in vam pošljemo predlog ogleda na posredovani kontakt."
       ],
+      "action": "schedule_placeholder",
       "next": "end"
     },
+
     {
       "id": "send_brochure",
       "texts": [
@@ -100,6 +152,7 @@
       "action": "mortgage_quote",
       "next": "end"
     },
+
     {
       "id": "fallback_prefs",
       "texts": [
@@ -110,12 +163,14 @@
       "action": "store_answer",
       "next": "alt_suggest"
     },
+
     {
       "id": "alt_suggest",
-      "texts": [ "Našel sem nekaj alternativ, ki ustrezajo vašim željam 👇" ],
+      "texts": ["Našel sem nekaj alternativ, ki ustrezajo vašim željam 👇"],
       "action": "deepseek_suggest_alternatives",
       "next": "closing_alt"
     },
+
     {
       "id": "closing_alt",
       "texts": [
@@ -126,20 +181,25 @@
         { "title": "Pošlji več informacij", "next": "end" }
       ]
     },
+
     {
       "id": "closing",
       "texts": [
         "Hvala za informacije 🚀. Predlagam: (1) rezerviramo termin ogleda ali (2) pošljem brošuro s tlorisom in dodatnimi podatki. Kaj vam ustreza?"
       ],
       "openInput": true,
-      "inputType": "single"
+      "inputType": "single",
+      "action": "store_answer",
+      "next": "end"
     },
+
     {
       "id": "end",
       "texts": [
         "Odlično 👍. Potrditev in podrobnosti pošljemo kmalu.",
         "Hvala za zanimanje – slišimo se v kratkem!"
-      ]
+      ],
+      "terminal": true
     }
   ]
 }

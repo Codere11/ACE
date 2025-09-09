@@ -25,6 +25,10 @@ type Channel = 'email'|'phone'|'whatsapp'|'sms';
   imports: [CommonModule, FormsModule, HttpClientModule]
 })
 export class AppComponent implements OnInit, OnDestroy {
+  // === Agent identity (for the hero header) ===
+  agentName = 'Matic';               // <- change name if needed
+  agentPhotoUrl = '/agents/matic.png';
+
   messages: Message[] = [];
   ui: any = null;
   chatMode: 'guided'|'open' = 'guided';
@@ -156,7 +160,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Mark UI state
     this.humanMode = true;
-    this.chatMode = 'open';
+       this.chatMode = 'open';
     this.ui = { inputType: 'single' };
 
     // Show local notice
