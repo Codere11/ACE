@@ -7,11 +7,11 @@
   </p>
 </section>
 
-<!-- Screen-fitted page: header (auto) / chat (1fr grid: messages, quick replies, composer) -->
+<!-- Standalone, fixed-size chat card -->
 <div class="agent-page">
-  <div class="chat-shell">
-    <!-- 1) Scrollable messages -->
-    <div class="messages">
+  <div class="chat-card">
+    <!-- 1) Scrollable messages (fixed box) -->
+    <div class="messages" #messagesRef>
       <div *ngFor="let m of messages" class="msg" [class.user]="m.role==='user'" [class.typing]="m.typing">
         <ng-container *ngIf="!m.typing; else typingTpl">
           {{ m.text }}
@@ -19,7 +19,7 @@
       </div>
     </div>
 
-    <!-- 2) Quick replies (non-scrolling, sits above composer; sticks if few messages) -->
+    <!-- 2) Quick replies -->
     <div *ngIf="ui && ($any(ui).type === 'choices')" class="choices-row">
       <div class="choices">
         <button
@@ -38,13 +38,13 @@
       </div>
     </div>
 
-    <!-- 3) Composer (always at bottom) -->
+    <!-- 3) Composer -->
     <!-- Dual-contact composer -->
     <form *ngIf="chatMode==='open' && ui?.inputType==='dual-contact'"
           class="composer dual-input"
           (ngSubmit)="sendContactDual(contactEmail.value, contactPhone.value)">
       <div class="contact-capture"><input #contactEmail type="email" placeholder="Vaš e-mail" [disabled]="loading"/></div>
-      <div class="contact-capture"><input #contactPhone type="tel" placeholder="Telefon (+386 ...)" [disabled]="loading" class="contact-capture"/></div>
+      <div class="contact-capture"><input #contactPhone type="tel" placeholder="Telefon (+386 ...)" [disabled]="loading"/></div>
       <div class="composer-actions">
         <button type="button" class="ghost" (click)="skipToHuman()" [disabled]="loading">Preskoči</button>
         <button type="submit" [disabled]="loading">Pošlji</button>

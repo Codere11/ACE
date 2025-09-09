@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ElementRef, ViewChild, AfterViewInit, NgZone } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { HttpClient, HttpClientModule, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
@@ -24,7 +24,7 @@ type Channel = 'email'|'phone'|'whatsapp'|'sms';
   styleUrls: ['./app.component.scss'],
   imports: [CommonModule, FormsModule, HttpClientModule]
 })
-export class AppComponent implements OnInit, OnDestroy {
+export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   // === Agent identity (for the hero header) ===
   agentName = 'Matic';               // <- change name if needed
   agentPhotoUrl = '/agents/matic.png';
@@ -56,9 +56,13 @@ export class AppComponent implements OnInit, OnDestroy {
     name: '', email: '', phone: '', channel: 'email'
   };
 
+  /** Chat scroll container (fixed box) */
+  @ViewChild('messagesRef') private messagesRef?: ElementRef<HTMLDivElement>;
+
   constructor(
     private http: HttpClient,
     private live: LiveEventsService,
+    private zone: NgZone,
     @Inject(PLATFORM_ID) platformId: Object
   ) {
     this.isBrowser = isPlatformBrowser(platformId);
@@ -76,6 +80,10 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sid = 'SSR_NO_SID';
       console.debug('[SID] init(ssr)');
     }
+  }
+
+  ngAfterViewInit() {
+    this.scrollToBottomSoon();
   }
 
   ngOnInit() {
@@ -111,6 +119,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
       this.messages.push({ role, text });
       this._removeTrailingTypingIfNeeded();
+      this.scrollToBottomSoon();
     });
 
     // Kick off bot greeting -> welcome node (dual-contact)
@@ -131,6 +140,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const p = (phone || '').trim();
     if (!e && !p) {
       this.messages.push({ role: 'assistant', text: 'Dodaj vsaj e-pošto ali telefon, prosim. 🙏' });
+      this.scrollToBottomSoon();
       return;
     }
     const rid = this.rid('CONTACT2');
@@ -160,11 +170,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
     // Mark UI state
     this.humanMode = true;
-       this.chatMode = 'open';
+    this.chatMode = 'open';
     this.ui = { inputType: 'single' };
 
     // Show local notice
     this.messages.push({ role: 'assistant', text: 'Povezujem te z agentom. Piši vprašanje kar tukaj 👇' });
+    this.scrollToBottomSoon();
 
     // Notify backend (analytics / takeover trigger)
     fetch(`${this.backendUrl}/chat/`, {
@@ -238,12 +249,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
       this.messages.pop();
       this.messages.push({ role: 'assistant', text: '' });
+      this.scrollToBottomSoon();
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
         this.messages[this.messages.length - 1].text = buffer;
+        this.scrollToBottomSoon();
       }
 
       this._rememberHash(`assistant|${buffer}`);
@@ -342,6 +355,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.humanMode) {
       this.chatMode = 'open';
       this.ui = { inputType: 'single' };
+      this.scrollToBottomSoon();
       return;
     }
 
@@ -350,10 +364,15 @@ export class AppComponent implements OnInit, OnDestroy {
     else this.ui = null;
 
     this.chatMode = res.chatMode;
+
+    this.scrollToBottomSoon();
   }
 
   private startTyping(label?: string) {
-    if (!this.isTypingActive()) this.messages.push({ role: 'assistant', typing: true });
+    if (!this.isTypingActive()) {
+      this.messages.push({ role: 'assistant', typing: true });
+      this.scrollToBottomSoon();
+    }
     this.typingLabel = label ?? this.typingLabel ?? 'Razmišljam…';
   }
 
@@ -364,10 +383,23 @@ export class AppComponent implements OnInit, OnDestroy {
       if (replaceWith !== undefined) this.messages.push({ role: 'assistant', text: replaceWith });
     }
     this.typingLabel = null;
+    this.scrollToBottomSoon();
   }
 
   private isTypingActive(): boolean {
     const last = this.messages[this.messages.length - 1];
     return !!(last && last.typing);
+  }
+
+  /** Scroll helper — after DOM updates */
+  private scrollToBottomSoon() {
+    if (!this.isBrowser) return;
+    this.zone.runOutsideAngular(() => {
+      setTimeout(() => {
+        const el = this.messagesRef?.nativeElement;
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+      }, 0);
+    });
   }
 }

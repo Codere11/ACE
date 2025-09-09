@@ -487,3 +487,75 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak.", "timestamp": 1757434204}
 {"sid": "rk50m1701mp", "role": "user", "text": "Rezerviraj ogled", "timestamp": 1757434206}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Super 👍. Poslali bomo predlog termina ogleda na vaš kontakt.", "timestamp": 1757434206}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757436168}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757436168}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Pozdravljeni", "timestamp": 1757436272}
+{"sid": "rk50m1701mp", "role": "user", "text": "Dober dan kaj zelite", "timestamp": 1757436288}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757446920}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "✅ Ključni podatki izbrane nepremičnine📍 Vič Ljubljana 💶 Cena: €685.000 📐 Površina: 180 m² bivalno (+ terasa/vrt) 🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti Kaj želite najprej?", "timestamp": 1757446920}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447005}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447005}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija na zemljevidu", "timestamp": 1757447018}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Okvirna lokacija 🗺️ – Vič, Ljubljana.", "timestamp": 1757447018}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757447020}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757447020}
+{"sid": "rk50m1701mp", "role": "user", "text": "Mogoče", "timestamp": 1757447023}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vam najpomembnejše pri odločitvi?", "timestamp": 1757447023}
+{"sid": "rk50m1701mp", "role": "user", "text": "Cena", "timestamp": 1757447024}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757447024}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447570}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757447570}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447640}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447640}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447688}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447688}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447700}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "✅ Ključni podatki izbrane nepremičnine📍 Vič Ljubljana 💶 Cena: €685.000 📐 Površina: 180 m² bivalno (+ terasa/vrt) 🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti Kaj želite najprej?", "timestamp": 1757447700}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447754}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447754}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447799}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447799}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447879}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "✅ Ključni podatki izbrane nepremičnine📍 Vič Ljubljana 💶 Cena: €685.000 📐 Površina: 180 m² bivalno (+ terasa/vrt) 🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti Kaj želite najprej?", "timestamp": 1757447879}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757447933}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757447933}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija na zemljevidu", "timestamp": 1757447945}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Okvirna lokacija 🗺️ – Vič, Ljubljana.", "timestamp": 1757447945}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757447946}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757447946}
+{"sid": "rk50m1701mp", "role": "user", "text": "Mogoče", "timestamp": 1757447950}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vam najpomembnejše pri odločitvi?", "timestamp": 1757447950}
+{"sid": "rk50m1701mp", "role": "user", "text": "Cena", "timestamp": 1757447951}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757447951}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757448031}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757448031}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija na zemljevidu", "timestamp": 1757448042}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Okvirna lokacija 🗺️ – Vič, Ljubljana.", "timestamp": 1757448042}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757448044}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757448044}
+{"sid": "rk50m1701mp", "role": "user", "text": "Mogoče", "timestamp": 1757448045}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vam najpomembnejše pri odločitvi?", "timestamp": 1757448045}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija", "timestamp": 1757448046}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757448046}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757448102}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757448102}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija na zemljevidu", "timestamp": 1757448116}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Okvirna lokacija 🗺️ – Vič, Ljubljana.", "timestamp": 1757448116}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757448117}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757448117}
+{"sid": "rk50m1701mp", "role": "user", "text": "Mogoče", "timestamp": 1757448120}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vam najpomembnejše pri odločitvi?", "timestamp": 1757448120}
+{"sid": "rk50m1701mp", "role": "user", "text": "Lokacija", "timestamp": 1757448126}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757448126}
+{"sid": "rk50m1701mp", "role": "user", "text": "€500–700k", "timestamp": 1757448127}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako ste z urejeno finančno platjo?", "timestamp": 1757448127}
+{"sid": "rk50m1701mp", "role": "user", "text": "Še urejam", "timestamp": 1757448128}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi želeli okvirno opraviti ogled?", "timestamp": 1757448128}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naslednji teden", "timestamp": 1757448129}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujen je nakup pri vas?", "timestamp": 1757448129}
+{"sid": "rk50m1701mp", "role": "user", "text": "Srednje – primerjam možnosti", "timestamp": 1757448130}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak.", "timestamp": 1757448130}
+{"sid": "rk50m1701mp", "role": "user", "text": "Pošlji več informacij", "timestamp": 1757448131}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ni problema – pošljemo brošuro in dodatne informacije na vaš kontakt.", "timestamp": 1757448131}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Pozdravljeni! Kako smo?", "timestamp": 1757448143}
+{"sid": "rk50m1701mp", "role": "user", "text": "Super!", "timestamp": 1757448148}
