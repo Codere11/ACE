@@ -1,6 +1,6 @@
 import os
 import json
-from typing import Dict, Generator, Optional
+from typing import Dict, Generator, Optional, Any
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -10,8 +10,8 @@ from app.core.config import ACE_CONFIG, DEEPSEEK_API_KEY, DEEPSEEK_URL, DEEPSEEK
 from app.core.logger import logger
 
 # ---------- Tunables ----------
-CONNECT_TIMEOUT = float(os.getenv("DEEPSEEK_CONNECT_TIMEOUT", "5"))   # seconds
-READ_TIMEOUT    = float(os.getenv("DEEPSEEK_READ_TIMEOUT", "35"))     # seconds
+CONNECT_TIMEOUT = float(os.getenv("DEEPSEEK_CONNECT_TIMEOUT", "5"))
+READ_TIMEOUT    = float(os.getenv("DEEPSEEK_READ_TIMEOUT", "35"))
 TOTAL_RETRIES   = int(os.getenv("DEEPSEEK_TOTAL_RETRIES", "3"))
 BACKOFF_FACTOR  = float(os.getenv("DEEPSEEK_BACKOFF", "0.6"))
 POOL_MAXSIZE    = int(os.getenv("DEEPSEEK_POOL_MAXSIZE", "20"))
@@ -46,30 +46,28 @@ def _headers() -> Dict[str, str]:
         "Content-Type": "application/json",
     }
 
+# ---------------- Config helpers ----------------
 
-# ------------ Config helpers (prompt + thresholds from conversation config) ------------
-def _qual_cfg() -> Dict:
+def _qual_cfg() -> Dict[str, Any]:
     llm = (ACE_CONFIG.get("llm") or {}).get("qualification") or {}
     return {
         "system_prompt": llm.get(
             "system_prompt",
-            "Ti si ACE kvalifikacijski AI. Odgovarjaj vedno v slovenščini in vrni strogo JSON."
+            "Ti si ACE kvalifikacijski AI. Odgovarjaj vedno v slovenščini in vrni STROGO JSON."
         ),
         "user_prompt_template": llm.get(
             "user_prompt_template",
             (
                 "Kontekst:\n- Produkt: {product}\n- Opis: {description}\n"
                 "- Idealni kupci: {ideal_clients}\n- Slab fit kupci: {bad_fit_clients}\n"
-                "- Jedro vrednosti: {core_value}\n\nVhod:\n{lead_text}\n\n"
+                "- Jedro vrednosti: {core_value}\n\nSignal:\n{lead_text}\n\n"
                 "Vrni JSON s ključi category, interest, compatibility, reasons, pitch, tags."
             )
         ),
         "interest_thresholds": llm.get("interest_thresholds", {"High": 70, "Medium": 40, "Low": 0}),
     }
 
-
-def _cfg_product_block() -> Dict:
-    # Only pick what we actually need
+def _cfg_product_block() -> Dict[str, Any]:
     return {
         "product": ACE_CONFIG.get("product"),
         "description": ACE_CONFIG.get("description"),
@@ -78,80 +76,114 @@ def _cfg_product_block() -> Dict:
         "core_value": ACE_CONFIG.get("core_value"),
     }
 
-
 def _render_user_prompt(lead_text: str) -> str:
     cfg = _qual_cfg()
     pb = _cfg_product_block()
-    # Make lists pretty for template
+
     def list_to_text(v):
         if isinstance(v, list):
-            return "; ".join([str(x) for x in v])
-        return str(v) if v is not None else ""
+            return "; ".join(str(x) for x in v)
+        return str(v or "")
+
     return cfg["user_prompt_template"].format(
-        product=str(pb.get("product") or ""),
-        description=str(pb.get("description") or ""),
+        product=list_to_text(pb.get("product")),
+        description=list_to_text(pb.get("description")),
         ideal_clients=list_to_text(pb.get("ideal_clients")),
         bad_fit_clients=list_to_text(pb.get("bad_fit_clients")),
         core_value=list_to_text(pb.get("core_value")),
-        lead_text=str(lead_text or "").strip()
+        lead_text=str(lead_text or "").strip(),
     )
 
+# ---------------- Normalization helpers ----------------
 
-def _coerce_output(parsed: Dict) -> Dict:
-    """
-    Normalize model output to a fixed shape for the dashboard.
-    Fills interest from thresholds if missing; clamps compatibility.
-    """
+def _num_or_none(x) -> Optional[int]:
+    try:
+        if isinstance(x, str):
+            xs = x.strip()
+            if xs.endswith("%"):
+                xs = xs[:-1]
+            return max(0, min(100, int(round(float(xs)))))
+        return max(0, min(100, int(round(float(x)))))
+    except Exception:
+        return None
+
+def _sanitize_interest(x: str) -> Optional[str]:
+    if not x:
+        return None
+    v = x.strip().lower()
+    if v in ("high", "visok", "zelo", "h", "3"):
+        return "High"
+    if v in ("medium", "srednje", "srednja", "m", "2"):
+        return "Medium"
+    if v in ("low", "nizko", "l", "1"):
+        return "Low"
+    return None
+
+def _midpoint_for_level(level: str, th: Dict[str, Any]) -> int:
+    hi = int(th.get("High", 70))
+    md = int(th.get("Medium", 40))
+    lo = int(th.get("Low", 0))
+    if level == "High":
+        lo_b, hi_b = hi, 100
+    elif level == "Medium":
+        lo_b, hi_b = md, max(hi - 1, md)
+    else:
+        lo_b, hi_b = lo, max(md - 1, lo)
+    return max(0, min(100, (lo_b + hi_b) // 2))
+
+def _interest_from_comp(comp: int, th: Dict[str, Any]) -> str:
+    hi = int(th.get("High", 70))
+    md = int(th.get("Medium", 40))
+    if comp >= hi:
+        return "High"
+    if comp >= md:
+        return "Medium"
+    return "Low"
+
+def _coerce_output(parsed: Dict[str, Any]) -> Dict[str, Any]:
     cfg = _qual_cfg()
-    thresholds = cfg["interest_thresholds"]
+    th = cfg["interest_thresholds"]
 
-    cat = (parsed.get("category") or "could_fit").strip()
+    # raw values from model
+    raw_interest = _sanitize_interest(str(parsed.get("interest", "")))
+    raw_comp = _num_or_none(parsed.get("compatibility"))
+
+    # compute interest & compatibility robustly
+    if raw_interest and raw_comp is not None:
+        interest = raw_interest
+        comp = raw_comp
+    elif raw_interest and raw_comp is None:
+        interest = raw_interest
+        comp = _midpoint_for_level(interest, th)
+    elif not raw_interest and raw_comp is not None:
+        comp = raw_comp
+        interest = _interest_from_comp(comp, th)
+    else:
+        # both missing → conservative defaults
+        interest = "Medium"
+        comp = _midpoint_for_level(interest, th)  # e.g. 55 with 70/40/0
+
+    cat = (parsed.get("category") or "could_fit").strip() or "could_fit"
     reasons = str(parsed.get("reasons") or "")
     pitch = str(parsed.get("pitch") or "")
     tags = parsed.get("tags") or []
     if not isinstance(tags, list):
         tags = [str(tags)]
 
-    # compatibility → int 0..100
-    try:
-        comp = int(float(parsed.get("compatibility")))
-    except Exception:
-        comp = 50
-    comp = max(0, min(100, comp))
-
-    # interest: model value wins; else derive from thresholds
-    m_interest = (parsed.get("interest") or "").strip().title()
-    if m_interest not in ("High", "Medium", "Low"):
-        # derive from thresholds
-        # sort thresholds by value desc and pick first match
-        derived = "Low"
-        try:
-            ordered = sorted(thresholds.items(), key=lambda x: int(x[1]), reverse=True)
-            for name, min_v in ordered:
-                if comp >= int(min_v):
-                    derived = name
-                    break
-            if derived not in ("High", "Medium", "Low"):
-                derived = "Low"
-        except Exception:
-            derived = "Medium" if comp >= 50 else "Low"
-        m_interest = derived
-
     return {
-        "category": cat,               # good_fit | could_fit | bad_fit
-        "interest": m_interest,        # High | Medium | Low
-        "compatibility": comp,         # 0..100
+        "category": cat,           # good_fit | could_fit | bad_fit
+        "interest": interest,      # High | Medium | Low
+        "compatibility": int(comp),
         "reasons": reasons,
         "pitch": pitch,
-        "tags": tags
+        "tags": [str(t) for t in tags],
     }
 
+# ---------------- Public API ----------------
 
-# ------------ Public API ------------
-def run_deepseek(user_text: str, sid: str) -> Dict:
+def run_deepseek(user_text: str, sid: str) -> Dict[str, Any]:
     """
-    Blocking call with retries/timeouts. Never throws — returns a dict.
-    On failure returns a minimal error shape the dashboard can handle.
+    Blocking call. Returns normalized dict for dashboard.
     """
     cfg = _qual_cfg()
     system_prompt = cfg["system_prompt"]
@@ -182,15 +214,14 @@ def run_deepseek(user_text: str, sid: str) -> Dict:
             return {"category": "error", "interest": "Low", "compatibility": 0, "reasons": "", "pitch": "", "tags": []}
 
         return _coerce_output(parsed)
+
     except Exception as e:
         logger.error(f"DeepSeek error (sid={sid}): {repr(e)}")
         return {"category": "error", "interest": "Low", "compatibility": 0, "reasons": "", "pitch": "", "tags": []}
 
-
 def stream_deepseek(user_text: str, sid: str) -> Generator[str, None, None]:
     """
-    Streaming generator with timeouts/retries. Uses the same config-driven prompts.
-    If it fails mid-stream, yield a short warning and stop.
+    Streaming generator. Uses the same config-driven prompts.
     """
     cfg = _qual_cfg()
     system_prompt = cfg["system_prompt"]

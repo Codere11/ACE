@@ -661,3 +661,18 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak.", "timestamp": 1757496077}
 {"sid": "rk50m1701mp", "role": "user", "text": "Pošlji več informacij", "timestamp": 1757496077}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Ni problema – pošljemo brošuro in dodatne informacije na vaš kontakt.", "timestamp": 1757496077}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757513731}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757513731}
+{"sid": "rk50m1701mp", "role": "user", "text": "Pokaži slike", "timestamp": 1757513858}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757513862}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757513862}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, ustreza", "timestamp": 1757513966}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757513966}
+{"sid": "rk50m1701mp", "role": "user", "text": "€500–700k", "timestamp": 1757513974}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako ste z urejeno finančno platjo?", "timestamp": 1757513974}
+{"sid": "rk50m1701mp", "role": "user", "text": "Gotovina", "timestamp": 1757513974}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi želeli okvirno opraviti ogled?", "timestamp": 1757513974}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naslednji teden", "timestamp": 1757513975}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujen je nakup pri vas?", "timestamp": 1757513975}
+{"sid": "rk50m1701mp", "role": "user", "text": "Srednje – primerjam možnosti", "timestamp": 1757513975}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ujemanje: Medium (55/100). Pridite na ogled, da se prepričate o vrednosti in primerjate z drugimi možnostmi v Ljubljani. Razlogi: Lead primerja možnosti brez specifičnih zahtev; ujemanje z lokacijo in tipom nepremičnine, vendar negotovost glede budgeta in nujnosti", "timestamp": 1757513986}
