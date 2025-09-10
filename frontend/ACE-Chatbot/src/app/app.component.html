@@ -12,9 +12,48 @@
   <div class="chat-card">
     <!-- 1) Scrollable messages (fixed box) -->
     <div class="messages" #messagesRef>
-      <div *ngFor="let m of messages" class="msg" [class.user]="m.role==='user'" [class.typing]="m.typing">
+      <div
+        *ngFor="let m of messages"
+        class="msg"
+        [class.user]="m.role==='user'"
+        [class.typing]="m.typing"
+        [attr.data-id]="m._id"
+      >
         <ng-container *ngIf="!m.typing; else typingTpl">
-          {{ m.text }}
+          <!-- Plain text -->
+          <div *ngIf="m.text">{{ m.text }}</div>
+
+          <!-- Single image block -->
+          <figure *ngIf="m.image" class="msg-image">
+            <img
+              [src]="m.image.src"
+              alt="image"
+              loading="lazy"
+              (load)="onImgLoad(m.image!.src)"
+              (error)="onImgError($event, m.image!.src)"
+            />
+            <figcaption *ngIf="m.image.label">{{ m.image.label }}</figcaption>
+          </figure>
+
+          <!-- Gallery block -->
+          <div *ngIf="m.gallery?.length" class="gallery">
+            <img
+              *ngFor="let src of m.gallery; let i = index"
+              [src]="src"
+              [alt]="'gallery image ' + (i+1)"
+              loading="lazy"
+              (load)="onImgLoad(src)"
+              (error)="onImgError($event, src)"
+            />
+          </div>
+
+          <!-- Map block (embed by address) -->
+          <div *ngIf="m.map" class="map-embed">
+            <iframe
+              [src]="mapSrc(m.map.address)"
+              width="100%" height="240" style="border:0;" loading="lazy">
+            </iframe>
+          </div>
         </ng-container>
       </div>
     </div>

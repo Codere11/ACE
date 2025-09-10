@@ -6,10 +6,22 @@
 
   <!-- Tab Navigation (centered) -->
   <nav class="tabs">
-    <button [class.active]="activeTab==='leads'" (click)="activeTab='leads'">LEADS</button>
-    <button [class.active]="activeTab==='notes'" (click)="activeTab='notes'">ANALYSIS</button>
-    <button [class.active]="activeTab==='flow'" (click)="activeTab='flow'">FLOW</button>
-  </nav>
+  <button [class.active]="activeTab==='leads'" (click)="activeTab='leads'">
+    <span>LEADS</span>
+  </button>
+
+  <!-- Unclickable tabs with "coming soon" -->
+  <button class="disabled" disabled>
+    <span>ANALYSIS</span>
+    <small class="soon"> - Prihaja kmalu</small>
+  </button>
+
+  <button class="disabled" disabled>
+    <span>FLOW</span>
+    <small class="soon"> - Prihaja kmalu</small>
+  </button>
+</nav>
+
 
   <div class="right">
     <div class="user-menu" (click)="agentMenuOpen=!agentMenuOpen" tabindex="0" (blur)="agentMenuOpen=false">

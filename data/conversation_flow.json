@@ -61,7 +61,6 @@
 
     {
       "id": "listing_gallery",
-      "texts": [ "Galerija nepremičnine 📸" ],
       "action": "show_gallery",
       "payload": { "images": "{{assets.gallery}}" },
       "choices": [

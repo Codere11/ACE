@@ -5,6 +5,8 @@ import { tap } from 'rxjs/operators';
 export type ChatMode = 'guided' | 'open';
 
 export interface QuickReply { title: string; payload: string; }
+
+// Keep old UI types, but don’t block extra fields from BE.
 export interface UIChoices { type: 'choices'; buttons: QuickReply[]; }
 export interface UIFormField {
   name: 'industry'|'budget'|'experience';
@@ -16,18 +18,26 @@ export interface UIFormField {
 export interface UIForm { type: 'form'; form: { title: string; fields: UIFormField[]; submitLabel: string; }; }
 export type UIBlock = UIChoices | UIForm | null;
 
+// Loosen ChatResponse so we don’t “lose” fields like action/payload/images
 export interface ChatResponse {
   reply: string;
   quickReplies?: QuickReply[] | null;
-  ui?: UIBlock;
+  ui?: UIBlock | any;
   chatMode: ChatMode;
   storyComplete: boolean;
   imageUrl?: string | null;
+
+  // pass-through fields (if server sends them)
+  uiAction?: string;
+  action?: string;
+  payload?: any;
+  images?: any;
+  image?: any;
+  address?: string;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ChatService {
-  // FIX: add protocol so devtools show the actual full URL
   private base = 'http://localhost:8000';
 
   constructor(private http: HttpClient) {

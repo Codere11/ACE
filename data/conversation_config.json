@@ -14,5 +14,13 @@
     "jasna predstavitev ključnih podatkov",
     "hitro zbiranje kontakta in terminov ogledov",
     "alternativni predlogi, če listing ne ustreza"
-  ]
+  ],
+
+  "llm": {
+    "qualification": {
+      "system_prompt": "Ti si ACE kvalifikacijski AI. Odgovarjaj vedno v slovenščini in vrni strogo JSON brez razlage.",
+      "user_prompt_template": "Kontekst:\n- Produkt: {product}\n- Opis: {description}\n- Idealni kupci: {ideal_clients}\n- Slab fit kupci: {bad_fit_clients}\n- Jedro vrednosti: {core_value}\n\nVhod od lead-a:\n\"\"\"\n{lead_text}\n\"\"\"\n\nNaloga: Analiziraj lead in vrni JSON s ključi:\n- category: \"good_fit\" | \"could_fit\" | \"bad_fit\"\n- interest: \"High\" | \"Medium\" | \"Low\"\n- compatibility: celo število 0–100 (višje = boljše ujemanje)\n- reasons: kratek povzetek razlogov\n- pitch: en kratek personaliziran predlog nadaljnjega koraka (npr. povabilo na ogled/posvet)\n- tags: seznam kratkih oznak (nizi)\n\nPravila:\n- Upoštevaj budget, lokacijo, tip nepremičnine in nujnost.\n- Če ni dovolj informacij, bodi konzervativen (\"could_fit\", interest \"Medium\" in compatibility ~ 50).\n- Vrni strogo veljaven JSON brez dodatnega besedila.",
+      "interest_thresholds": { "High": 70, "Medium": 40, "Low": 0 }
+    }
+  }
 }

@@ -21,12 +21,16 @@ export class LiveEventsService implements OnDestroy {
   /** Streams events for the active SID */
   readonly events$ = new BehaviorSubject<ChatEvent | null>(null);
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.debug('[LiveEvents] init', { base: this.base });
+  }
 
   start(sid: string) {
     this.stop();
     this.topic = sid;
     this.nextSeq = 0;
+
+    console.debug('[LiveEvents] start()', { sid });
 
     this.sub = timer(0, 200).pipe(
       switchMap(() =>
@@ -36,17 +40,24 @@ export class LiveEventsService implements OnDestroy {
       )
     ).subscribe({
       next: res => {
-        if (!res?.ok) return;
+        if (!res?.ok) {
+          console.warn('[LiveEvents] poll not ok', res);
+          return;
+        }
         for (const e of res.events) {
+          console.debug('[LiveEvents] event', e);
           this.events$.next(e);
           if (e._seq && e._seq > this.nextSeq) this.nextSeq = e._seq;
         }
       },
-      error: () => { /* transient errors auto-retry on next tick */ }
+      error: err => {
+        console.warn('[LiveEvents] poll error, will retry', err);
+      }
     });
   }
 
   stop() {
+    console.debug('[LiveEvents] stop()');
     this.sub?.unsubscribe();
     this.sub = undefined;
   }
