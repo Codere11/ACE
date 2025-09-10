@@ -33,18 +33,6 @@
     "phone_hint": "+386 ..."
   },
 
-  "scoring": {
-    "mode": "deterministic",
-    "thresholds": { "High": 70, "Medium": 40, "Low": 0 },
-    "weights": {
-      "fit":        { "good": 40, "close": 25, "low": 8 },
-      "finance":    { "cash": 25, "preapproved": 20, "in_progress": 10 },
-      "when":       { "this_week": 25, "next_week": 20, "weekend": 20, "later": 8 },
-      "motivation": { "high": 25, "medium": 15, "low": 8 },
-      "reason_penalty": { "price_high": -20, "location": -15, "size": -10 }
-    }
-  },
-
   "nodes": [
     {
       "id": "welcome",
@@ -105,9 +93,9 @@
       "id": "fit_check",
       "texts": [ "Ali ta nepremičnina okvirno ustreza vašim željam?" ],
       "choices": [
-        { "title": "Da, ustreza", "next": "budget_band" },
-        { "title": "Mogoče", "next": "priority_hint" },
-        { "title": "Ne, iščem drugo", "next": "alt_reason" }
+        { "title": "Da, ustreza", "next": "budget_band", "action": "qualify_tag", "payload": { "fit_intent": "yes" } },
+        { "title": "Mogoče", "next": "priority_hint", "action": "qualify_tag", "payload": { "fit_intent": "maybe" } },
+        { "title": "Ne, iščem drugo", "next": "alt_reason", "action": "qualify_tag", "payload": { "fit_intent": "no" } }
       ]
     },
 
@@ -133,7 +121,8 @@
 
     {
       "id": "alt_suggest",
-      "texts": [ "Glede na vaš odgovor lahko predlagamo alternative. Želite, da pošljemo podobne nepremičnine?" ],
+      "texts": [ "Predlagam nekaj alternativ glede na vaš odgovor 👇" ],
+      "action": "deepseek_suggest_alternatives",
       "choices": [
         { "title": "Zanimajo me te alternative", "next": "end_info" },
         { "title": "Ne, hvala", "next": "end_exit" }
@@ -185,13 +174,13 @@
     {
       "id": "summary",
       "texts": [
-        "Hvala! Pripravljam kratek povzetek ujemanja in predlog naslednjega koraka."
+        "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak."
       ],
       "action": "compute_fit",
       "choices": [
-        { "title": "Rezerviraj ogled", "next": "end_meeting" },
-        { "title": "Pošlji več informacij", "next": "end_info" },
-        { "title": "Ni za mene", "next": "end_exit" }
+        { "title": "Rezerviraj ogled", "next": "end_meeting", "action": "qualify_tag", "payload": { "cta": "meeting" } },
+        { "title": "Pošlji več informacij", "next": "end_info", "action": "qualify_tag", "payload": { "cta": "info" } },
+        { "title": "Ni za mene", "next": "end_exit", "action": "qualify_tag", "payload": { "fit_intent": "no" } }
       ]
     },
 

@@ -90,40 +90,42 @@ def _append_lead_notes(sid: str, note: str):
         return
     lead.notes = (" | ".join([p for p in [lead.notes, note] if p])).strip(" |")
 
-def _apply_score_to_lead(sid: str, result: dict | None):
+def _apply_score_to_lead(sid: str, result: dict | None, *, silent: bool = False):
     """
-    Persist deterministic interest/score and append a short summary to notes/lastMessage.
-    (User-facing replies will NOT include numeric score/interest.)
+    Persist deterministic interest/score.
+    If silent=True, do NOT overwrite lastMessage (to avoid visible noise).
     """
     if not result:
         return
     lead = _ensure_lead(sid)
-    # interest
+
     interest = (result or {}).get("interest")
     if isinstance(interest, str) and interest:
         lead.interest = interest
-    # score
+
     comp = (result or {}).get("compatibility")
     try:
         if comp is not None:
             lead.score = max(0, min(100, int(round(float(comp)))))
     except Exception:
         pass
-    # internal summary
+
     pitch = (result or {}).get("pitch", "") or ""
     reasons = (result or {}).get("reasons", "") or ""
-    summary = (f"{pitch} Razlogi: {reasons}").strip()
-    if summary:
-        lead.lastMessage = summary
-        _append_lead_notes(sid, f"Score: {lead.score} | interest: {lead.interest} | {summary}")
+
+    # Only set lastMessage on final compute_fit (silent=False), and NEVER include reasons
+    if not silent and pitch:
+        lead.lastMessage = pitch
+
+    # Keep internal breadcrumb for dashboard/audit
+    try:
+        _append_lead_notes(sid, f"Score: {lead.score} | interest: {lead.interest}" + (f" | reasons: {reasons}" if reasons else ""))
+    except Exception:
+        pass
 
 def _set_node(flow_sessions: Dict[str, Dict[str, Any]], sid: str, node_id: str, **extra):
-    """
-    Update node without losing accumulated state (like qual).
-    """
     fs = flow_sessions.setdefault(sid, {})
     fs["node"] = node_id
-    # clear old open-input flags unless explicitly re-armed
     if "waiting_input" not in extra:
         fs.pop("waiting_input", None)
     if "awaiting_node" not in extra:
@@ -131,15 +133,22 @@ def _set_node(flow_sessions: Dict[str, Dict[str, Any]], sid: str, node_id: str, 
     fs.update(extra)
     return fs
 
+def _realtime_score(sid: str, qual: Dict[str, Any]):
+    try:
+        result = scoring_service.score_from_qual(qual or {})
+        _apply_score_to_lead(sid, result, silent=True)
+    except Exception:
+        logger.exception("realtime scoring failed sid=%s", sid)
+
 # ---------------- Flow engine ----------------
 def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
     action = (node.get("action") or "").strip()
     next_key = node.get("next")
     node_id = node.get("id")
 
-    # Deterministic scoring for both 'compute_fit' and legacy 'deepseek_score'
+    # Deterministic scoring (final)
     if action in ("compute_fit", "deepseek_score"):
-        qual = (flow_sessions.get(sid, {}) or {}).get("qual", {})  # collected via qualify_tag
+        qual = (flow_sessions.get(sid, {}) or {}).get("qual", {})
         _ensure_lead(sid)
 
         qual_pairs = "; ".join(f"{k}={v}" for k, v in qual.items())
@@ -147,17 +156,12 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
             _append_lead_notes(sid, f"qual: {qual_pairs}")
 
         result = scoring_service.score_from_qual(qual)
-        _apply_score_to_lead(sid, result)
+        _apply_score_to_lead(sid, result, silent=False)
 
-        # ----- USER-FACING REPLY (no score/interest labels) -----
-        reasons = (result or {}).get("reasons", "") or ""
-        pitch = (result or {}).get("pitch", "") or ""
-        # keep it friendly and CTA-driven; hide numeric/interest
-        reply_body = " ".join(part for part in [pitch, f"Razlogi: {reasons}" if reasons else ""] if part).strip()
-        reply = reply_body or "Super — zdi se, da ustreza vašim željam. Lahko uskladimo termin za ogled ali pošljem več informacij."
-        # --------------------------------------------------------
+        # USER-FACING reply: pitch only (no numbers, no reasons)
+        reply = (result or {}).get("pitch") or \
+                "Super — zdi se, da ustreza vašim željam. Lahko uskladimo termin za ogled ali pošljem več informacij."
 
-        # Keep current node active so its choices remain visible
         _set_node(flow_sessions, sid, node_id)
         if node.get("choices"):
             return make_response(
@@ -174,7 +178,6 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
             return base
         return make_response(reply, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
-    # Default: other actions behave as before
     return format_node(node, story_complete=False)
 
 def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
@@ -200,7 +203,7 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
         chosen = next((c for c in node["choices"]
                        if c.get("title") == msg or c.get("payload") == msg), None)
         if chosen:
-            # capture structured signals
+            # Capture structured signals
             choice_action = (chosen.get("action") or "").strip()
             if choice_action == "qualify_tag":
                 payload = (chosen.get("payload") or {})
@@ -209,6 +212,8 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
                 if payload:
                     pairs = "; ".join(f"{k}={v}" for k, v in payload.items())
                     _append_lead_notes(sid, f"qual: {pairs}")
+                # Real-time scoring (silent)
+                _realtime_score(sid, q)
 
             next_key = chosen.get("next")
             next_node = get_node_by_id(next_key) if next_key else None
@@ -244,7 +249,6 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             _trace(sid, "ask", current_id, state)
             return format_node(node, story_complete=False)
 
-        # We just received the user's free-text answer
         state.pop("waiting_input", None)
         _trace(sid, "answer", current_id, state, msg)
 
@@ -313,13 +317,12 @@ def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, 
 # ---------------- In-memory flow sessions ----------------
 FLOW_SESSIONS: Dict[str, Dict[str, Any]] = {}
 
-# ---------------- Route impls (single impl + dual mounts) ----------------
+# ---------------- Route impls ----------------
 async def _chat_impl(req: ChatRequest):
     sid = req.sid
     message = (req.message or "").strip()
     logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
 
-    # handle /contact first
     if message.startswith("/contact"):
         try:
             json_str = message[len("/contact"):].strip()
@@ -373,7 +376,6 @@ async def _chat_impl(req: ChatRequest):
 
     _touch_lead_message(sid, message)
 
-    # Persist & publish USER
     try:
         user_msg = chat_store.append_message(sid, role="user", text=message)
         await event_bus.publish(sid, "message.created", user_msg)
@@ -385,14 +387,12 @@ async def _chat_impl(req: ChatRequest):
         logger.info("human-mode active sid=%s -> skipping bot", sid)
         return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
-    # Bot flow
     try:
         result = handle_flow(req, FLOW_SESSIONS)
     except Exception:
         logger.exception("flow error sid=%s", sid)
         raise
 
-    # Persist & publish ASSISTANT
     reply_text = (result.get("reply") or "").strip()
     if reply_text:
         try:
@@ -483,7 +483,6 @@ async def _chat_stream_impl(req: ChatRequest):
 
     _touch_lead_message(sid, message)
 
-    # Persist & publish USER
     try:
         user_msg = chat_store.append_message(sid, role="user", text=message)
         await event_bus.publish(sid, "message.created", user_msg)
@@ -496,7 +495,6 @@ async def _chat_stream_impl(req: ChatRequest):
             yield "Agent je prevzel pogovor. 🤝\n"
         return StreamingResponse(human_notice2(), media_type="text/plain; charset=utf-8")
 
-    # Bot flow
     try:
         result = handle_flow(req, FLOW_SESSIONS)
     except Exception:
@@ -517,7 +515,6 @@ async def _chat_stream_impl(req: ChatRequest):
             logger.exception("stream send error sid=%s", sid)
             raise
 
-    # Persist & publish ASSISTANT
     if reply_text:
         try:
             assistant_msg = chat_store.append_message(sid, role="assistant", text=reply_text)
@@ -537,7 +534,7 @@ async def chat_stream(req: ChatRequest):
 async def chat_stream_slash(req: ChatRequest):
     return await _chat_stream_impl(req)
 
-# ---- survey (no AI; notes only) ----
+# ---- survey (notes only) ----
 async def _survey_impl(body: SurveyRequest):
     sid = body.sid
     logger.info("POST /chat/survey sid=%s", sid)
@@ -604,7 +601,7 @@ async def _staff_impl(body: StaffMessage):
     saved = None
     try:
         saved = chat_store.append_message(sid, role="staff", text=text)
-        sessions.add_chat(sid, "staff", text)  # legacy in-memory
+        sessions.add_chat(sid, "staff", text)
         await event_bus.publish(sid, "message.created", saved)
     except Exception:
         logger.exception("persist/publish staff message failed sid=%s", sid)

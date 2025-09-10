@@ -727,3 +727,35 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Predlagam, da uskladimo termin ogleda. Razlogi: Ujemanje: good; Finance: cash; Čas: this_week; Motivacija: high", "timestamp": 1757525014}
 {"sid": "rk50m1701mp", "role": "user", "text": "Pošlji več informacij", "timestamp": 1757525028}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Ni problema – pošljemo brošuro in dodatne informacije na vaš kontakt.", "timestamp": 1757525028}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757527481}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757527481}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757527496}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757527496}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, ustreza", "timestamp": 1757527499}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757527499}
+{"sid": "rk50m1701mp", "role": "user", "text": "> €900k", "timestamp": 1757527506}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako ste z urejeno finančno platjo?", "timestamp": 1757527506}
+{"sid": "rk50m1701mp", "role": "user", "text": "Gotovina", "timestamp": 1757527520}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi želeli okvirno opraviti ogled?", "timestamp": 1757527520}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ta teden", "timestamp": 1757527530}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujen je nakup pri vas?", "timestamp": 1757527530}
+{"sid": "rk50m1701mp", "role": "user", "text": "Nizko – raziskujem trg", "timestamp": 1757527533}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Predlagam, da uskladimo termin ogleda. Razlogi: Ujemanje: good; Finance: cash; Čas: this_week; Motivacija: low", "timestamp": 1757527533}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ni za mene", "timestamp": 1757527546}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Razumem. Če se kriteriji spremenijo, smo na voljo. Hvala in lep dan!", "timestamp": 1757527546}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757528593}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757528593}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757528618}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757528618}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, ustreza", "timestamp": 1757528619}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757528619}
+{"sid": "rk50m1701mp", "role": "user", "text": "€700–900k", "timestamp": 1757528623}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako ste z urejeno finančno platjo?", "timestamp": 1757528623}
+{"sid": "rk50m1701mp", "role": "user", "text": "Gotovina", "timestamp": 1757528627}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi želeli okvirno opraviti ogled?", "timestamp": 1757528627}
+{"sid": "rk50m1701mp", "role": "user", "text": "Kasneje", "timestamp": 1757528635}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujen je nakup pri vas?", "timestamp": 1757528635}
+{"sid": "rk50m1701mp", "role": "user", "text": "Nizko – raziskujem trg", "timestamp": 1757528647}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Predlagam, da uskladimo termin ogleda.", "timestamp": 1757528647}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ni za mene", "timestamp": 1757528654}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Razumem. Če se kriteriji spremenijo, smo na voljo. Hvala in lep dan!", "timestamp": 1757528654}
