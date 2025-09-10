@@ -1,6 +1,7 @@
 {
   "version": "1.0.0",
   "locale": "sl-SI",
+
   "product": "Vila Zelena – 4-sobna hiša z vrtom (Vič, Ljubljana)",
   "description": "Svetla, energetsko varčna hiša (180 m² + terasa/vrt), 2 kopalnici, 2 parkirni mesti, mirna ulica blizu LPP in šole. Cena: €685.000.",
   "ideal_clients": [
@@ -17,30 +18,33 @@
     "hitro zbiranje kontakta in terminov ogledov",
     "alternativni predlogi, če listing ne ustreza"
   ],
+
   "system_prompt": "Ti si prijazen, konkreten AI asistent nepremičninske agencije. Glavni cilj je hitro oceniti ujemanje: proračun, časovnica, motivacija. Vodi uporabnika po gumbih. Ne odpiraš odprtih vprašanj. Odgovarjaj v slovenščini.",
   "start": "welcome",
+
   "assets": {
-    "gallery": [
-      "/listings/vila-zelena.png"
-    ],
+    "gallery": [ "/listings/vila-zelena.png" ],
     "floorplan": "/listings/tloris.png",
     "map_address": "Vič, Ljubljana"
   },
+
   "validations": {
     "email_regex": "^\\S+@\\S+\\.\\S+$",
     "phone_hint": "+386 ..."
   },
-  "llm": {
-    "qualification": {
-      "system_prompt": "Ti si ACE kvalifikacijski AI. Odgovarjaj vedno v slovenščini in vrni STROGO JSON brez razlage.",
-      "user_prompt_template": "Kontekst:\n- Produkt: {product}\n- Opis: {description}\n- Idealni kupci: {ideal_clients}\n- Slab fit kupci: {bad_fit_clients}\n- Jedro vrednosti: {core_value}\n\nSignal iz pogovora:\n\"\"\"\n{lead_text}\n\"\"\"\n\nNaloga: vrni izključno JSON s ključi:\n- category: \"good_fit\" | \"could_fit\" | \"bad_fit\"\n- interest: \"High\" | \"Medium\" | \"Low\"\n- compatibility: celo število 0–100\n- reasons: kratek povzetek razlogov\n- pitch: kratek predlog naslednjega koraka (npr. ogled)\n- tags: seznam nizov\n\nPravila:\n- Upoštevaj budget, lokacijo, tip nepremičnine, nujnost in finance.\n- Če ni dovolj podatkov, uporabi konservativno oceno (\"could_fit\", interest \"Medium\", compatibility ~ 55).",
-      "interest_thresholds": {
-        "High": 70,
-        "Medium": 40,
-        "Low": 0
-      }
+
+  "scoring": {
+    "mode": "deterministic",
+    "thresholds": { "High": 70, "Medium": 40, "Low": 0 },
+    "weights": {
+      "fit":        { "good": 40, "close": 25, "low": 8 },
+      "finance":    { "cash": 25, "preapproved": 20, "in_progress": 10 },
+      "when":       { "this_week": 25, "next_week": 20, "weekend": 20, "later": 8 },
+      "motivation": { "high": 25, "medium": 15, "low": 8 },
+      "reason_penalty": { "price_high": -20, "location": -15, "size": -10 }
     }
   },
+
   "nodes": [
     {
       "id": "welcome",
@@ -54,346 +58,143 @@
       "action": "store_contact",
       "next": "listing_highlights"
     },
+
     {
       "id": "listing_highlights",
       "texts": [
         "✅ Ključni podatki izbrane nepremičnine📍 Vič Ljubljana 💶 Cena: €685.000 📐 Površina: 180 m² bivalno (+ terasa/vrt) 🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti Kaj želite najprej?"
       ],
       "choices": [
-        {
-          "title": "Pokaži slike",
-          "next": "listing_gallery"
-        },
-        {
-          "title": "Pokaži tloris",
-          "next": "floorplan"
-        },
-        {
-          "title": "Lokacija na zemljevidu",
-          "next": "map"
-        },
-        {
-          "title": "Naprej → preveri ujemanje",
-          "next": "fit_check"
-        }
+        { "title": "Pokaži slike", "next": "listing_gallery" },
+        { "title": "Pokaži tloris", "next": "floorplan" },
+        { "title": "Lokacija na zemljevidu", "next": "map" },
+        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
       ]
     },
+
     {
       "id": "listing_gallery",
       "action": "show_gallery",
-      "payload": {
-        "images": "{{assets.gallery}}"
-      },
+      "payload": { "images": "{{assets.gallery}}" },
       "choices": [
-        {
-          "title": "Naprej → preveri ujemanje",
-          "next": "fit_check"
-        }
+        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
       ]
     },
+
     {
       "id": "floorplan",
-      "texts": [
-        "Tloris nepremičnine 🗺️ (po potrebi pošljemo tudi PDF na e-pošto)."
-      ],
+      "texts": [ "Tloris nepremičnine 🗺️ (po potrebi pošljemo tudi PDF na e-pošto)." ],
       "action": "show_image",
-      "payload": {
-        "image": "{{assets.floorplan}}",
-        "label": "Tloris (predogled)"
-      },
+      "payload": { "image": "{{assets.floorplan}}", "label": "Tloris (predogled)" },
       "choices": [
-        {
-          "title": "Naprej → preveri ujemanje",
-          "next": "fit_check"
-        }
+        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
       ]
     },
+
     {
       "id": "map",
-      "texts": [
-        "Okvirna lokacija 🗺️ – Vič, Ljubljana."
-      ],
+      "texts": [ "Okvirna lokacija 🗺️ – Vič, Ljubljana." ],
       "action": "show_map",
-      "payload": {
-        "address": "{{assets.map_address}}"
-      },
+      "payload": { "address": "{{assets.map_address}}" },
       "choices": [
-        {
-          "title": "Naprej → preveri ujemanje",
-          "next": "fit_check"
-        }
+        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
       ]
     },
+
     {
       "id": "fit_check",
-      "texts": [
-        "Ali ta nepremičnina okvirno ustreza vašim željam?"
-      ],
+      "texts": [ "Ali ta nepremičnina okvirno ustreza vašim željam?" ],
       "choices": [
-        {
-          "title": "Da, ustreza",
-          "next": "budget_band"
-        },
-        {
-          "title": "Mogoče",
-          "next": "priority_hint"
-        },
-        {
-          "title": "Ne, iščem drugo",
-          "next": "alt_reason"
-        }
+        { "title": "Da, ustreza", "next": "budget_band" },
+        { "title": "Mogoče", "next": "priority_hint" },
+        { "title": "Ne, iščem drugo", "next": "alt_reason" }
       ]
     },
+
     {
       "id": "priority_hint",
-      "texts": [
-        "Kaj je vam najpomembnejše pri odločitvi?"
-      ],
+      "texts": [ "Kaj je vam najpomembnejše pri odločitvi?" ],
       "choices": [
-        {
-          "title": "Cena",
-          "next": "budget_band",
-          "action": "qualify_tag",
-          "payload": {
-            "priority": "price"
-          }
-        },
-        {
-          "title": "Lokacija",
-          "next": "budget_band",
-          "action": "qualify_tag",
-          "payload": {
-            "priority": "location"
-          }
-        },
-        {
-          "title": "Velikost/razporeditev",
-          "next": "budget_band",
-          "action": "qualify_tag",
-          "payload": {
-            "priority": "size"
-          }
-        }
+        { "title": "Cena", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "price" } },
+        { "title": "Lokacija", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "location" } },
+        { "title": "Velikost/razporeditev", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "size" } }
       ]
     },
+
     {
       "id": "alt_reason",
-      "texts": [
-        "Kaj je glavni razlog, da ta ogled ni pravi?"
-      ],
+      "texts": [ "Kaj je glavni razlog, da ta ogled ni pravi?" ],
       "choices": [
-        {
-          "title": "Cena previsoka",
-          "next": "alt_suggest",
-          "action": "qualify_tag",
-          "payload": {
-            "reason": "price_high"
-          }
-        },
-        {
-          "title": "Lokacija ne ustreza",
-          "next": "alt_suggest",
-          "action": "qualify_tag",
-          "payload": {
-            "reason": "location"
-          }
-        },
-        {
-          "title": "Velikost/razporeditev",
-          "next": "alt_suggest",
-          "action": "qualify_tag",
-          "payload": {
-            "reason": "size"
-          }
-        }
+        { "title": "Cena previsoka", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "price_high" } },
+        { "title": "Lokacija ne ustreza", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "location" } },
+        { "title": "Velikost/razporeditev", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "size" } }
       ]
     },
+
     {
       "id": "alt_suggest",
-      "texts": [
-        "Predlagam nekaj alternativ glede na vaš odgovor 👇"
-      ],
-      "action": "deepseek_suggest_alternatives",
+      "texts": [ "Glede na vaš odgovor lahko predlagamo alternative. Želite, da pošljemo podobne nepremičnine?" ],
       "choices": [
-        {
-          "title": "Zanimajo me te alternative",
-          "next": "end_info"
-        },
-        {
-          "title": "Ne, hvala",
-          "next": "end_exit"
-        }
+        { "title": "Zanimajo me te alternative", "next": "end_info" },
+        { "title": "Ne, hvala", "next": "end_exit" }
       ]
     },
+
     {
       "id": "budget_band",
-      "texts": [
-        "Kakšen je vaš okvirni proračun?"
-      ],
+      "texts": [ "Kakšen je vaš okvirni proračun?" ],
       "choices": [
-        {
-          "title": "< €500.000",
-          "next": "financing",
-          "action": "qualify_tag",
-          "payload": {
-            "budget": "<500k",
-            "fit": "low"
-          }
-        },
-        {
-          "title": "€500–700k",
-          "next": "financing",
-          "action": "qualify_tag",
-          "payload": {
-            "budget": "500-700k",
-            "fit": "close"
-          }
-        },
-        {
-          "title": "€700–900k",
-          "next": "financing",
-          "action": "qualify_tag",
-          "payload": {
-            "budget": "700-900k",
-            "fit": "good"
-          }
-        },
-        {
-          "title": "> €900k",
-          "next": "financing",
-          "action": "qualify_tag",
-          "payload": {
-            "budget": ">900k",
-            "fit": "good"
-          }
-        }
+        { "title": "< €500.000", "next": "financing", "action": "qualify_tag", "payload": { "budget": "<500k", "fit": "low" } },
+        { "title": "€500–700k", "next": "financing", "action": "qualify_tag", "payload": { "budget": "500-700k", "fit": "close" } },
+        { "title": "€700–900k", "next": "financing", "action": "qualify_tag", "payload": { "budget": "700-900k", "fit": "good" } },
+        { "title": "> €900k", "next": "financing", "action": "qualify_tag", "payload": { "budget": ">900k", "fit": "good" } }
       ]
     },
+
     {
       "id": "financing",
-      "texts": [
-        "Kako ste z urejeno finančno platjo?"
-      ],
+      "texts": [ "Kako ste z urejeno finančno platjo?" ],
       "choices": [
-        {
-          "title": "Predodobritev kredita",
-          "next": "timeline",
-          "action": "qualify_tag",
-          "payload": {
-            "finance": "preapproved"
-          }
-        },
-        {
-          "title": "Gotovina",
-          "next": "timeline",
-          "action": "qualify_tag",
-          "payload": {
-            "finance": "cash"
-          }
-        },
-        {
-          "title": "Še urejam",
-          "next": "timeline",
-          "action": "qualify_tag",
-          "payload": {
-            "finance": "in_progress"
-          }
-        }
+        { "title": "Predodobritev kredita", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "preapproved" } },
+        { "title": "Gotovina", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "cash" } },
+        { "title": "Še urejam", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "in_progress" } }
       ]
     },
+
     {
       "id": "timeline",
-      "texts": [
-        "Kdaj bi želeli okvirno opraviti ogled?"
-      ],
+      "texts": [ "Kdaj bi želeli okvirno opraviti ogled?" ],
       "choices": [
-        {
-          "title": "Ta teden",
-          "next": "motivation",
-          "action": "qualify_tag",
-          "payload": {
-            "when": "this_week"
-          }
-        },
-        {
-          "title": "Naslednji teden",
-          "next": "motivation",
-          "action": "qualify_tag",
-          "payload": {
-            "when": "next_week"
-          }
-        },
-        {
-          "title": "Vikend",
-          "next": "motivation",
-          "action": "qualify_tag",
-          "payload": {
-            "when": "weekend"
-          }
-        },
-        {
-          "title": "Kasneje",
-          "next": "motivation",
-          "action": "qualify_tag",
-          "payload": {
-            "when": "later"
-          }
-        }
+        { "title": "Ta teden", "next": "motivation", "action": "qualify_tag", "payload": { "when": "this_week" } },
+        { "title": "Naslednji teden", "next": "motivation", "action": "qualify_tag", "payload": { "when": "next_week" } },
+        { "title": "Vikend", "next": "motivation", "action": "qualify_tag", "payload": { "when": "weekend" } },
+        { "title": "Kasneje", "next": "motivation", "action": "qualify_tag", "payload": { "when": "later" } }
       ]
     },
+
     {
       "id": "motivation",
-      "texts": [
-        "Kako nujen je nakup pri vas?"
-      ],
+      "texts": [ "Kako nujen je nakup pri vas?" ],
       "choices": [
-        {
-          "title": "Zelo – aktivno iščem",
-          "next": "summary",
-          "action": "qualify_tag",
-          "payload": {
-            "motivation": "high"
-          }
-        },
-        {
-          "title": "Srednje – primerjam možnosti",
-          "next": "summary",
-          "action": "qualify_tag",
-          "payload": {
-            "motivation": "medium"
-          }
-        },
-        {
-          "title": "Nizko – raziskujem trg",
-          "next": "summary",
-          "action": "qualify_tag",
-          "payload": {
-            "motivation": "low"
-          }
-        }
+        { "title": "Zelo – aktivno iščem", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "high" } },
+        { "title": "Srednje – primerjam možnosti", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "medium" } },
+        { "title": "Nizko – raziskujem trg", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "low" } }
       ]
     },
+
     {
       "id": "summary",
       "texts": [
-        "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak."
+        "Hvala! Pripravljam kratek povzetek ujemanja in predlog naslednjega koraka."
       ],
       "action": "compute_fit",
       "choices": [
-        {
-          "title": "Rezerviraj ogled",
-          "next": "end_meeting"
-        },
-        {
-          "title": "Pošlji več informacij",
-          "next": "end_info"
-        },
-        {
-          "title": "Ni za mene",
-          "next": "end_exit"
-        }
+        { "title": "Rezerviraj ogled", "next": "end_meeting" },
+        { "title": "Pošlji več informacij", "next": "end_info" },
+        { "title": "Ni za mene", "next": "end_exit" }
       ]
     },
+
     {
       "id": "end_meeting",
       "texts": [
@@ -402,6 +203,7 @@
       "action": "schedule_placeholder",
       "terminal": true
     },
+
     {
       "id": "end_info",
       "texts": [
@@ -409,6 +211,7 @@
       ],
       "terminal": true
     },
+
     {
       "id": "end_exit",
       "texts": [

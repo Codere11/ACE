@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import logging
 import random
 import time
@@ -15,14 +14,12 @@ from app.core.config import FLOW
 from app.core import sessions  # legacy memory store
 from app.models import chat as chat_models
 from app.models.chat import ChatRequest, SurveyRequest, StaffMessage
-from app.services import deepseek_service, lead_service
-from app.services import chat_store, event_bus
-from app.services import takeover  # <-- single source for human mode
+from app.services import lead_service, chat_store, event_bus, takeover
+from app.services import scoring_service
 
 logger = logging.getLogger("ace.api.chat")
 router = APIRouter()
 
-# One-time log proving centralized models are loaded
 logger.info(
     "Chat models: version=%s fingerprint=%s modules=%s",
     chat_models.SCHEMA_VERSION,
@@ -93,79 +90,46 @@ def _append_lead_notes(sid: str, note: str):
         return
     lead.notes = (" | ".join([p for p in [lead.notes, note] if p])).strip(" |")
 
-def _apply_ai_to_lead(sid: str, result: dict | None):
+def _apply_score_to_lead(sid: str, result: dict | None):
     """
-    Persist interest/score and append a short AI summary to notes/lastMessage.
-    This is the critical fix for the 'interest stuck at 50' issue.
+    Persist deterministic interest/score and append a short summary to notes/lastMessage.
+    (User-facing replies will NOT include numeric score/interest.)
     """
-    lead = _ensure_lead(sid)
     if not result:
         return
-
-    # Persist interest + score derived from DeepSeek normalizer
+    lead = _ensure_lead(sid)
+    # interest
     interest = (result or {}).get("interest")
     if isinstance(interest, str) and interest:
-        lead.interest = interest  # "High" | "Medium" | "Low"
-
+        lead.interest = interest
+    # score
     comp = (result or {}).get("compatibility")
     try:
         if comp is not None:
             lead.score = max(0, min(100, int(round(float(comp)))))
     except Exception:
         pass
-
+    # internal summary
     pitch = (result or {}).get("pitch", "") or ""
     reasons = (result or {}).get("reasons", "") or ""
     summary = (f"{pitch} Razlogi: {reasons}").strip()
     if summary:
         lead.lastMessage = summary
-        _append_lead_notes(sid, f"AI: {summary}")
+        _append_lead_notes(sid, f"Score: {lead.score} | interest: {lead.interest} | {summary}")
 
-def _update_lead_with_deepseek(sid: str, prompt: str, result: dict | None):
+def _set_node(flow_sessions: Dict[str, Dict[str, Any]], sid: str, node_id: str, **extra):
     """
-    Back-compat shim used by survey & older paths.
-    Now also applies interest/score so the dashboard updates correctly.
+    Update node without losing accumulated state (like qual).
     """
-    if prompt:
-        _append_lead_notes(sid, f"Prompt: {prompt}")
-    _apply_ai_to_lead(sid, result)
-
-# ---------------- AI gating (only-once-per-open-answer) ----------------
-_LAST_AI_HASH: Dict[str, str] = {}  # sid -> sha1 of last scored free-text
-
-def _hash_text(txt: str) -> str:
-    return hashlib.sha1((txt or "").strip().encode("utf-8")).hexdigest()
-
-def _human_takeover_active(sid: str) -> bool:
-    # single authoritative check
-    try:
-        return bool(sid) and takeover.is_active(sid)
-    except Exception:
-        return False
-
-def _arm_ai_for_answer(sid: str, msg: str, flow_sessions: Dict[str, Dict[str, Any]]):
-    """
-    Mark that we have a new open answer worth scoring. We don't run DeepSeek here;
-    we just arm a flag that only the 'deepseek_score' action node will honor.
-    """
-    if _human_takeover_active(sid):
-        logger.info("AI skip (human takeover) sid=%s", sid)
-        return
-    msg_norm = (msg or "").strip()
-    if not msg_norm:
-        return
-    h = _hash_text(msg_norm)
-    if _LAST_AI_HASH.get(sid) == h:
-        logger.info("AI skip (duplicate answer) sid=%s", sid)
-        return
     fs = flow_sessions.setdefault(sid, {})
-    fs["ai_pending"] = {"hash": h, "text": msg_norm}
-    logger.info("AI armed sid=%s hash=%s", sid, h[:10])
-
-def _consume_ai_arm(sid: str, flow_sessions: Dict[str, Dict[str, Any]]) -> Optional[dict]:
-    fs = flow_sessions.get(sid, {})
-    pending = fs.pop("ai_pending", None)
-    return pending
+    fs["node"] = node_id
+    # clear old open-input flags unless explicitly re-armed
+    if "waiting_input" not in extra:
+        fs.pop("waiting_input", None)
+    if "awaiting_node" not in extra:
+        fs.pop("awaiting_node", None)
+    fs.update(extra)
+    return fs
 
 # ---------------- Flow engine ----------------
 def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str, Dict[str, Any]]) -> dict:
@@ -173,73 +137,28 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
     next_key = node.get("next")
     node_id = node.get("id")
 
-    # --- New: unified handler supports both 'compute_fit' and 'deepseek_score'
+    # Deterministic scoring for both 'compute_fit' and legacy 'deepseek_score'
     if action in ("compute_fit", "deepseek_score"):
-        # human takeover shortcut
-        if _human_takeover_active(sid):
-            logger.info("AI action suppressed (human takeover) sid=%s", sid)
-            # Stay on current node so choices still show
-            flow_sessions[sid] = {"node": node_id}
-            ui = {"type": "choices", "buttons": node.get("choices", [])} if node.get("choices") else {"openInput": True}
-            return make_response(None, ui=ui, chat_mode="guided" if node.get("choices") else "open", story_complete=False)
+        qual = (flow_sessions.get(sid, {}) or {}).get("qual", {})  # collected via qualify_tag
+        _ensure_lead(sid)
 
-        # deepseek_score keeps 'armed' behavior (only after free-text)
-        if action == "deepseek_score":
-            arm = _consume_ai_arm(sid, flow_sessions)
-            if not arm:
-                logger.info("AI action skipped (not armed) sid=%s node=%s", sid, node_id)
-                # advance if next exists, else re-render current
-                if next_key:
-                    flow_sessions[sid] = {"node": next_key}
-                    return format_node(get_node_by_id(next_key), story_complete=False)
-                flow_sessions[sid] = {"node": node_id}
-                return format_node(node, story_complete=False)
-            free_text = arm["text"]
-        else:
-            # compute_fit always runs; build free_text from lead data
-            free_text = ""
+        qual_pairs = "; ".join(f"{k}={v}" for k, v in qual.items())
+        if qual_pairs:
+            _append_lead_notes(sid, f"qual: {qual_pairs}")
 
-        # Build prompt from lead context + optional free-text
-        lead = _ensure_lead(sid)
-        prompt_parts = []
-        if getattr(lead, "notes", None):
-            prompt_parts.append(f"Notes: {lead.notes}")
-        if getattr(lead, "lastMessage", None):
-            prompt_parts.append(f"Last: {lead.lastMessage}")
-        if free_text:
-            prompt_parts.append(f"FreeText: {free_text}")
-        prompt = "\n".join(prompt_parts).strip() or (free_text or "ni signalov; konzervativna ocena")
+        result = scoring_service.score_from_qual(qual)
+        _apply_score_to_lead(sid, result)
 
-        try:
-            result = deepseek_service.run_deepseek(prompt, sid)
-        except Exception:
-            logger.exception("deepseek error sid=%s", sid)
-            _update_lead_with_deepseek(sid, prompt, {"pitch": "", "reasons": ""})
-            # stay on current node; show choices if present
-            flow_sessions[sid] = {"node": node_id}
-            ui = {"type": "choices", "buttons": node.get("choices", [])} if node.get("choices") else {"openInput": True}
-            return make_response(
-                "⚠️ Težava pri ocenjevanju. Nadaljujeva.",
-                ui=ui,
-                chat_mode="guided" if node.get("choices") else "open",
-                story_complete=False,
-            )
-
-        # Persist + remember hash for deepseek_score
-        _update_lead_with_deepseek(sid, prompt, result)
-        if action == "deepseek_score" and free_text:
-            _LAST_AI_HASH[sid] = _hash_text(free_text)
-
-        # Compose reply & keep this node active to show its choices
-        pitch = (result or {}).get("pitch", "") or ""
+        # ----- USER-FACING REPLY (no score/interest labels) -----
         reasons = (result or {}).get("reasons", "") or ""
-        comp = (result or {}).get("compatibility", "")
-        interest = (result or {}).get("interest", "")
-        prefix = f"Ujemanje: {interest} ({comp}/100)." if interest or comp != "" else ""
-        reply = (" ".join([prefix, f"{pitch} Razlogi: {reasons}".strip()])).strip() or \
-                "Ocena je pripravljena. Kako naprej?"
+        pitch = (result or {}).get("pitch", "") or ""
+        # keep it friendly and CTA-driven; hide numeric/interest
+        reply_body = " ".join(part for part in [pitch, f"Razlogi: {reasons}" if reasons else ""] if part).strip()
+        reply = reply_body or "Super — zdi se, da ustreza vašim željam. Lahko uskladimo termin za ogled ali pošljem več informacij."
+        # --------------------------------------------------------
 
-        flow_sessions[sid] = {"node": node_id}
+        # Keep current node active so its choices remain visible
+        _set_node(flow_sessions, sid, node_id)
         if node.get("choices"):
             return make_response(
                 reply,
@@ -247,9 +166,8 @@ def _execute_action_node(sid: str, node: Dict[str, Any], flow_sessions: Dict[str
                 chat_mode="guided",
                 story_complete=False,
             )
-        # No choices → optionally advance
         if next_key:
-            flow_sessions[sid] = {"node": next_key}
+            _set_node(flow_sessions, sid, next_key)
             nxt = get_node_by_id(next_key)
             base = format_node(nxt, story_complete=False)
             base["reply"] = (reply + "\n\n" + (base.get("reply") or "")).strip()
@@ -282,24 +200,34 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
         chosen = next((c for c in node["choices"]
                        if c.get("title") == msg or c.get("payload") == msg), None)
         if chosen:
+            # capture structured signals
+            choice_action = (chosen.get("action") or "").strip()
+            if choice_action == "qualify_tag":
+                payload = (chosen.get("payload") or {})
+                q = flow_sessions.setdefault(sid, {}).setdefault("qual", {})
+                q.update(payload)
+                if payload:
+                    pairs = "; ".join(f"{k}={v}" for k, v in payload.items())
+                    _append_lead_notes(sid, f"qual: {pairs}")
+
             next_key = chosen.get("next")
             next_node = get_node_by_id(next_key) if next_key else None
             if not next_node:
-                flow_sessions[sid] = {"node": next_key or "done"}
+                _set_node(flow_sessions, sid, next_key or "done")
                 _trace(sid, "choice->missing_next", next_key, flow_sessions[sid], msg)
                 return make_response("⚠️ Manjka naslednji korak.", ui={}, chat_mode="guided", story_complete=True)
 
             if next_node.get("openInput"):
-                flow_sessions[sid] = {"node": next_key, "waiting_input": True, "awaiting_node": next_key}
+                _set_node(flow_sessions, sid, next_key, waiting_input=True, awaiting_node=next_key)
                 _trace(sid, "choice->openInput(armed)", next_key, flow_sessions[sid], msg)
                 return format_node(next_node, story_complete=False)
 
             if next_node.get("action"):
-                flow_sessions[sid] = {"node": next_key}
+                _set_node(flow_sessions, sid, next_key)
                 _trace(sid, "choice->action(exec)", next_key, flow_sessions[sid], msg)
                 return _execute_action_node(sid, next_node, flow_sessions)
 
-            flow_sessions[sid] = {"node": next_key}
+            _set_node(flow_sessions, sid, next_key)
             _trace(sid, "choice->next", next_key, flow_sessions[sid], msg)
             return format_node(next_node, story_complete=False)
 
@@ -316,7 +244,7 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
             _trace(sid, "ask", current_id, state)
             return format_node(node, story_complete=False)
 
-        # We just received the user's free-text answer for an open input
+        # We just received the user's free-text answer
         state.pop("waiting_input", None)
         _trace(sid, "answer", current_id, state, msg)
 
@@ -326,40 +254,37 @@ def handle_flow(req: ChatRequest, flow_sessions: Dict[str, Dict[str, Any]]) -> d
         if node.get("action") == "store_answer":
             _append_lead_notes(sid, msg)
             _touch_lead_message(sid, msg)
-            # ✅ Arm AI scoring ONLY now (for open answers), once per unique text
-            _arm_ai_for_answer(sid, msg, FLOW_SESSIONS)
 
         if next_key:
             next_node = get_node_by_id(next_key)
-            flow_sessions[sid] = {"node": next_key}
+            _set_node(flow_sessions, sid, next_key)
 
             if next_node and next_node.get("openInput"):
-                flow_sessions[sid]["waiting_input"] = True
-                flow_sessions[sid]["awaiting_node"] = next_key
-                _trace(sid, "armed_next_openInput", next_key, FLOW_SESSIONS[sid])
+                _set_node(flow_sessions, sid, next_key, waiting_input=True, awaiting_node=next_key)
+                _trace(sid, "armed_next_openInput", next_key, flow_sessions[sid])
                 return format_node(next_node, story_complete=False)
 
             if next_node and next_node.get("action"):
-                _trace(sid, "goto_next->action(exec)", next_key, FLOW_SESSIONS[sid])
-                return _execute_action_node(sid, next_node, FLOW_SESSIONS)
+                _trace(sid, "goto_next->action(exec)", next_key, flow_sessions[sid])
+                return _execute_action_node(sid, next_node, flow_sessions)
 
-            _trace(sid, "goto_next", next_key, FLOW_SESSIONS[sid])
+            _trace(sid, "goto_next", next_key, flow_sessions[sid])
             return format_node(next_node, story_complete=False)
 
         _trace(sid, "dup_or_mismatch", current_id, state, msg)
         if next_key:
             next_node = get_node_by_id(next_key)
-            flow_sessions[sid] = {"node": next_key}
+            _set_node(flow_sessions, sid, next_key)
             if next_node and next_node.get("action"):
-                _trace(sid, "dup_or_mismatch->action(exec)", next_key, FLOW_SESSIONS[sid])
-                return _execute_action_node(sid, next_node, FLOW_SESSIONS)
+                _trace(sid, "dup_or_mismatch->action(exec)", next_key, flow_sessions[sid])
+                return _execute_action_node(sid, next_node, flow_sessions)
             return format_node(next_node, story_complete=False)
 
         return make_response("", ui={}, chat_mode="guided", story_complete=False)
 
     if node.get("action"):
         _trace(sid, "action(exec at enter)", node_key, state, msg)
-        return _execute_action_node(sid, node, FLOW_SESSIONS)
+        return _execute_action_node(sid, node, flow_sessions)
 
     _trace(sid, "default", node_key, state)
     return format_node(node, story_complete=False)
@@ -368,7 +293,6 @@ def format_node(node: Dict[str, Any] | None, story_complete: bool) -> Dict[str, 
     if not node:
         return make_response("⚠️ Manjka vozlišče v pogovornem toku.", ui={}, chat_mode="guided", story_complete=True)
 
-    # Prioritize openInput over choices
     if node.get("openInput"):
         ui = {"openInput": True, "inputType": node.get("inputType", "single")}
         mode = "open"
@@ -395,8 +319,7 @@ async def _chat_impl(req: ChatRequest):
     message = (req.message or "").strip()
     logger.info("POST /chat sid=%s len=%d", sid, len(message or ""))
 
-    # ---- NEW: handle contact command BEFORE touching/storing message
-    # Accept: /contact {"name":"...","email":"...","phone":"...","channel":"email"}
+    # handle /contact first
     if message.startswith("/contact"):
         try:
             json_str = message[len("/contact"):].strip()
@@ -408,7 +331,6 @@ async def _chat_impl(req: ChatRequest):
 
             lead = lead_service.upsert_contact(sid, name=name, email=email, phone=phone, channel=channel)
 
-            # Notify dashboards live (lead row update)
             try:
                 await event_bus.publish(sid, "lead.touched", {
                     "lastMessage": "Kontakt posodobljen",
@@ -421,37 +343,23 @@ async def _chat_impl(req: ChatRequest):
             except Exception:
                 logger.exception("lead.touched publish failed sid=%s", sid)
 
-            # >>> advance if on dual-contact node
             curr = FLOW_SESSIONS.get(sid) or {}
             curr_node_id = curr.get("node")
             curr_node = get_node_by_id(curr_node_id) if curr_node_id else None
             if curr_node and curr_node.get("openInput") and curr_node.get("inputType") in ("dual-contact", "contact"):
                 next_key = curr_node.get("next") or "done"
-                FLOW_SESSIONS[sid] = {"node": next_key}
+                _set_node(FLOW_SESSIONS, sid, next_key)
                 next_node = get_node_by_id(next_key)
                 if next_node and next_node.get("openInput"):
-                    FLOW_SESSIONS[sid]["waiting_input"] = True
-                    FLOW_SESSIONS[sid]["awaiting_node"] = next_key
+                    _set_node(FLOW_SESSIONS, sid, next_key, waiting_input=True, awaiting_node=next_key)
                 _trace(sid, "contact->advance", next_key, FLOW_SESSIONS[sid], "advance after /contact")
                 return format_node(next_node, story_complete=False)
-            # <<<
 
-            return make_response(
-                reply="Kontakt shranjen ✅ — nadaljujeva. 🔥",
-                ui=None,
-                chat_mode="guided",
-                story_complete=False
-            )
+            return make_response("Kontakt shranjen ✅ — nadaljujeva. 🔥", ui=None, chat_mode="guided", story_complete=False)
         except Exception:
             logger.exception("contact parse/save failed sid=%s", sid)
-            return make_response(
-                reply="⚠️ Ni uspelo shraniti kontakta. Poskusi znova ali preskoči v klepet.",
-                ui=None,
-                chat_mode="guided",
-                story_complete=False
-            )
+            return make_response("⚠️ Ni uspelo shraniti kontakta. Poskusi znova ali preskoči v klepet.", ui=None, chat_mode="guided", story_complete=False)
 
-    # Optional: allow FE to flip to human mode explicitly
     if message.strip() == "/skip_to_human":
         try:
             takeover.enable(sid)
@@ -473,8 +381,7 @@ async def _chat_impl(req: ChatRequest):
         logger.exception("persist/publish user message failed sid=%s", sid)
         raise
 
-    # Human takeover short-circuit
-    if _human_takeover_active(sid):
+    if takeover.is_active(sid):
         logger.info("human-mode active sid=%s -> skipping bot", sid)
         return make_response(reply=None, ui={"openInput": True}, chat_mode="open", story_complete=False)
 
@@ -512,7 +419,6 @@ async def _chat_stream_impl(req: ChatRequest):
     message = (req.message or "").strip()
     logger.info("POST /chat/stream sid=%s len=%d", sid, len(message or ""))
 
-    # We don't expect /contact over stream, but if it happens, handle it similarly.
     if message.startswith("/contact"):
         try:
             json_str = message[len("/contact"):].strip()
@@ -536,24 +442,21 @@ async def _chat_stream_impl(req: ChatRequest):
             except Exception:
                 logger.exception("lead.touched publish failed (stream) sid=%s", sid)
 
-            # >>> advance if on dual-contact node
             curr = FLOW_SESSIONS.get(sid) or {}
             curr_node_id = curr.get("node")
             curr_node = get_node_by_id(curr_node_id) if curr_node_id else None
             if curr_node and curr_node.get("openInput") and curr_node.get("inputType") in ("dual-contact", "contact"):
                 next_key = curr_node.get("next") or "done"
-                FLOW_SESSIONS[sid] = {"node": next_key}
+                _set_node(FLOW_SESSIONS, sid, next_key)
                 next_node = get_node_by_id(next_key)
                 if next_node and next_node.get("openInput"):
-                    FLOW_SESSIONS[sid]["waiting_input"] = True
-                    FLOW_SESSIONS[sid]["awaiting_node"] = next_key
+                    _set_node(FLOW_SESSIONS, sid, next_key, waiting_input=True, awaiting_node=next_key)
                 _trace(sid, "contact->advance(stream)", next_key, FLOW_SESSIONS[sid], "advance after /contact")
                 reply_text = (format_node(next_node, story_complete=False).get("reply") or "").strip()
 
                 async def ok():
                     yield reply_text or "Nadaljujva. 🔥"
                 return StreamingResponse(ok(), media_type="text/plain; charset=utf-8")
-            # <<<
 
             async def ok_fallback():
                 yield "Kontakt shranjen ✅ — nadaljujeva. 🔥"
@@ -586,8 +489,8 @@ async def _chat_stream_impl(req: ChatRequest):
         await event_bus.publish(sid, "message.created", user_msg)
     except Exception:
         logger.exception("persist/publish user message failed (stream) sid=%s", sid)
-    # Human takeover -> stream a notice and exit
-    if _human_takeover_active(sid):
+
+    if takeover.is_active(sid):
         logger.info("human-mode active sid=%s -> streaming notice", sid)
         async def human_notice2():
             yield "Agent je prevzel pogovor. 🤝\n"
@@ -634,13 +537,12 @@ async def chat_stream(req: ChatRequest):
 async def chat_stream_slash(req: ChatRequest):
     return await _chat_stream_impl(req)
 
-# ---- survey ----
+# ---- survey (no AI; notes only) ----
 async def _survey_impl(body: SurveyRequest):
     sid = body.sid
     logger.info("POST /chat/survey sid=%s", sid)
 
-    # Human mode: don't engage bot logic
-    if _human_takeover_active(sid):
+    if takeover.is_active(sid):
         return {"ok": True, "human_mode": True}
 
     parts = []
@@ -655,48 +557,15 @@ async def _survey_impl(body: SurveyRequest):
     _append_lead_notes(sid, survey_text)
     _touch_lead_message(sid, getattr(body, "question2", None) or getattr(body, "question1", None) or getattr(body, "industry", None) or "")
 
-    # Persist & publish USER (survey as a message)
     try:
         user_msg = chat_store.append_message(sid, role="user", text=f"[Survey] {survey_text}")
         await event_bus.publish(sid, "message.created", user_msg)
     except Exception:
         logger.exception("persist/publish survey message failed sid=%s", sid)
 
-    # DeepSeek summary → notes + interest/score
-    try:
-        lead = _ensure_lead(sid)
-        prompt_parts = []
-        if getattr(lead, "notes", None):
-            prompt_parts.append(f"Notes: {lead.notes}")
-        if getattr(lead, "lastMessage", None):
-            prompt_parts.append(f"Last: {lead.lastMessage}")
-        prompt_parts.append(f"Survey: {survey_text}")
-        prompt = "\n".join(prompt_parts).strip() or survey_text
+    reply = "Hvala za odgovore! Nadaljujeva z naslednjimi koraki ali terminom ogleda."
+    story_complete = True
 
-        result = deepseek_service.run_deepseek(prompt, sid)
-    except Exception:
-        logger.exception("deepseek error in survey sid=%s", sid)
-        result = {"category": "error", "reasons": "", "pitch": ""}
-
-    _update_lead_with_deepseek(sid, prompt, result)
-
-    if result and result.get("category") != "error":
-        pitch = (result or {}).get("pitch", "") or ""
-        reasons = (result or {}).get("reasons", "") or ""
-        comp = (result or {}).get("compatibility", "")
-        interest = (result or {}).get("interest", "")
-        prefix = f"Ujemanje: {interest} ({comp}/100)." if interest or comp != "" else ""
-        reply = (" ".join([prefix, f"{pitch} Razlogi: {reasons}".strip()])).strip() or \
-                "Hitra ocena je pripravljena. Predlagam kratek test ACE ali termin za posvet."
-        story_complete = True
-    else:
-        reply = (
-            "Hvala za odgovore! Trenutno ne morem pripraviti hitre ocene. "
-            "Lahko nadaljujeva z odprtim pogovorom ali urediva kratek termin."
-        )
-        story_complete = False
-
-    # Persist & publish ASSISTANT
     try:
         assistant_msg = chat_store.append_message(sid, role="assistant", text=reply)
         await event_bus.publish(sid, "message.created", assistant_msg)
@@ -722,11 +591,9 @@ async def survey_slash(body: SurveyRequest):
 
 # ---- staff ----
 async def _staff_impl(body: StaffMessage):
-    """Persist a staff message from the dashboard takeover UI (dual-write for legacy)."""
     sid = body.sid
     text = (body.text or "").strip()
 
-    # Enable/refresh human mode TTL for this sid
     takeover.enable(sid)
 
     if not text:
@@ -736,11 +603,8 @@ async def _staff_impl(body: StaffMessage):
 
     saved = None
     try:
-        # Persistent store
         saved = chat_store.append_message(sid, role="staff", text=text)
-        # Legacy in-memory (so old readers still see it)
-        sessions.add_chat(sid, "staff", text)
-        # Publish event
+        sessions.add_chat(sid, "staff", text)  # legacy in-memory
         await event_bus.publish(sid, "message.created", saved)
     except Exception:
         logger.exception("persist/publish staff message failed sid=%s", sid)
