@@ -264,15 +264,6 @@
     <button class="close-btn" (click)="closeTakeover()">Zapri</button>
   </header>
 
-  <div class="takeover-toolbar" *ngIf="takeoverOpen && takeoverLead">
-    <label id="pokazi-zgodovino-label">
-      <input type="checkbox"
-           [checked]="showFullHistoryBySid[takeoverLead.id]"
-           (change)="onHistoryToggle($any($event.target).checked)" />
-      Pokaži celotno zgodovino
-    </label>
-  </div>
-
   <div id="takeover-body" class="takeover-body">
     <ng-container *ngIf="!takeoverLoading; else taking">
       <div *ngIf="!leadChats[takeoverLead.id] || leadChats[takeoverLead.id].length === 0" class="empty">

@@ -69,12 +69,6 @@ export class AppComponent implements OnInit, OnDestroy {
   // per-SID human mode: if true, suppress assistant messages on dashboard
   private humanMode: Record<string, boolean> = {};
 
-  // per-SID "fresh takeover" window start (unix seconds)
-  private takeoverSince: Record<string, number> = {};
-
-  // per-SID toggle for showing full history in takeover
-  showFullHistoryBySid: Record<string, boolean> = {};
-
   interestFilter: 'All' | 'High' | 'Medium' | 'Low' = 'All';
   minScore = 0;
   maxScore = 100;
@@ -337,12 +331,9 @@ export class AppComponent implements OnInit, OnDestroy {
 
   // -------- Visible thread for takeover --------
   getVisibleThread(sid: string): ChatLog[] {
-    const all = this.leadChats[sid] || [];
-    if (this.showFullHistoryBySid[sid]) return all;
-    const since = this.takeoverSince[sid] || 0;
-    if (!since) return all;
-    return all.filter(m => (m.timestamp || 0) >= since);
+    return this.leadChats[sid] || [];
   }
+
 
   // -------- UI helpers --------
   selectLeadSid(sid: string) {
@@ -368,9 +359,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.takeoverOpen = true;
     this.takeoverLoading = true;
     this.log('openTakeover', lead.id);
-
-    this.takeoverSince[lead.id] = Math.floor(Date.now() / 1000);
-    this.showFullHistoryBySid[lead.id] = false;
 
     this.loadChatsForLead(lead.id, true);
     setTimeout(() => (this.takeoverLoading = false), 150);
@@ -439,38 +427,11 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  // -------- History toggle helpers --------
-  showAllHistory() {
-    if (!this.takeoverLead) return;
-    this.showFullHistoryBySid[this.takeoverLead.id] = true;
-    setTimeout(() => {
-      const el = document.getElementById('takeover-body');
-      if (el) el.scrollTop = el.scrollHeight;
-    }, 0);
-  }
-  showOnlySinceTakeover() {
-    if (!this.takeoverLead) return;
-    this.showFullHistoryBySid[this.takeoverLead.id] = false;
-    setTimeout(() => {
-      const el = document.getElementById('takeover-body');
-      if (el) el.scrollTop = el.scrollHeight;
-    }, 0);
-  }
-
   formatAgo(timestamp: number): string {
     const seconds = Math.floor(Date.now() / 1000) - timestamp;
     if (seconds < 60) return `pred ${seconds}s`;
     const m = Math.floor(seconds / 60);
     return m === 1 ? 'pred 1 min' : `pred ${m} min`;
-  }
-
-  onHistoryToggle(checked: boolean) {
-    if (!this.takeoverLead) return;
-    this.showFullHistoryBySid[this.takeoverLead.id] = checked;
-    setTimeout(() => {
-      const el = document.getElementById('takeover-body');
-      if (el) el.scrollTop = el.scrollHeight;
-    }, 0);
   }
 
   // -------- FILTERING --------

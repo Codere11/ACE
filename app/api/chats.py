@@ -28,8 +28,18 @@ def _get_chats(sid: str | None):
 
 @router.get("/", name="get_chats_slash")
 def get_chats_slash(sid: str | None = Query(None)):
-    return _get_chats(sid)
+    """
+    Returns ONLY messages for the given sid.
+    If sid is missing, returns an empty list (no global history).
+    """
+    if not sid:
+        logger.info("chats: sid missing -> return [] (no flat history)")
+        return []
+    return chat_store.list_messages(sid)
 
 @router.get("", include_in_schema=False, name="get_chats_no_slash")
 def get_chats_no_slash(sid: str | None = Query(None)):
-    return _get_chats(sid)
+    if not sid:
+        logger.info("chats: sid missing (no-slash) -> []")
+        return []
+    return chat_store.list_messages(sid)
