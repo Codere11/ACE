@@ -1,25 +1,25 @@
 {
-  "product": "Vila Zelena – 4-sobna hiša z vrtom (Vič, Ljubljana)",
-  "description": "Svetla, energetsko varčna hiša (180 m² + terasa/vrt), 2 kopalnici, 2 parkirni mesti, mirna ulica blizu LPP in šole. Cena: €685.000.",
+  "product": "ACE Clinic Intake (MVP)",
+  "description": "Kratek, linearen sprejemni tok za klinike v Sloveniji. Zbere ključne podatke za triažo in predlog termina.",
   "ideal_clients": [
-    "družine, ki iščejo hišo v Ljubljani",
-    "pari, ki želijo mirno lokacijo z vrtom",
-    "investitorji, ki iščejo kakovostno hišo na dobri mikrolokaciji"
+    "pacienti z jasno izraženim razlogom obiska",
+    "nujni pacienti (bolečina/oteklina)",
+    "preventiva/estetika z namero rezervacije"
   ],
   "bad_fit_clients": [
-    "kupci z budžetom pod €400.000",
-    "iskalci garsonjer ali poslovnih prostorov"
+    "neodzivni ali brez kontakta",
+    "samo iskalci cen brez namere obiska"
   ],
   "core_value": [
-    "jasna predstavitev ključnih podatkov",
-    "hitro zbiranje kontakta in terminov ogledov",
-    "alternativni predlogi, če listing ne ustreza"
+    "poln kontekst za triažo in termin",
+    "kratka, linearna vprašanja (MVP)",
+    "samodejni povzetek za osebje"
   ],
 
   "llm": {
     "qualification": {
-      "system_prompt": "Ti si ACE kvalifikacijski AI. Odgovarjaj vedno v slovenščini in vrni strogo JSON brez razlage.",
-      "user_prompt_template": "Kontekst:\n- Produkt: {product}\n- Opis: {description}\n- Idealni kupci: {ideal_clients}\n- Slab fit kupci: {bad_fit_clients}\n- Jedro vrednosti: {core_value}\n\nVhod od lead-a:\n\"\"\"\n{lead_text}\n\"\"\"\n\nNaloga: Analiziraj lead in vrni JSON s ključi:\n- category: \"good_fit\" | \"could_fit\" | \"bad_fit\"\n- interest: \"High\" | \"Medium\" | \"Low\"\n- compatibility: celo število 0–100 (višje = boljše ujemanje)\n- reasons: kratek povzetek razlogov\n- pitch: en kratek personaliziran predlog nadaljnjega koraka (npr. povabilo na ogled/posvet)\n- tags: seznam kratkih oznak (nizi)\n\nPravila:\n- Upoštevaj budget, lokacijo, tip nepremičnine in nujnost.\n- Če ni dovolj informacij, bodi konzervativen (\"could_fit\", interest \"Medium\" in compatibility ~ 50).\n- Vrni strogo veljaven JSON brez dodatnega besedila.",
+      "system_prompt": "Ti si ACE kvalifikacijski AI za kliniko. Odgovarjaj vedno v slovenščini in vrni strogo JSON brez razlage.",
+      "user_prompt_template": "Kontekst klinike (MVP):\\n- Produkt: {product}\\n- Opis: {description}\\n- Idealni pacienti: {ideal_clients}\\n- Slab fit pacienti: {bad_fit_clients}\\n- Jedro vrednosti: {core_value}\\n\\nVhod od pacienta:\\n\"\"\"\\n{lead_text}\\n\"\"\"\\n\\nNaloga: Analiziraj vnos in vrni JSON s ključi:\\n- category: \"good_fit\" | \"could_fit\" | \"bad_fit\"\\n- interest: \"High\" | \"Medium\" | \"Low\"\\n- compatibility: celo število 0–100 (višje = boljše ujemanje)\\n- reasons: kratek povzetek razlogov (1–2 stavka)\\n- pitch: en kratek personaliziran predlog nadaljnjega koraka (termin/klic/info)\\n- tags: seznam kratkih oznak (nizi)\\n\\nPravila:\\n- Upoštevaj razlog (emergency/preventive/aesthetic), nujnost, časovno preferenco, plačilo in medicinske faktorje.\\n- Če ni dovolj informacij, bodi konzervativen (\"could_fit\", interest \"Medium\", compatibility ~ 50).\\n- Vrni strogo veljaven JSON brez dodatnega besedila.",
       "interest_thresholds": { "High": 70, "Medium": 40, "Low": 0 }
     }
   }

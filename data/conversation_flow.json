@@ -2,30 +2,16 @@
   "version": "1.0.0",
   "locale": "sl-SI",
 
-  "product": "Vila Zelena – 4-sobna hiša z vrtom (Vič, Ljubljana)",
-  "description": "Svetla, energetsko varčna hiša (180 m² + terasa/vrt), 2 kopalnici, 2 parkirni mesti, mirna ulica blizu LPP in šole. Cena: €685.000.",
-  "ideal_clients": [
-    "družine, ki iščejo hišo v Ljubljani",
-    "pari, ki želijo mirno lokacijo z vrtom",
-    "investitorji, ki iščejo kakovostno hišo na dobri mikrolokaciji"
-  ],
-  "bad_fit_clients": [
-    "kupci s proračunom pod €400.000",
-    "iskalci garsonjer ali poslovnih prostorov"
-  ],
-  "core_value": [
-    "jasna predstavitev ključnih podatkov",
-    "hitro zbiranje kontakta in terminov ogledov",
-    "alternativni predlogi, če listing ne ustreza"
-  ],
+  "product": "ACE Clinic Intake (MVP)",
+  "description": "Univerzalni vpisni tok za slovenske klinike/zobozdravstvo. Linearna vprašanja: kontakt, razlog (3 možnosti), nujnost, čas, plačilo, zdravje, zgodovina in opombe. Cilj: hiter triaž in priprava termina.",
 
-  "system_prompt": "Ti si prijazen, konkreten AI asistent nepremičninske agencije. Glavni cilj je hitro oceniti ujemanje: proračun, časovnica, motivacija. Vodi uporabnika po gumbih. Ne odpiraš odprtih vprašanj. Odgovarjaj v slovenščini.",
+  "system_prompt": "Ti si prijazen, konkreten AI asistent klinike. Zberi: kontakt, razlog obiska (3 opcije), nujnost, časovna preferenca, plačilo, zdravstveni dejavniki, pretekla obravnava in opombe. Uporabljaj gumbe (choices), brez odprtih vprašanj razen 'opombe'. Odgovarjaj v slovenščini.",
   "start": "welcome",
 
   "assets": {
-    "gallery": [ "/listings/vila-zelena.png" ],
-    "floorplan": "/listings/tloris.png",
-    "map_address": "Vič, Ljubljana"
+    "gallery": [],
+    "floorplan": "",
+    "map_address": ""
   },
 
   "validations": {
@@ -37,174 +23,131 @@
     {
       "id": "welcome",
       "texts": [
-        "Preden začnemo, prosim vnesite kontakt za povratni info 👇",
-        "• E-pošta",
-        "• Telefon (lahko pustite samo eno polje)"
+        "Pozdravljeni 👋 Za potrditev komunikacije prosim vnesite kontakt (zadostuje e-pošta ali telefon)."
       ],
       "openInput": true,
       "inputType": "dual-contact",
       "action": "store_contact",
-      "next": "listing_highlights"
+      "next": "reason"
     },
 
     {
-      "id": "listing_highlights",
+      "id": "reason",
       "texts": [
-        "✅ Ključni podatki izbrane nepremičnine📍 Vič Ljubljana 💶 Cena: €685.000 📐 Površina: 180 m² bivalno (+ terasa/vrt) 🛏️ 4 sobe | 🛁 2 kopalnici | 🅿️ 2 parkirni mesti Kaj želite najprej?"
+        "Kaj je glavni razlog obiska?"
       ],
       "choices": [
-        { "title": "Pokaži slike", "next": "listing_gallery" },
-        { "title": "Pokaži tloris", "next": "floorplan" },
-        { "title": "Lokacija na zemljevidu", "next": "map" },
-        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
+        { "title": "🆘 Bolečina / oteklina", "next": "urgency", "action": "qualify_tag", "payload": { "service": "emergency" } },
+        { "title": "🦷 Preventiva / pregled / higiena", "next": "urgency", "action": "qualify_tag", "payload": { "service": "preventive" } },
+        { "title": "✨ Estetika (beljenje, luske ipd.)", "next": "urgency", "action": "qualify_tag", "payload": { "service": "aesthetic" } }
       ]
     },
 
     {
-      "id": "listing_gallery",
-      "action": "show_gallery",
-      "payload": { "images": "{{assets.gallery}}" },
+      "id": "urgency",
+      "texts": [
+        "Kako nujno je za vas?"
+      ],
       "choices": [
-        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
+        { "title": "Zelo nujno (danes/jutri)", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p1" } },
+        { "title": "V naslednjem tednu", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p2" } },
+        { "title": "Ni nujno", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p3" } }
       ]
     },
 
     {
-      "id": "floorplan",
-      "texts": [ "Tloris nepremičnine 🗺️ (po potrebi pošljemo tudi PDF na e-pošto)." ],
-      "action": "show_image",
-      "payload": { "image": "{{assets.floorplan}}", "label": "Tloris (predogled)" },
+      "id": "time_pref",
+      "texts": [
+        "Kdaj bi vam okvirno najbolj ustrezalo?"
+      ],
       "choices": [
-        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
+        { "title": "Dopoldne", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "am" } },
+        { "title": "Popoldne", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "pm" } },
+        { "title": "Vikend", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "weekend" } },
+        { "title": "Fleksibilno", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "flex" } }
       ]
     },
 
     {
-      "id": "map",
-      "texts": [ "Okvirna lokacija 🗺️ – Vič, Ljubljana." ],
-      "action": "show_map",
-      "payload": { "address": "{{assets.map_address}}" },
+      "id": "payment",
+      "texts": [
+        "Kako bi želeli poravnati storitev?"
+      ],
       "choices": [
-        { "title": "Naprej → preveri ujemanje", "next": "fit_check" }
+        { "title": "ZZZS (obvezno zavarovanje)", "next": "medical", "action": "qualify_tag", "payload": { "payment": "zzzs" } },
+        { "title": "Samoplačniško", "next": "medical", "action": "qualify_tag", "payload": { "payment": "private" } },
+        { "title": "Ne vem", "next": "medical", "action": "qualify_tag", "payload": { "payment": "unknown" } }
       ]
     },
 
     {
-      "id": "fit_check",
-      "texts": [ "Ali ta nepremičnina okvirno ustreza vašim željam?" ],
+      "id": "medical",
+      "texts": [
+        "Ali velja kaj od naštetega?"
+      ],
       "choices": [
-        { "title": "Da, ustreza", "next": "budget_band", "action": "qualify_tag", "payload": { "fit_intent": "yes" } },
-        { "title": "Mogoče", "next": "priority_hint", "action": "qualify_tag", "payload": { "fit_intent": "maybe" } },
-        { "title": "Ne, iščem drugo", "next": "alt_reason", "action": "qualify_tag", "payload": { "fit_intent": "no" } }
+        { "title": "Nosečnost", "next": "history", "action": "qualify_tag", "payload": { "med": "pregnancy" } },
+        { "title": "Antikoagulanti / srčno-žilna zdravila", "next": "history", "action": "qualify_tag", "payload": { "med": "anticoagulants" } },
+        { "title": "Alergije", "next": "history", "action": "qualify_tag", "payload": { "med": "allergies" } },
+        { "title": "Nič od navedenega", "next": "history", "action": "qualify_tag", "payload": { "med": "none" } }
       ]
     },
 
     {
-      "id": "priority_hint",
-      "texts": [ "Kaj je vam najpomembnejše pri odločitvi?" ],
+      "id": "history",
+      "texts": [
+        "Ste bili zaradi te težave že obravnavani?"
+      ],
       "choices": [
-        { "title": "Cena", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "price" } },
-        { "title": "Lokacija", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "location" } },
-        { "title": "Velikost/razporeditev", "next": "budget_band", "action": "qualify_tag", "payload": { "priority": "size" } }
+        { "title": "Da, pri nas", "next": "notes", "action": "qualify_tag", "payload": { "history": "ours" } },
+        { "title": "Da, drugje", "next": "notes", "action": "qualify_tag", "payload": { "history": "other" } },
+        { "title": "Ne", "next": "notes", "action": "qualify_tag", "payload": { "history": "none" } }
       ]
     },
 
     {
-      "id": "alt_reason",
-      "texts": [ "Kaj je glavni razlog, da ta ogled ni pravi?" ],
-      "choices": [
-        { "title": "Cena previsoka", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "price_high" } },
-        { "title": "Lokacija ne ustreza", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "location" } },
-        { "title": "Velikost/razporeditev", "next": "alt_suggest", "action": "qualify_tag", "payload": { "reason": "size" } }
-      ]
-    },
-
-    {
-      "id": "alt_suggest",
-      "texts": [ "Predlagam nekaj alternativ glede na vaš odgovor 👇" ],
-      "action": "deepseek_suggest_alternatives",
-      "choices": [
-        { "title": "Zanimajo me te alternative", "next": "end_info" },
-        { "title": "Ne, hvala", "next": "end_exit" }
-      ]
-    },
-
-    {
-      "id": "budget_band",
-      "texts": [ "Kakšen je vaš okvirni proračun?" ],
-      "choices": [
-        { "title": "< €500.000", "next": "financing", "action": "qualify_tag", "payload": { "budget": "<500k", "fit": "low" } },
-        { "title": "€500–700k", "next": "financing", "action": "qualify_tag", "payload": { "budget": "500-700k", "fit": "close" } },
-        { "title": "€700–900k", "next": "financing", "action": "qualify_tag", "payload": { "budget": "700-900k", "fit": "good" } },
-        { "title": "> €900k", "next": "financing", "action": "qualify_tag", "payload": { "budget": ">900k", "fit": "good" } }
-      ]
-    },
-
-    {
-      "id": "financing",
-      "texts": [ "Kako ste z urejeno finančno platjo?" ],
-      "choices": [
-        { "title": "Predodobritev kredita", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "preapproved" } },
-        { "title": "Gotovina", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "cash" } },
-        { "title": "Še urejam", "next": "timeline", "action": "qualify_tag", "payload": { "finance": "in_progress" } }
-      ]
-    },
-
-    {
-      "id": "timeline",
-      "texts": [ "Kdaj bi želeli okvirno opraviti ogled?" ],
-      "choices": [
-        { "title": "Ta teden", "next": "motivation", "action": "qualify_tag", "payload": { "when": "this_week" } },
-        { "title": "Naslednji teden", "next": "motivation", "action": "qualify_tag", "payload": { "when": "next_week" } },
-        { "title": "Vikend", "next": "motivation", "action": "qualify_tag", "payload": { "when": "weekend" } },
-        { "title": "Kasneje", "next": "motivation", "action": "qualify_tag", "payload": { "when": "later" } }
-      ]
-    },
-
-    {
-      "id": "motivation",
-      "texts": [ "Kako nujen je nakup pri vas?" ],
-      "choices": [
-        { "title": "Zelo – aktivno iščem", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "high" } },
-        { "title": "Srednje – primerjam možnosti", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "medium" } },
-        { "title": "Nizko – raziskujem trg", "next": "summary", "action": "qualify_tag", "payload": { "motivation": "low" } }
-      ]
+      "id": "notes",
+      "texts": [
+        "Je še kaj, kar bi morali vedeti pred obiskom? (neobvezno)"
+      ],
+      "openInput": true,
+      "inputType": "single",
+      "action": "qualify_tag",
+      "next": "summary"
     },
 
     {
       "id": "summary",
       "texts": [
-        "Hvala! Na podlagi odgovorov bom pripravil kratek povzetek ujemanja in predlagal naslednji korak."
+        "Hvala! Pripravljam kratek povzetek in predlog naslednjega koraka."
       ],
       "action": "compute_fit",
       "choices": [
-        { "title": "Rezerviraj ogled", "next": "end_meeting", "action": "qualify_tag", "payload": { "cta": "meeting" } },
-        { "title": "Pošlji več informacij", "next": "end_info", "action": "qualify_tag", "payload": { "cta": "info" } },
-        { "title": "Ni za mene", "next": "end_exit", "action": "qualify_tag", "payload": { "fit_intent": "no" } }
+        { "title": "Pošljite predlog termina", "next": "end_meeting", "action": "qualify_tag", "payload": { "cta": "meeting" } },
+        { "title": "Raje najprej pokličite", "next": "end_call", "action": "qualify_tag", "payload": { "cta": "call" } },
+        { "title": "Pošljite info na kontakt", "next": "end_info", "action": "qualify_tag", "payload": { "cta": "info" } }
       ]
     },
 
     {
       "id": "end_meeting",
       "texts": [
-        "Super 👍. Poslali bomo predlog termina ogleda na vaš kontakt."
+        "Odlično ✅. Na vaš kontakt bomo poslali 1–3 predloge terminov. Če ste označili NUJNO, vas uvrstimo v najhitrejši možni termin."
       ],
       "action": "schedule_placeholder",
       "terminal": true
     },
-
     {
-      "id": "end_info",
+      "id": "end_call",
       "texts": [
-        "Ni problema – pošljemo brošuro in dodatne informacije na vaš kontakt."
+        "V redu. Na kratko vas pokličemo za uskladitev. Hvala!"
       ],
       "terminal": true
     },
-
     {
-      "id": "end_exit",
+      "id": "end_info",
       "texts": [
-        "Razumem. Če se kriteriji spremenijo, smo na voljo. Hvala in lep dan!"
+        "Ni problema. Pošljemo povzetek in navodila na vaš kontakt. Hvala!"
       ],
       "terminal": true
     }

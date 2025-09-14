@@ -803,3 +803,21 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757839409}
 {"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "user", "text": "/start", "timestamp": 1757839950}
 {"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757839950}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757851762}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757851762}
+{"sid": "rk50m1701mp", "role": "user", "text": "✨ Estetika (beljenje, luske ipd.)", "timestamp": 1757851781}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujno je za vas?", "timestamp": 1757851781}
+{"sid": "rk50m1701mp", "role": "user", "text": "V naslednjem tednu", "timestamp": 1757851783}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi vam okvirno najbolj ustrezalo?", "timestamp": 1757851783}
+{"sid": "rk50m1701mp", "role": "user", "text": "Dopoldne", "timestamp": 1757851791}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako bi želeli poravnati storitev?", "timestamp": 1757851791}
+{"sid": "rk50m1701mp", "role": "user", "text": "Samoplačniško", "timestamp": 1757851793}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali velja kaj od naštetega?", "timestamp": 1757851793}
+{"sid": "rk50m1701mp", "role": "user", "text": "Nič od navedenega", "timestamp": 1757851803}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ste bili zaradi te težave že obravnavani?", "timestamp": 1757851803}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, pri nas", "timestamp": 1757851807}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Je še kaj, kar bi morali vedeti pred obiskom? (neobvezno)", "timestamp": 1757851807}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ja, rad bi si zbelil zobe do daske", "timestamp": 1757851825}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lahko predlagam alternative ali dodatna pojasnila.", "timestamp": 1757851825}
+{"sid": "rk50m1701mp", "role": "user", "text": "Raje najprej pokličite", "timestamp": 1757851870}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "V redu. Na kratko vas pokličemo za uskladitev. Hvala!", "timestamp": 1757851870}
