@@ -821,3 +821,5 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Lahko predlagam alternative ali dodatna pojasnila.", "timestamp": 1757851825}
 {"sid": "rk50m1701mp", "role": "user", "text": "Raje najprej pokličite", "timestamp": 1757851870}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "V redu. Na kratko vas pokličemo za uskladitev. Hvala!", "timestamp": 1757851870}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757858336}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757858336}
