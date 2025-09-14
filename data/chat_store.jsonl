@@ -780,3 +780,24 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757588331}
 {"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757588358}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757588358}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757786522}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757786522}
+{"sid": "rk50m1701mp", "role": "user", "text": "Pokaži slike", "timestamp": 1757788925}
+{"sid": "rk50m1701mp", "role": "user", "text": "Naprej → preveri ujemanje", "timestamp": 1757788928}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ali ta nepremičnina okvirno ustreza vašim željam?", "timestamp": 1757788928}
+{"sid": "rk50m1701mp", "role": "user", "text": "Mogoče", "timestamp": 1757788930}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vam najpomembnejše pri odločitvi?", "timestamp": 1757788930}
+{"sid": "rk50m1701mp", "role": "user", "text": "Velikost/razporeditev", "timestamp": 1757788931}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kakšen je vaš okvirni proračun?", "timestamp": 1757788931}
+{"sid": "rk50m1701mp", "role": "user", "text": "€500–700k", "timestamp": 1757788932}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako ste z urejeno finančno platjo?", "timestamp": 1757788932}
+{"sid": "rk50m1701mp", "role": "user", "text": "Gotovina", "timestamp": 1757788932}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj bi želeli okvirno opraviti ogled?", "timestamp": 1757788932}
+{"sid": "rk50m1701mp", "role": "user", "text": "Kasneje", "timestamp": 1757788933}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kako nujen je nakup pri vas?", "timestamp": 1757788933}
+{"sid": "rk50m1701mp", "role": "user", "text": "Srednje – primerjam možnosti", "timestamp": 1757788933}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lahko pošljem več informacij ali predlagam ogled.", "timestamp": 1757788933}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Dober dan sem Matic, ne pogovarjate se vec z AIjem", "timestamp": 1757788955}
+{"sid": "rk50m1701mp", "role": "user", "text": "Dober dan", "timestamp": 1757788961}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757839409}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757839409}
