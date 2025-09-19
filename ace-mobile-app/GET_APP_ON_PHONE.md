@@ -27,12 +27,15 @@ cd android
 # APK will be in: app/build/outputs/apk/debug/app-debug.apk
 ```
 
-## 🌐 Current Web Preview (Default Icon)
+## 🌐 Web App (PWA) with Custom Icon
 Your app is currently running at:
 - **Local**: http://localhost:4300
 - **Network**: http://YOUR_IP:4300 (accessible from phone browser)
 
-**Note**: Web preview shows default favicon, not the custom app icon.
+**✅ NOW INCLUDES**: Custom favicon and PWA manifest!
+- **Browser tab**: Shows custom ACE icon 
+- **Add to Home Screen**: Users can install as PWA with your custom icon
+- **Progressive Web App**: Works offline and feels like native app
 
 ## ✅ What We've Built So Far
 - ✅ Custom app icon (house + notification bell)

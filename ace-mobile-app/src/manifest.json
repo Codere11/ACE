@@ -1,0 +1,24 @@
+{
+  "name": "ACE Real Estate",
+  "short_name": "ACE Real Estate",
+  "description": "Real estate lead notifications and management",
+  "theme_color": "#2E7D32",
+  "background_color": "#1B5E20",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "./",
+  "start_url": "./",
+  "icons": [
+    {
+      "src": "assets/icon/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "assets/icon/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
