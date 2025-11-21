@@ -823,3 +823,94 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "V redu. Na kratko vas pokličemo za uskladitev. Hvala!", "timestamp": 1757851870}
 {"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757858336}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757858336}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1757926732}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1757926732}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758108820}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758108820}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758126819}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758126819}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758126850}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758126850}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758127091}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je glavni razlog obiska?", "timestamp": 1758127091}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758127955}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758127955}
+{"sid": "rk50m1701mp", "role": "user", "text": "🏠 Kupujem", "timestamp": 1758127966}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Katera vrsta nepremičnine?", "timestamp": 1758127966}
+{"sid": "rk50m1701mp", "role": "user", "text": "Hiša", "timestamp": 1758127968}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lokacija (okvirno)?", "timestamp": 1758127968}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ljubljana in okolica", "timestamp": 1758127970}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Proračun (okvirno)?", "timestamp": 1758127970}
+{"sid": "rk50m1701mp", "role": "user", "text": "200k – 400k €", "timestamp": 1758127971}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj želite urediti ogled/posel?", "timestamp": 1758127971}
+{"sid": "rk50m1701mp", "role": "user", "text": "Zelo kmalu (1–2 tedna)", "timestamp": 1758127973}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Način financiranja?", "timestamp": 1758127973}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ne vem / se dogovarjam", "timestamp": 1758127974}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ste že bili na ogledu ali sodelovali z agentom?", "timestamp": 1758127974}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, drugje", "timestamp": 1758127976}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Dodatne želje (lega, parkirišče, nadstropje, vrt ipd.)? (neobvezno)", "timestamp": 1758127976}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758187042}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758187042}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758187079}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758187079}
+{"sid": "rk50m1701mp", "role": "user", "text": "🏠 Kupujem", "timestamp": 1758187360}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Katera vrsta nepremičnine?", "timestamp": 1758187360}
+{"sid": "rk50m1701mp", "role": "user", "text": "Poslovni prostor", "timestamp": 1758187362}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lokacija (okvirno)?", "timestamp": 1758187363}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ljubljana in okolica", "timestamp": 1758187462}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Proračun (okvirno)?", "timestamp": 1758187462}
+{"sid": "rk50m1701mp", "role": "user", "text": "400k+ €", "timestamp": 1758187463}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj želite urediti ogled/posel?", "timestamp": 1758187463}
+{"sid": "rk50m1701mp", "role": "user", "text": "V naslednjem mesecu", "timestamp": 1758187463}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Način financiranja?", "timestamp": 1758187463}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ne vem / se dogovarjam", "timestamp": 1758187464}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ste že bili na ogledu ali sodelovali z agentom?", "timestamp": 1758187464}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, pri vas", "timestamp": 1758187464}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Dodatne želje (lega, parkirišče, nadstropje, vrt ipd.)? (neobvezno)", "timestamp": 1758187464}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758188032}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758188032}
+{"sid": "rk50m1701mp", "role": "user", "text": "💼 Prodajam", "timestamp": 1758188197}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Katera vrsta nepremičnine?", "timestamp": 1758188197}
+{"sid": "rk50m1701mp", "role": "user", "text": "Stanovanje", "timestamp": 1758188197}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lokacija (okvirno)?", "timestamp": 1758188197}
+{"sid": "rk50m1701mp", "role": "user", "text": "Drugo (SLO)", "timestamp": 1758188198}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Proračun (okvirno)?", "timestamp": 1758188198}
+{"sid": "rk50m1701mp", "role": "user", "text": "200k – 400k €", "timestamp": 1758188199}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj želite urediti ogled/posel?", "timestamp": 1758188199}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Pozdravljeni, vidim da vas zanima nasa nepremicnina v Centru", "timestamp": 1758188291}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Pise vam Matic", "timestamp": 1758188311}
+{"sid": "rk50m1701mp", "role": "user", "text": "Aha ja zanima me, vec mi povejte", "timestamp": 1758188320}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758188510}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758188510}
+{"sid": "rk50m1701mp", "role": "user", "text": "🏠 Kupujem", "timestamp": 1758188687}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Katera vrsta nepremičnine?", "timestamp": 1758188687}
+{"sid": "rk50m1701mp", "role": "user", "text": "Hiša", "timestamp": 1758188717}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lokacija (okvirno)?", "timestamp": 1758188717}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ljubljana in okolica", "timestamp": 1758188718}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Proračun (okvirno)?", "timestamp": 1758188718}
+{"sid": "rk50m1701mp", "role": "user", "text": "400k+ €", "timestamp": 1758188722}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj želite urediti ogled/posel?", "timestamp": 1758188722}
+{"sid": "rk50m1701mp", "role": "user", "text": "Zelo kmalu (1–2 tedna)", "timestamp": 1758188726}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Način financiranja?", "timestamp": 1758188726}
+{"sid": "rk50m1701mp", "role": "staff", "text": "Pozdravljeni, tukaj Matic. Se lahko kar tako pogovarjava? Vidim da vas nepremicnina zanima", "timestamp": 1758188775}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ja zanima me, imam samo vprasanje..", "timestamp": 1758188790}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1758267635}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1758267635}
+{"sid": "rk50m1701mp", "role": "user", "text": "🏠 Kupujem", "timestamp": 1758267675}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Katera vrsta nepremičnine?", "timestamp": 1758267675}
+{"sid": "rk50m1701mp", "role": "user", "text": "Hiša", "timestamp": 1758267677}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Lokacija (okvirno)?", "timestamp": 1758267677}
+{"sid": "rk50m1701mp", "role": "user", "text": "Ljubljana in okolica", "timestamp": 1758267679}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Proračun (okvirno)?", "timestamp": 1758267679}
+{"sid": "rk50m1701mp", "role": "user", "text": "400k+ €", "timestamp": 1758267680}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kdaj želite urediti ogled/posel?", "timestamp": 1758267680}
+{"sid": "rk50m1701mp", "role": "user", "text": "Zelo kmalu (1–2 tedna)", "timestamp": 1758267681}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Način financiranja?", "timestamp": 1758267681}
+{"sid": "rk50m1701mp", "role": "user", "text": "Gotovina", "timestamp": 1758267684}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Ste že bili na ogledu ali sodelovali z agentom?", "timestamp": 1758267684}
+{"sid": "rk50m1701mp", "role": "user", "text": "Da, drugje", "timestamp": 1758267689}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Dodatne želje (lega, parkirišče, nadstropje, vrt ipd.)? (neobvezno)", "timestamp": 1758267689}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1763464510}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1763464510}
+{"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1763468341}
+{"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vaš glavni namen?", "timestamp": 1763468341}

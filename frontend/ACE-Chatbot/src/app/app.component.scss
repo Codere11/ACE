@@ -1,172 +1,203 @@
-/* ==========================================================================
-   ACE Chat — Clinic Theme (Professional Dental Blue)
-   Markup & logic unchanged. Pure style refresh with hardcoded colors.
-   ========================================================================== */
-
-/* ---------- Base ---------- */
-* { box-sizing: border-box; }
 html, body { height: 100%; }
-body { margin: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; color: #334155; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color: #22252A; /* charcoal-900 */
+  background: #0C0D10; /* deep charcoal backdrop for luxe feel */
+}
 
 /* Layout helpers */
 .agent-page { display: block; padding: 8px 14px 18px; }
 
-/* ---------- Agent hero (centered) ---------- */
-.agent-hero {
+/* ---------- Agent hero (centered, full-bleed dark) ---------- */
+.agent-hero{
   display: grid; place-items: center; text-align: center;
-  padding: 22px 12px 10px; gap: 12px;
-  background: linear-gradient(180deg, #eef6ff 0%, #ffffff 60%);
-  border-bottom: 2px solid #b8dbff;
+  padding: 28px 12px 18px; gap: 12px;
+  background:
+    radial-gradient(1200px 400px at 50% -80px, rgba(193,164,108,.22), transparent 60%),
+    linear-gradient(180deg, #121417 0%, #0C0D10 70%);
+  border-bottom: 1px solid rgba(193,164,108,.32);
 }
-.agent-hero__photo {
+.agent-hero__photo{
   width: clamp(96px, 18vw, 156px); height: clamp(96px, 18vw, 156px);
   border-radius: 50%; object-fit: cover;
-  border: 2px solid #d8ebff; box-shadow: 0 10px 26px rgba(47,128,237,.15);
-  background: #fff;
+  border: 2px solid rgba(193,164,108,.55);
+  box-shadow: 0 16px 36px rgba(0,0,0,.35), 0 0 0 6px rgba(193,164,108,.12) inset;
+  background: #111216;
 }
-.agent-hero__title {
-  margin: 2px 0 0; font-size: clamp(22px, 3.2vw, 34px);
-  line-height: 1.15; font-weight: 900; letter-spacing: .2px; color: #0f172a;
+.agent-hero__title{
+  color: #FAFAF7;
+  margin: 6px 0 0;
+  font-size: clamp(22px, 3.2vw, 34px);
+  line-height: 1.12; font-weight: 900; letter-spacing: .2px;
 }
-.agent-hero__subtitle {
-  margin: 0; font-size: clamp(12px, 1.6vw, 14px); color: #64748b;
+.agent-hero__subtitle{
+  margin: 0;
+  font-size: clamp(12px, 1.6vw, 14px);
+  color: #EDEBE6;
+  opacity: .9;
 }
 
-/* ---------- Chat Card (fixed height) ---------- */
-.chat-card {
-  --chat-height: 560px; /* tweak if needed */
+/* ---------- Chat Card (fixed height, elevated on dark) ---------- */
+.chat-card{
+  --chat-height: 560px;
   height: var(--chat-height);
-  max-width: 860px; margin: 12px auto 24px;
-  background: #ffffff;
-  border: 1.5px solid #d8ebff;
-  border-radius: 14px;
-  box-shadow: 0 10px 26px rgba(2,8,23,.06);
-  padding: 12px; box-sizing: border-box;
-
+  max-width: 920px; margin: 18px auto 28px;
+  background: #FFFFFF; /* light card for contrast */
+  border: 1px solid #E6E2D6;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px rgba(0,0,0,.35),
+    0 1px 0 rgba(255,255,255,.12) inset;
+  padding: 12px;
   display: grid;
   grid-template-rows: 1fr auto auto; /* messages | quick replies | composer */
   gap: 10px; overflow: hidden;
 }
 
 /* ---------- Messages (scroll area) ---------- */
-.messages {
+.messages{
   min-height: 450px; max-height: 450px; overflow-y: auto;
   overscroll-behavior: contain; scrollbar-gutter: stable; padding-right: 4px;
-
-  display: flex; flex-direction: column; gap: 12px; color: #334155;
+  display: flex; flex-direction: column; gap: 12px; color: #111317;
+  background:
+    linear-gradient(180deg, #FFFFFF 0%, #FBFAF7 100%);
+  border-radius: 12px;
+  border: 1px solid #E6E2D6;
+  padding: 12px;
 }
 .messages::-webkit-scrollbar { width: 10px; }
-.messages::-webkit-scrollbar-thumb { background: #d8ebff; border-radius: 10px; border: 2px solid #eef6ff; }
-
-/* Bubbles */
-.msg {
-  max-width: 75%; padding: .75rem 1rem; border-radius: 14px;
-  line-height: 1.4; word-wrap: break-word; align-self: flex-start;
-  background: #f1f5f9; color: #0f172a;
-  border: 1.5px solid #d8ebff;
-  box-shadow: 0 2px 6px rgba(2,8,23,.05);
+.messages::-webkit-scrollbar-thumb {
+  background: #DCD7C9; border-radius: 10px; border: 2px solid #F5F3EC;
 }
-.msg.user {
+
+/* Bubbles — buyer/agent vibe */
+.msg{
+  max-width: 75%; padding: .75rem 1rem; border-radius: 14px;
+  line-height: 1.45; word-wrap: break-word; align-self: flex-start;
+  background: #F6F4EF; color: #121417;
+  border: 1px solid #E6E2D6;
+  box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 2px 6px rgba(17,19,23,.04);
+}
+.msg.user{
   align-self: flex-end;
-  background: #2f80ed; color: #ffffff;
-  border: 1.5px solid #2f80ed;
-  box-shadow: 0 6px 14px rgba(47,128,237,.25);
+  background: #1A1D22; color: #FAFAF7;
+  border: 1px solid #2C2F35;
+  box-shadow: 0 8px 18px rgba(0,0,0,.25);
 }
 
 /* Typing state */
-.msg.typing{ display:inline-flex; align-items:center; gap:6px; width:auto; background:#eef6ff; border-color:#b8dbff; }
-.typing-dots-wrap { display:flex; align-items:center; gap:8px; padding: 0 0 2px; }
-.typing-label { color:#64748b; font-size:.9rem; }
+.msg.typing{ display:inline-flex; align-items:center; gap:6px; width:auto; background:#F4F1EA; border-color:#E6E2D6; }
+.typing-dots-wrap{ display:flex; align-items:center; gap:8px; padding: 0 0 2px; }
+.typing-label{ color:#6B7280; font-size:.9rem; }
 .typing-dots{ display:inline-flex; gap:5px; }
 .typing-dots .dot{
-  width:6px; height:6px; background:#8fc5ff; border-radius:50%;
-  animation:bounce 1s infinite ease-in-out;
+  width:6px; height:6px; background: #C1A46C;
+  border-radius:50%; animation:bounce 1s infinite ease-in-out;
 }
 .typing-dots .dot:nth-child(2){ animation-delay:.15s; }
 .typing-dots .dot:nth-child(3){ animation-delay:.3s; }
 @keyframes bounce{ 0%,80%,100%{ transform:translateY(0); opacity:.6; } 40%{ transform:translateY(-4px); opacity:1; } }
 
 /* Rich content inside bubbles */
-.msg-image { margin: 8px 0 0; }
-.msg-image img {
-  max-width: 100%; display:block; border-radius: 10px;
-  border: 1px solid #e5e7eb;
+.msg-image{ margin: 8px 0 0; }
+.msg-image img{
+  max-width: 100%; display:block; border-radius: 12px;
+  border: 1px solid #E6E2D6;
+  box-shadow: 0 8px 18px rgba(0,0,0,.08);
 }
-.msg-image figcaption { margin-top: 6px; font-size: 12px; color:#64748b; }
+.msg-image figcaption{ margin-top: 6px; font-size: 12px; color:#6B7280; }
 
-.gallery {
+/* Gallery — real estate photo grid */
+.gallery{
   display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 8px; margin-top: 8px; min-width: 100px; min-height: 100px;
-  max-width: 450px; max-height: 450px;
+  max-width: 520px; max-height: 520px;
 }
-.gallery img {
-  min-width: 100px; min-height: 100px; max-width: 450px; max-height: 450px;
-  object-fit: cover; border-radius: 10px; border: 1px solid #e5e7eb;
+.gallery img{
+  min-width: 100px; min-height: 100px; max-width: 520px; max-height: 520px;
+  object-fit: cover; border-radius: 12px; border: 1px solid #E6E2D6;
+  filter: saturate(1.02) contrast(1.03);
 }
-.map-embed { margin-top: 8px; border-radius: 12px; overflow: hidden; border: 1px solid #d8ebff; }
+
+/* Map frame matches luxe outline */
+.map-embed{
+  margin-top: 8px; border-radius: 12px; overflow: hidden;
+  border: 1px solid #E6E2D6; box-shadow: 0 8px 18px rgba(0,0,0,.06);
+}
 
 /* ---------- Quick Replies ---------- */
-.choices-row { margin: 0; }
-.choices {
+.choices-row{ margin: 0; }
+.choices{
   display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
 }
-.choices .chip, .choices button {
-  background: #2f80ed; color: #ffffff;
-  border: 2px solid #2f80ed;
+.choices .chip, .choices button{
+  background: #C1A46C; color: #1E2126;
+  border: 2px solid #C1A46C;
   padding: .55rem 1rem; cursor: pointer; font-weight: 800; font-size: .95rem;
-  border-radius: 999px; box-shadow: 0 6px 14px rgba(47,128,237,.22);
-  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(193,164,108,.32), 0 1px 0 rgba(255,255,255,.6) inset;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
 }
-.choices .chip:hover, .choices button:hover { background: #1d56a5; border-color:#1d56a5; transform: translateY(-1px); }
-.choices .alt-skip {
-  background: transparent; color: #2f80ed; border: 2px dashed #2f80ed; box-shadow: none;
+.choices .chip:hover, .choices button:hover{
+  background: #A98C58; border-color: #A98C58; transform: translateY(-1px);
 }
-.choices .alt-skip:hover { background:#eef6ff; }
+.choices .alt-skip{
+  background: transparent; color: #1A1D22;
+  border: 2px dashed #C1A46C; box-shadow: none;
+}
+.choices .alt-skip:hover{ background:#FBF9F3; }
 
 /* ---------- Composer ---------- */
-.composer {
-  background: #ffffff; padding: 6px 0 calc(max(12px, env(safe-area-inset-bottom)) - 2px);
-  border-top: 2px solid #b8dbff;
-
+.composer{
+  background: #FFFFFF; padding: 8px 0 calc(max(12px, env(safe-area-inset-bottom)) - 2px);
+  border-top: 1px solid #E6E2D6;
   display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center;
 }
-.composer input {
+.composer input{
   flex: 1; padding: .6rem 1rem; background: #fff; color: #0f172a;
-  border: 1.5px solid #d8ebff; border-radius: 10px; outline: none;
+  border: 1px solid #E6E2D6; border-radius: 10px; outline: none;
   transition: box-shadow .15s ease, border-color .15s ease;
 }
-.composer input:focus { border-color:#5eabff; box-shadow: 0 0 0 3px rgba(47,128,237,.18); }
-.composer button {
-  padding: .6rem 1rem; background: #10b981; color: #fff;
-  border: 2px solid #059669; border-radius: 10px; cursor: pointer; font-weight: 900; min-width: 108px;
+.composer input:focus{
+  border-color: #C1A46C;
+  box-shadow: 0 0 0 3px rgba(193,164,108,.22);
+}
+.composer button{
+  padding: .6rem 1rem; background: #12B981; color: #fff;
+  border: 2px solid #0E9F6E; border-radius: 10px; cursor: pointer; font-weight: 900; min-width: 108px;
   box-shadow: 0 10px 18px rgba(16,185,129,.25);
   transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
 }
-.composer button:hover { transform: translateY(-1px); }
-.composer button:disabled { opacity: .65; cursor: not-allowed; }
+.composer button:hover{ transform: translateY(-1px); }
+.composer button:disabled{ opacity: .65; cursor: not-allowed; }
 
-.composer.dual-input { display:flex; flex-direction: row; justify-content: center; gap: 10px; }
-.composer .composer-actions { display:flex; gap:.5rem; align-items:center; justify-content:flex-end; }
-.composer .ghost {
-  background: transparent; color: #2f80ed; border: 2px dashed #2f80ed; border-radius: 10px; padding:.55rem 1rem; font-weight:800;
+.composer.dual-input{ display:flex; flex-direction: row; justify-content: center; gap: 10px; }
+.composer .composer-actions{ display:flex; gap:.5rem; align-items:center; justify-content:flex-end; }
+.composer .ghost{
+  background: transparent; color: #1A1D22;
+  border: 2px dashed #C1A46C; border-radius: 10px; padding:.55rem 1rem; font-weight:800;
 }
-.composer .ghost:hover { background:#eef6ff; }
+.composer .ghost:hover{ background:#FBF9F3; }
 
 /* Contact capture inputs (dual-contact) */
-.contact-capture { border: 2px solid #b8dbff; border-radius: 10px; padding: 2px; }
-.contact-capture input { border: none !important; padding: .6rem .8rem; width: 260px; }
+.contact-capture{ border: 1px solid #E6E2D6; border-radius: 10px; padding: 2px; background: #FFFFFF; }
+.contact-capture input{ border: none !important; padding: .6rem .8rem; width: 260px; }
 
 /* ---------- Accessibility focus ring ---------- */
-button, [role="button"], .chip, .choices button, .composer input {
-  &:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(47,128,237,.28); }
+button, [role="button"], .chip, .choices button, .composer input{
+  outline: none;
+}
+button:focus-visible, [role="button"]:focus-visible, .chip:focus-visible, .choices button:focus-visible, .composer input:focus-visible{
+  box-shadow: 0 0 0 3px rgba(193,164,108,.28) !important;
 }
 
 /* ---------- Mobile tweaks ---------- */
-@media (max-width: 600px) {
-  .chat-card { --chat-height: 480px; }
-  .msg { max-width: 85%; padding: .65rem .85rem; font-size: .96rem; }
-  .composer.dual-input { flex-direction: column; }
-  .composer .composer-actions { justify-content: stretch; }
-  .composer.dual-input button { width: 100%; }
-  .contact-capture input { width: 100%; }
+@media (max-width: 600px){
+  .chat-card{ --chat-height: 520px; margin: 12px auto 22px; }
+  .msg{ max-width: 85%; padding: .65rem .85rem; font-size: .96rem; }
+  .composer.dual-input{ flex-direction: column; }
+  .composer .composer-actions{ justify-content: stretch; }
+  .composer.dual-input button{ width: 100%; }
+  .contact-capture input{ width: 100%; }
 }

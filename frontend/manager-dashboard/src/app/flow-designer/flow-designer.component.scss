@@ -53,13 +53,17 @@ label span { color: #9fb0c3; font-size: 12px; }
 input, select, textarea {
   background: #0b0f14; color: #e6edf3; border: 1px solid #263142; border-radius: 8px;
   padding: 8px 10px; font-size: 14px; font-family: inherit;
+  resize: vertical;
 }
 
 .texts .head, .choices .head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
 .text-row { display: grid; grid-template-columns: 1fr 40px; gap: 8px; margin: 8px 0; }
 .choice {
-  display: grid; grid-template-columns: 1fr 1fr 40px; gap: 8px; margin: 8px 0;
+  display: grid; grid-template-columns: 1fr 120px 1fr 40px; gap: 8px; margin: 8px 0;
+  align-items: center;
 }
+
+.payment label { margin-bottom: 8px; }
 
 .tools .ok { color: #7ee787; }
 .errors { list-style: none; padding: 0; margin: 8px 0; }
@@ -76,3 +80,5 @@ input, select, textarea {
 
 .preview summary { cursor: pointer; margin-top: 12px; }
 .preview pre { background: #0b0f14; border: 1px solid #263142; padding: 10px; border-radius: 8px; max-height: 360px; overflow: auto; }
+
+.info-line { color: #9fb0c3; font-size: 12px; margin-top: 8px; display: block; }

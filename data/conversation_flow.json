@@ -2,10 +2,10 @@
   "version": "1.0.0",
   "locale": "sl-SI",
 
-  "product": "ACE Clinic Intake (MVP)",
-  "description": "Univerzalni vpisni tok za slovenske klinike/zobozdravstvo. Linearna vprašanja: kontakt, razlog (3 možnosti), nujnost, čas, plačilo, zdravje, zgodovina in opombe. Cilj: hiter triaž in priprava termina.",
+  "product": "ACE Real Estate Intake (MVP)",
+  "description": "Univerzalni sprejemni tok za slovenske nepremičninske agencije. Linearna vprašanja: kontakt, namen (3 možnosti), tip, lokacija, proračun, čas, financiranje, zgodovina in opombe. Cilj: hiter kvalifikacijski povzetek ter predlog ogleda/klica.",
 
-  "system_prompt": "Ti si prijazen, konkreten AI asistent klinike. Zberi: kontakt, razlog obiska (3 opcije), nujnost, časovna preferenca, plačilo, zdravstveni dejavniki, pretekla obravnava in opombe. Uporabljaj gumbe (choices), brez odprtih vprašanj razen 'opombe'. Odgovarjaj v slovenščini.",
+  "system_prompt": "Ti si prijazen, konkreten AI asistent nepremičninske agencije. Zberi: kontakt, namen (3 opcije), tip nepremičnine, lokacija, proračun, časovna preferenca, financiranje, pretekla obravnava/ogledi in opombe. Uporabljaj gumbe (choices), brez odprtih vprašanj razen 'opombe'. Odgovarjaj v slovenščini.",
   "start": "welcome",
 
   "assets": {
@@ -23,83 +23,93 @@
     {
       "id": "welcome",
       "texts": [
-        "Pozdravljeni 👋 Za potrditev komunikacije prosim vnesite kontakt (zadostuje e-pošta ali telefon)."
+        "Pozdravljeni 👋 Za začetek prosim vnesite kontakt (zadostuje e-pošta ali telefon)."
       ],
       "openInput": true,
       "inputType": "dual-contact",
       "action": "store_contact",
-      "next": "reason"
+      "next": "intent"
     },
 
     {
-      "id": "reason",
+      "id": "intent",
       "texts": [
-        "Kaj je glavni razlog obiska?"
+        "Kaj je vaš glavni namen?"
       ],
       "choices": [
-        { "title": "🆘 Bolečina / oteklina", "next": "urgency", "action": "qualify_tag", "payload": { "service": "emergency" } },
-        { "title": "🦷 Preventiva / pregled / higiena", "next": "urgency", "action": "qualify_tag", "payload": { "service": "preventive" } },
-        { "title": "✨ Estetika (beljenje, luske ipd.)", "next": "urgency", "action": "qualify_tag", "payload": { "service": "aesthetic" } }
+        { "title": "🏠 Kupujem", "next": "property_type", "action": "qualify_tag", "payload": { "intent": "buy" } },
+        { "title": "🔑 Najemam", "next": "property_type", "action": "qualify_tag", "payload": { "intent": "rent" } },
+        { "title": "💼 Prodajam", "next": "property_type", "action": "qualify_tag", "payload": { "intent": "sell" } }
       ]
     },
 
     {
-      "id": "urgency",
+      "id": "property_type",
       "texts": [
-        "Kako nujno je za vas?"
+        "Katera vrsta nepremičnine?"
       ],
       "choices": [
-        { "title": "Zelo nujno (danes/jutri)", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p1" } },
-        { "title": "V naslednjem tednu", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p2" } },
-        { "title": "Ni nujno", "next": "time_pref", "action": "qualify_tag", "payload": { "urgency": "p3" } }
+        { "title": "Stanovanje", "next": "location", "action": "qualify_tag", "payload": { "type": "apartment" } },
+        { "title": "Hiša", "next": "location", "action": "qualify_tag", "payload": { "type": "house" } },
+        { "title": "Poslovni prostor", "next": "location", "action": "qualify_tag", "payload": { "type": "commercial" } }
       ]
     },
 
     {
-      "id": "time_pref",
+      "id": "location",
       "texts": [
-        "Kdaj bi vam okvirno najbolj ustrezalo?"
+        "Lokacija (okvirno)?"
       ],
       "choices": [
-        { "title": "Dopoldne", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "am" } },
-        { "title": "Popoldne", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "pm" } },
-        { "title": "Vikend", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "weekend" } },
-        { "title": "Fleksibilno", "next": "payment", "action": "qualify_tag", "payload": { "time_pref": "flex" } }
+        { "title": "Ljubljana in okolica", "next": "budget", "action": "qualify_tag", "payload": { "loc": "ljubljana" } },
+        { "title": "Primorska / Obala", "next": "budget", "action": "qualify_tag", "payload": { "loc": "coast" } },
+        { "title": "Drugo (SLO)", "next": "budget", "action": "qualify_tag", "payload": { "loc": "other" } }
       ]
     },
 
     {
-      "id": "payment",
+      "id": "budget",
       "texts": [
-        "Kako bi želeli poravnati storitev?"
+        "Proračun (okvirno)?"
       ],
       "choices": [
-        { "title": "ZZZS (obvezno zavarovanje)", "next": "medical", "action": "qualify_tag", "payload": { "payment": "zzzs" } },
-        { "title": "Samoplačniško", "next": "medical", "action": "qualify_tag", "payload": { "payment": "private" } },
-        { "title": "Ne vem", "next": "medical", "action": "qualify_tag", "payload": { "payment": "unknown" } }
+        { "title": "Do 200k €", "next": "timing", "action": "qualify_tag", "payload": { "budget": "lt200" } },
+        { "title": "200k – 400k €", "next": "timing", "action": "qualify_tag", "payload": { "budget": "200-400" } },
+        { "title": "400k+ €", "next": "timing", "action": "qualify_tag", "payload": { "budget": "gt400" } }
       ]
     },
 
     {
-      "id": "medical",
+      "id": "timing",
       "texts": [
-        "Ali velja kaj od naštetega?"
+        "Kdaj želite urediti ogled/posel?"
       ],
       "choices": [
-        { "title": "Nosečnost", "next": "history", "action": "qualify_tag", "payload": { "med": "pregnancy" } },
-        { "title": "Antikoagulanti / srčno-žilna zdravila", "next": "history", "action": "qualify_tag", "payload": { "med": "anticoagulants" } },
-        { "title": "Alergije", "next": "history", "action": "qualify_tag", "payload": { "med": "allergies" } },
-        { "title": "Nič od navedenega", "next": "history", "action": "qualify_tag", "payload": { "med": "none" } }
+        { "title": "Zelo kmalu (1–2 tedna)", "next": "financing", "action": "qualify_tag", "payload": { "timing": "p1" } },
+        { "title": "V naslednjem mesecu", "next": "financing", "action": "qualify_tag", "payload": { "timing": "p2" } },
+        { "title": "Kasneje / fleksibilno", "next": "financing", "action": "qualify_tag", "payload": { "timing": "p3" } }
+      ]
+    },
+
+    {
+      "id": "financing",
+      "texts": [
+        "Način financiranja?"
+      ],
+      "choices": [
+        { "title": "Gotovina", "next": "history", "action": "qualify_tag", "payload": { "finance": "cash" } },
+        { "title": "Hipoteka / kredit", "next": "history", "action": "qualify_tag", "payload": { "finance": "mortgage" } },
+        { "title": "Ne vem / se dogovarjam", "next": "history", "action": "qualify_tag", "payload": { "finance": "unknown" } }
       ]
     },
 
     {
       "id": "history",
       "texts": [
-        "Ste bili zaradi te težave že obravnavani?"
+        "Ste že bili na ogledu ali sodelovali z agentom?"
       ],
       "choices": [
-        { "title": "Da, pri nas", "next": "notes", "action": "qualify_tag", "payload": { "history": "ours" } },
+        { "title": "Da, pri vas", "next": "notes", "action": "qualify_tag", "payload": { "history": "ours" } },
         { "title": "Da, drugje", "next": "notes", "action": "qualify_tag", "payload": { "history": "other" } },
         { "title": "Ne", "next": "notes", "action": "qualify_tag", "payload": { "history": "none" } }
       ]
@@ -108,7 +118,7 @@
     {
       "id": "notes",
       "texts": [
-        "Je še kaj, kar bi morali vedeti pred obiskom? (neobvezno)"
+        "Dodatne želje (lega, parkirišče, nadstropje, vrt ipd.)? (neobvezno)"
       ],
       "openInput": true,
       "inputType": "single",
@@ -123,16 +133,16 @@
       ],
       "action": "compute_fit",
       "choices": [
-        { "title": "Pošljite predlog termina", "next": "end_meeting", "action": "qualify_tag", "payload": { "cta": "meeting" } },
+        { "title": "Pošljite predloge ogledov", "next": "end_viewing", "action": "qualify_tag", "payload": { "cta": "viewing" } },
         { "title": "Raje najprej pokličite", "next": "end_call", "action": "qualify_tag", "payload": { "cta": "call" } },
         { "title": "Pošljite info na kontakt", "next": "end_info", "action": "qualify_tag", "payload": { "cta": "info" } }
       ]
     },
 
     {
-      "id": "end_meeting",
+      "id": "end_viewing",
       "texts": [
-        "Odlično ✅. Na vaš kontakt bomo poslali 1–3 predloge terminov. Če ste označili NUJNO, vas uvrstimo v najhitrejši možni termin."
+        "Odlično ✅. Na vaš kontakt bomo poslali 1–3 termine za ogled ustreznih nepremičnin."
       ],
       "action": "schedule_placeholder",
       "terminal": true
@@ -140,14 +150,14 @@
     {
       "id": "end_call",
       "texts": [
-        "V redu. Na kratko vas pokličemo za uskladitev. Hvala!"
+        "V redu. Kratek klic za uskladitev – oglasimo se na vaš kontakt. Hvala!"
       ],
       "terminal": true
     },
     {
       "id": "end_info",
       "texts": [
-        "Ni problema. Pošljemo povzetek in navodila na vaš kontakt. Hvala!"
+        "Ni problema. Pošljemo povzetek in predloge na vaš kontakt. Hvala!"
       ],
       "terminal": true
     }
