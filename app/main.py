@@ -7,6 +7,7 @@ from app.api import chat, chats, leads, kpis, funnel, objections
 from app.middleware.request_logger import RequestLoggerMiddleware
 from app.api import agent, chat_events
 from app.api import health
+from app.api import survey_flow
 from app.services.bootstrap_db import create_all
 
 # 👉 NEW: portal imports (adds login/admin/manager + public flow + static mounting)
@@ -61,6 +62,8 @@ app.include_router(agent.router,       prefix="/agent",       tags=["Agent"])
 app.include_router(chat_events.router, prefix="/chat-events", tags=["ChatEvents"])
 # Health + introspection
 app.include_router(health.router,      prefix="/health",      tags=["Health"])
+# Survey flow management
+app.include_router(survey_flow.router, tags=["Survey"])
 
 # ---- Routers (NEW – additive only) -----------------------------------------
 # Auth for portal (login + me)

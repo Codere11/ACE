@@ -8,9 +8,14 @@ DATA_DIR = os.path.join(ROOT_DIR, "data")
 CONFIG_PATH = os.path.join(DATA_DIR, "conversation_config.json")
 FLOW_PATH = os.path.join(DATA_DIR, "conversation_flow.json")
 
-with open(CONFIG_PATH, "r", encoding="utf-8") as f:
-    ACE_CONFIG = json.load(f)
+# Load conversation config (optional - only used for AI features)
+try:
+    with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+        ACE_CONFIG = json.load(f)
+except FileNotFoundError:
+    ACE_CONFIG = {}  # Empty config if file doesn't exist
 
+# Load conversation flow (required for agent takeover chat)
 with open(FLOW_PATH, "r", encoding="utf-8") as f:
     FLOW = json.load(f)
 
@@ -68,7 +73,4 @@ def _ensure_dual_contact_first_node(flow: dict) -> dict:
 if os.getenv("ACE_ENFORCE_DUAL_CONTACT", "1") not in ("0", "false", "False"):
     FLOW = _ensure_dual_contact_first_node(FLOW)
 
-# DeepSeek
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-ac86f23b7a524c8cb0f42b4f62a010b2")
-DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-chat"
+# Note: DeepSeek AI removed - survey system doesn't need AI

@@ -9,7 +9,8 @@ import { LiveEventsService, ChatEvent } from './services/live-events.service';
 import { Subscription } from 'rxjs';
 
 // ✅ Flow Designer
-import { FlowDesignerComponent } from './flow-designer/flow-designer.component';
+import { SimpleSurveyBuilderComponent } from './simple-survey-builder/simple-survey-builder.component';
+import { SurveyAnswersComponent } from './survey-answers/survey-answers.component';
 
 const SELECT_KEY = 'ace_notes_selected_lead_sid';
 
@@ -21,7 +22,8 @@ const SELECT_KEY = 'ace_notes_selected_lead_sid';
     HttpClientModule,
     FormsModule,
     NotesTableComponent,
-    FlowDesignerComponent
+    SimpleSurveyBuilderComponent,
+    SurveyAnswersComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -77,10 +79,6 @@ export class AppComponent implements OnInit, OnDestroy {
   dateFrom: string = '';
   dateTo: string = '';
   searchName: string = '';
-
-  // ------- TAGS state -------
-  aiTags: string[] = ['money', 'ready'];
-  newTag = '';
 
   // ✅ NEW: local flow state for designer (no backend yet)
   flowData: any = null;
@@ -465,17 +463,6 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     this.displayedLeads = list.sort((a, b) => b.score - a.score);
-  }
-
-  // -------- TAGS controls --------
-  addTag() {
-    const t = (this.newTag || '').trim();
-    if (!t) return;
-    if (!this.aiTags.includes(t)) this.aiTags = [...this.aiTags, t];
-    this.newTag = '';
-  }
-  removeTag(i: number) {
-    this.aiTags = this.aiTags.filter((_, idx) => idx !== i);
   }
 
   // -------- Logo fallbacks --------

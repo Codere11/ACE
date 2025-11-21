@@ -914,3 +914,9 @@
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1763464510}
 {"sid": "rk50m1701mp", "role": "user", "text": "/start", "timestamp": 1763468341}
 {"sid": "rk50m1701mp", "role": "assistant", "text": "Kaj je vaš glavni namen?", "timestamp": 1763468341}
+{"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "user", "text": "/start", "timestamp": 1763739180}
+{"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "assistant", "text": "Preden začnemo – prosim vnesite kontakt (e-pošta in/ali telefon) za povratni info.", "timestamp": 1763739180}
+{"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "staff", "text": "Kako smo?", "timestamp": 1763741425}
+{"sid": "f935260a-3a9d-483d-9eb3-ce9895aad763", "role": "user", "text": "SUper", "timestamp": 1763741429}
+{"sid": "sid_1763742358673_f90evggq", "role": "staff", "text": "Dober dan!", "timestamp": 1763742387}
+{"sid": "sid_1763742358673_f90evggq", "role": "user", "text": "Dan", "timestamp": 1763742390}

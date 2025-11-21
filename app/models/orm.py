@@ -129,6 +129,11 @@ class Lead(Base):
     lastMessage: Mapped[str] = mapped_column(Text, default="")
     lastSeenSec: Mapped[int] = mapped_column(Integer, default=0)
     notes: Mapped[str] = mapped_column(Text, default="")
+    # Survey tracking
+    survey_started_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    survey_completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    survey_answers: Mapped[Optional[dict]] = mapped_column(JSON)  # {node_id: answer}
+    survey_progress: Mapped[int] = mapped_column(Integer, default=0)  # 0-100 percentage
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

@@ -21,6 +21,12 @@ export type Lead = {
   lastMessage: string;
   lastSeenSec: number;
   notes: string;
+  
+  // Survey fields
+  survey_started_at?: string | null;
+  survey_completed_at?: string | null;
+  survey_answers?: Record<string, any> | null;
+  survey_progress?: number;
 };
 
 export type KPIs = {

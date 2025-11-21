@@ -198,3 +198,65 @@ def get_objections():
     counts = Counter(words)
     ranked = [f"{k} ({v})" for k, v in counts.most_common(5)]
     return ranked
+
+
+# -------------------
+# Survey tracking (NEW)
+# -------------------
+def start_survey(sid: str) -> Lead:
+    """
+    Mark survey as started for this lead.
+    """
+    from datetime import datetime
+    lead = _ensure(sid)
+    if not lead.survey_started_at:
+        lead.survey_started_at = datetime.utcnow().isoformat()
+    lead.lastSeenSec = _now()
+    return lead
+
+
+def update_survey_answer(sid: str, node_id: str, answer: any) -> Lead:
+    """
+    Store a single survey answer for a lead.
+    """
+    lead = _ensure(sid)
+    if not lead.survey_answers:
+        lead.survey_answers = {}
+    lead.survey_answers[node_id] = answer
+    lead.lastSeenSec = _now()
+    return lead
+
+
+def update_survey_progress(sid: str, progress: int, answers: dict = None) -> Lead:
+    """
+    Update survey completion percentage and optionally merge answers.
+    """
+    from datetime import datetime
+    lead = _ensure(sid)
+    
+    if not lead.survey_started_at:
+        lead.survey_started_at = datetime.utcnow().isoformat()
+    
+    lead.survey_progress = max(0, min(100, progress))
+    
+    if answers:
+        if not lead.survey_answers:
+            lead.survey_answers = {}
+        lead.survey_answers.update(answers)
+    
+    if progress >= 100 and not lead.survey_completed_at:
+        lead.survey_completed_at = datetime.utcnow().isoformat()
+        lead.stage = "Qualified" if lead.stage in ("Awareness", "Cold", "Discovery") else lead.stage
+        if lead.score < 60:
+            lead.score = 60
+    
+    lead.lastSeenSec = _now()
+    return lead
+
+
+def get_survey_answers(sid: str) -> dict:
+    """
+    Retrieve survey answers for a lead.
+    """
+    lead = _find(sid)
+    return lead.survey_answers if lead and lead.survey_answers else {}

@@ -1,0 +1,210 @@
+{
+  "version": "1.0.0",
+  "start": "welcome",
+  "nodes": [
+    {
+      "id": "welcome",
+      "texts": [
+        "Pozdravljeni 👋 Za začetek prosim vnesite kontakt (zadostuje e-pošta ali telefon)."
+      ],
+      "openInput": true,
+      "inputType": "dual-contact",
+      "next": "intent"
+    },
+    {
+      "id": "intent",
+      "texts": [
+        "Kaj je vaš glavni namen?"
+      ],
+      "choices": [
+        {
+          "title": "🏠 Kupujem",
+          "next": "property_type"
+        },
+        {
+          "title": "🔑 Najemam",
+          "next": "property_type"
+        },
+        {
+          "title": "💼 Prodajam",
+          "next": "property_type"
+        }
+      ]
+    },
+    {
+      "id": "property_type",
+      "texts": [
+        "Katera vrsta nepremičnine?"
+      ],
+      "choices": [
+        {
+          "title": "Stanovanje",
+          "next": "location"
+        },
+        {
+          "title": "Hiša",
+          "next": "location"
+        },
+        {
+          "title": "Poslovni prostor",
+          "next": "location"
+        }
+      ]
+    },
+    {
+      "id": "location",
+      "texts": [
+        "Lokacija (okvirno)?"
+      ],
+      "choices": [
+        {
+          "title": "Ljubljana in okolica",
+          "next": "budget"
+        },
+        {
+          "title": "Primorska / Obala",
+          "next": "budget"
+        },
+        {
+          "title": "Drugo (SLO)",
+          "next": "budget"
+        }
+      ]
+    },
+    {
+      "id": "budget",
+      "texts": [
+        "Proračun (okvirno)?"
+      ],
+      "choices": [
+        {
+          "title": "Do 200k €",
+          "next": "timing"
+        },
+        {
+          "title": "200k – 400k €",
+          "next": "timing"
+        },
+        {
+          "title": "400k+ €",
+          "next": "timing"
+        }
+      ]
+    },
+    {
+      "id": "timing",
+      "texts": [
+        "Kdaj želite urediti ogled/posel?"
+      ],
+      "choices": [
+        {
+          "title": "Zelo kmalu (1–2 tedna)",
+          "next": "financing"
+        },
+        {
+          "title": "V naslednjem mesecu",
+          "next": "financing"
+        },
+        {
+          "title": "Kasneje / fleksibilno",
+          "next": "financing"
+        }
+      ]
+    },
+    {
+      "id": "financing",
+      "texts": [
+        "Način financiranja?"
+      ],
+      "choices": [
+        {
+          "title": "Gotovina",
+          "next": "history"
+        },
+        {
+          "title": "Hipoteka / kredit",
+          "next": "history"
+        },
+        {
+          "title": "Ne vem / se dogovarjam",
+          "next": "history"
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "texts": [
+        "Ste že bili na ogledu ali sodelovali z agentom?"
+      ],
+      "choices": [
+        {
+          "title": "Da, pri vas",
+          "next": "notes"
+        },
+        {
+          "title": "Da, drugje",
+          "next": "notes"
+        },
+        {
+          "title": "Ne",
+          "next": "notes"
+        }
+      ]
+    },
+    {
+      "id": "notes",
+      "texts": [
+        "Dodatne želje (lega, parkirišče, nadstropje, vrt ipd.)? (neobvezno)"
+      ],
+      "openInput": true,
+      "inputType": "single",
+      "next": "summary"
+    },
+    {
+      "id": "summary",
+      "texts": [
+        "Hvala! Pripravljam kratek povzetek in predlog naslednjega koraka."
+      ],
+      "choices": [
+        {
+          "title": "Pošljite predloge ogledov",
+          "next": "end_viewing"
+        },
+        {
+          "title": "Raje najprej pokličite",
+          "next": "end_viewing"
+        },
+        {
+          "title": "Pošljite info na kontakt",
+          "next": "end_viewing"
+        }
+      ]
+    },
+    {
+      "id": "end_viewing",
+      "texts": [
+        "Odlično ✅. Na vaš kontakt bomo poslali 1–3 termine za ogled ustreznih nepremičnin."
+      ],
+      "openInput": true,
+      "inputType": "text",
+      "next": "end_call"
+    },
+    {
+      "id": "end_call",
+      "texts": [
+        "V redu. Kratek klic za uskladitev – oglasimo se na vaš kontakt. Hvala!"
+      ],
+      "openInput": true,
+      "inputType": "text",
+      "next": "end_info"
+    },
+    {
+      "id": "end_info",
+      "texts": [
+        "Ni problema. Pošljemo povzetek in predloge na vaš kontakt. Hvala!"
+      ],
+      "openInput": true,
+      "inputType": "text"
+    }
+  ]
+}

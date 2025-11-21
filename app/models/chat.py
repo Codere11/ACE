@@ -59,6 +59,15 @@ class SurveyRequest(_FlexibleModel):
     tenant_slug: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
 
+class SurveySubmitRequest(_FlexibleModel):
+    """Submit survey answers with progress tracking"""
+    sid: str
+    node_id: str  # Current node being answered
+    answer: Any  # Answer value (string, list, dict)
+    progress: int = 0  # 0-100 percentage
+    all_answers: Optional[Dict[str, Any]] = None  # Complete answers so far
+    tenant_slug: Optional[str] = None
+
 class StaffMessage(_FlexibleModel):
     sid: str
     text: str
@@ -92,7 +101,7 @@ from .core import Tenant, User, ConversationFlow  # noqa: E402,F401
 __all__ = [
     "SCHEMA_VERSION","SUPPORTED_SCHEMA_VERSIONS","is_schema_supported","schema_fingerprint",
     "ROLE_USER","ROLE_ASSISTANT","ROLE_STAFF","ROLE_SYSTEM","MESSAGE_ROLES","MESSAGE_TYPES","sanitize_role",
-    "ChatRequest","SurveyRequest","StaffMessage","ChatMessage","ChatEvent",
+    "ChatRequest","SurveyRequest","SurveySubmitRequest","StaffMessage","ChatMessage","ChatEvent",
     "model_modules",
     "Tenant","User","ConversationFlow",
 ]

@@ -25,5 +25,11 @@ class Lead(BaseModel):
     lastSeenSec: int = 0
     notes: str = ""
 
+    # Survey tracking
+    survey_started_at: Optional[str] = None  # ISO datetime string
+    survey_completed_at: Optional[str] = None
+    survey_answers: Optional[dict] = None  # {node_id: answer_value}
+    survey_progress: int = 0  # 0-100 percentage
+
     class Config:
         extra = "ignore"

@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from app.core.config import FLOW
 from app.core import sessions  # legacy memory store
 from app.models import chat as chat_models
-from app.models.chat import ChatRequest, SurveyRequest, StaffMessage
+from app.models.chat import ChatRequest, SurveyRequest, SurveySubmitRequest, StaffMessage
 from app.services import lead_service, chat_store, event_bus, takeover
 from app.services import scoring_service
 
@@ -615,3 +615,96 @@ async def staff_message(body: StaffMessage):
 @router.post("/staff/", include_in_schema=False, name="staff_message_slash")
 async def staff_message_slash(body: StaffMessage):
     return await _staff_impl(body)
+
+# ---- survey/submit (NEW structured survey system) ----
+async def _survey_submit_impl(body: SurveySubmitRequest):
+    """
+    Submit survey answer for a specific node.
+    Stores answer, updates progress, and returns next node or completion status.
+    """
+    sid = body.sid
+    node_id = body.node_id
+    answer = body.answer
+    progress = body.progress
+    
+    logger.info("POST /survey/submit sid=%s node=%s progress=%d", sid, node_id, progress)
+    
+    # Check takeover - if human mode, pause survey
+    if takeover.is_active(sid):
+        logger.info("Human mode active sid=%s - survey paused", sid)
+        try:
+            await event_bus.publish(sid, "survey.paused", {"sid": sid, "node_id": node_id})
+        except Exception:
+            logger.exception("survey.paused event failed sid=%s", sid)
+        return {
+            "ok": True,
+            "human_mode": True,
+            "paused": True,
+            "message": "Agent prevzel pogovor - anketa začasno ustavljena"
+        }
+    
+    # Ensure lead exists
+    _ensure_lead(sid)
+    
+    # Store the answer
+    lead_service.update_survey_answer(sid, node_id, answer)
+    
+    # Update progress
+    all_answers = body.all_answers if body.all_answers else {node_id: answer}
+    lead = lead_service.update_survey_progress(sid, progress, all_answers)
+    
+    # Store answer in notes for audit trail
+    answer_str = json.dumps(answer) if not isinstance(answer, str) else answer
+    _append_lead_notes(sid, f"Survey [{node_id}]: {answer_str}")
+    
+    # Publish event for real-time dashboard updates
+    try:
+        await event_bus.publish(sid, "survey.progress", {
+            "sid": sid,
+            "node_id": node_id,
+            "progress": progress,
+            "completed": progress >= 100
+        })
+    except Exception:
+        logger.exception("survey.progress event failed sid=%s", sid)
+    
+    # If completed, publish completion event
+    if progress >= 100:
+        logger.info("Survey completed sid=%s", sid)
+        try:
+            await event_bus.publish(sid, "survey.completed", {
+                "sid": sid,
+                "answers": lead.survey_answers,
+                "completed_at": lead.survey_completed_at
+            })
+        except Exception:
+            logger.exception("survey.completed event failed sid=%s", sid)
+        
+        return {
+            "ok": True,
+            "completed": True,
+            "progress": 100,
+            "message": "Hvala za sodelovanje! Kmalu se oglasimo.",
+            "lead": {
+                "stage": lead.stage,
+                "score": lead.score,
+                "progress": lead.survey_progress
+            }
+        }
+    
+    # Return success with current progress
+    return {
+        "ok": True,
+        "completed": False,
+        "progress": progress,
+        "answers_count": len(lead.survey_answers) if lead.survey_answers else 0
+    }
+
+@router.post("/survey/submit", name="survey_submit")
+async def survey_submit(body: SurveySubmitRequest):
+    """Submit survey answer and track progress"""
+    return await _survey_submit_impl(body)
+
+@router.post("/survey/submit/", include_in_schema=False, name="survey_submit_slash")
+async def survey_submit_slash(body: SurveySubmitRequest):
+    return await _survey_submit_impl(body)

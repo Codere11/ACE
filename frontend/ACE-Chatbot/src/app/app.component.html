@@ -1,13 +1,24 @@
 <section class="agent-hero">
   <img class="agent-hero__photo" [src]="agentPhotoUrl" alt="{{agentName}}" />
-  <h1 class="agent-hero__title">Govoriš z AI asistentom agenta {{agentName}}</h1>
+  <h1 class="agent-hero__title">{{ appMode === 'survey' && !surveyCompleted ? 'Izpolnite kratek vprašalnik' : 'Govoriš z AI asistentom agenta ' + agentName }}</h1>
   <p class="agent-hero__subtitle">
-    Ta pogovor nam pomaga razumeti vaše želje in vam predlagati nepremičnine, ki vam res ustrezajo.
+    {{ appMode === 'survey' && !surveyCompleted ? 'Pomagajte nam razumeti vaše želje in preferenc in vam predlagati nepremičnine, ki vam res ustrezajo.' : 'Ta pogovor nam pomaga razumeti vaše želje in vam predlagati nepremičnine, ki vam res ustrezajo.' }}
   </p>
 </section>
 
-<!-- Standalone, fixed-size chat card -->
-<div class="agent-page">
+<!-- Survey Mode -->
+<div class="agent-page" *ngIf="appMode === 'survey'">
+  <app-survey-form
+    [flow]="surveyFlow"
+    [sid]="sid"
+    [backendUrl]="backendUrl"
+    (completed)="onSurveyCompleted()"
+    (paused)="onSurveyPaused()"
+  ></app-survey-form>
+</div>
+
+<!-- Chat Mode -->
+<div class="agent-page" *ngIf="appMode === 'chat'">
   <div class="chat-card">
     <!-- 1) Scrollable messages (fixed box) -->
     <div class="messages" #messagesRef>

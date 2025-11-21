@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { LiveEventsService, ChatEvent } from './services/live-events.service';
 import { Subscription } from 'rxjs';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { SurveyFormComponent } from './survey-form.component';
 
 type Role = 'user' | 'assistant' | 'staff';
 type Channel = 'email'|'phone'|'whatsapp'|'sms';
@@ -41,7 +42,7 @@ interface ChatResponse {
   standalone: true,
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss'],
-  imports: [CommonModule, FormsModule, HttpClientModule]
+  imports: [CommonModule, FormsModule, HttpClientModule, SurveyFormComponent]
 })
 export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   // ====== CONFIG ======
@@ -77,6 +78,11 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   humanMode = false;
   typingLabel: string | null = null;
 
+  // Survey mode (NEW)
+  appMode: 'survey' | 'chat' = 'survey';  // Default to survey mode
+  surveyFlow: any = null;
+  surveyCompleted = false;
+
   contactPending = false;
 
   contact: { name: string; email: string; phone: string; channel: Channel } = {
@@ -95,14 +101,10 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isBrowser = isPlatformBrowser(platformId);
 
     if (this.isBrowser) {
-      const existing = localStorage.getItem('ace_sid');
-      if (existing && existing.length >= 8) {
-        this.sid = existing;
-      } else {
-        this.sid = Math.random().toString(36).slice(2);
-        localStorage.setItem('ace_sid', this.sid);
-      }
-      this.d('[SID] init(browser)', { sid: this.sid });
+      // Always generate a fresh SID on page load for clean survey start
+      this.sid = 'sid_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+      localStorage.setItem('ace_sid', this.sid);
+      this.d('[SID] Fresh session generated', { sid: this.sid });
     } else {
       this.sid = 'SSR_NO_SID';
       this.d('[SID] init(ssr)');
@@ -122,9 +124,21 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.d('ngOnInit → starting LiveEvents for SID', this.sid);
     this.live.start(this.sid);
+    
+    // Load survey flow from backend
+    this.loadSurveyFlow();
+    
     this.liveSub = this.live.events$.subscribe((evt: ChatEvent | null) => {
       if (!evt) return;
       this.d('LiveEvent received', evt);
+      
+      // Handle survey-specific events
+      if (evt.type === 'survey.paused') {
+        this.i('Survey paused by agent → switching to chat mode');
+        this.onSurveyPaused();
+        return;
+      }
+      
       if (evt.type !== 'message.created') return;
       if (evt.sid !== this.sid) return;
 
@@ -134,6 +148,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       if (role === 'staff') {
         this.i('Staff takeover detected → switching to humanMode');
         this.humanMode = true;
+        this.appMode = 'chat';  // Switch from survey to chat
         this.chatMode = 'open';
         this.ui = { inputType: 'single' };
       }
@@ -170,10 +185,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       this.scrollToBottomSoon();
     });
 
-    if (!this.humanMode) {
-      this.d('Initial /start');
-      this.send('/start');
-    }
+    // DON'T call /start in survey mode - only in chat mode if needed
+    // Survey mode loads its own flow from loadSurveyFlow()
   }
 
   ngOnDestroy() {
@@ -712,5 +725,90 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         this.d('scrollToBottomSoon() → scrolled', { scrollTop: el.scrollTop, scrollHeight: el.scrollHeight });
       }, 0);
     });
+  }
+
+  // ===== Survey Mode Methods (NEW) =====
+  private loadSurveyFlow() {
+    this.i('=== LOADING SURVEY FLOW FROM BACKEND ==>');
+    
+    // Load from backend (same endpoint as manager dashboard)
+    this.http.get<any>(`${this.backendUrl}/api/survey/flow`).subscribe({
+      next: (flow) => {
+        console.log('=== SURVEY FLOW LOADED SUCCESSFULLY ==>');
+        console.log('Full flow object:', JSON.stringify(flow, null, 2));
+        console.log('Flow.version:', flow.version);
+        console.log('Flow.start:', flow.start);
+        console.log('Flow.nodes:', flow.nodes);
+        console.log('Flow.nodes.length:', flow.nodes?.length);
+        if (flow.nodes) {
+          flow.nodes.forEach((node: any, i: number) => {
+            console.log(`Node ${i}:`, node);
+          });
+        }
+        this.surveyFlow = flow;
+        console.log('this.surveyFlow is now:', this.surveyFlow);
+      },
+      error: (err) => {
+        this.e('Failed to load survey flow from backend', err);
+        // Fallback to localStorage
+        const saved = localStorage.getItem('ace_survey_flow');
+        if (saved) {
+          try {
+            this.surveyFlow = JSON.parse(saved);
+            this.i('Survey flow loaded from localStorage');
+            return;
+          } catch (e) {
+            this.w('Failed to parse localStorage flow', e);
+          }
+        }
+        // Last resort: use default
+        this.surveyFlow = this.getDefaultSurvey();
+        this.i('Using default survey flow');
+      }
+    });
+  }
+
+  private getDefaultSurvey() {
+    return {
+      version: '1.0.0',
+      start: 'contact',
+      nodes: [
+        {
+          id: 'contact',
+          texts: ['Prosimo vnesite kontaktne podatke:'],
+          openInput: true,
+          inputType: 'dual-contact',
+          next: 'thank_you'
+        },
+        {
+          id: 'thank_you',
+          texts: ['Hvala! Kmalu se oglasimo.'],
+          terminal: true
+        }
+      ]
+    };
+  }
+
+  onSurveyCompleted() {
+    this.i('Survey completed');
+    this.surveyCompleted = true;
+    // Optionally switch to chat mode after survey completion
+    // this.appMode = 'chat';
+  }
+
+  onSurveyPaused() {
+    this.i('Survey paused by agent - switching to chat mode');
+    this.appMode = 'chat';
+    this.humanMode = true;
+    this.chatMode = 'open';
+    this.ui = { inputType: 'single' };
+    
+    // Add message to chat
+    this.messages.push({
+      role: 'assistant',
+      text: 'Agent je prevzel pogovor. Pišite vprašanja tukaj 👇',
+      _id: this.rid('MSG')
+    });
+    this.scrollToBottomSoon();
   }
 }

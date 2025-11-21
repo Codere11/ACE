@@ -10,14 +10,13 @@
     <span>LEADS</span>
   </button>
 
+  <button [class.active]="activeTab==='flow'" (click)="activeTab='flow'">
+    <span>FLOW</span>
+  </button>
+
   <!-- Unclickable tabs with "coming soon" -->
   <button class="disabled" disabled>
     <span>ANALYSIS</span>
-    <small class="soon"> - Prihaja kmalu</small>
-  </button>
-
-  <button class="disabled" disabled>
-    <span>FLOW</span>
     <small class="soon"> - Prihaja kmalu</small>
   </button>
 </nav>
@@ -100,25 +99,35 @@
           </label>
         </aside>
 
-        <!-- RIGHT: TAGS card -->
+        <!-- RIGHT: Quick Stats card -->
         <aside class="card tags-card" style="grid-area: tags;">
-          <h3>TAGS — what the AI looks for in leads</h3>
+          <h3>📊 QUICK STATS</h3>
 
-          <div class="add-tag">
-            <input type="text" [(ngModel)]="newTag" placeholder="Add tag (e.g., money, ready)" (keyup.enter)="addTag()" />
-            <button class="plus" (click)="addTag()">+</button>
+          <div class="stats-grid" *ngIf="kpis">
+            <div class="stat-item">
+              <div class="stat-value">{{ kpis.activeLeads }}</div>
+              <div class="stat-label">Active Leads</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ kpis.contacts }}</div>
+              <div class="stat-label">Total Contacts</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ displayedLeads.length }}</div>
+              <div class="stat-label">Filtered Results</div>
+            </div>
           </div>
-
-          <div class="chip-wrap">
-            <button *ngFor="let t of aiTags; let i=index" class="chip" (click)="removeTag(i)">
-              {{ t }} <span class="x">✕</span>
-            </button>
+          
+          <div class="divider" style="margin: 16px 0;"></div>
+          
+          <div class="info-note">
+            <small>💡 Tip: Use filters to find leads by score, contact info, or date range</small>
           </div>
         </aside>
 
         <!-- FULL-WIDTH LEADS under both cards -->
         <main class="leads-span" style="grid-area: leads;">
-          <h2>🔥 Najbolj kvalificirani kontakti (v živo)</h2>
+          <h2>📋 Survey Responses (Live)</h2>
 
           <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam leads...</div>
           <div *ngIf="!loadingLeads && displayedLeads.length === 0" class="empty">
@@ -142,7 +151,6 @@
                   </div>
                   <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
                   <div class="tags">
-                    <span class="tag good" *ngIf="lead.compatibility">✅ Compatibility</span>
                     <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
 
                     <ng-container *ngIf="lead.phoneText?.trim(); else phoneBadge">
@@ -159,8 +167,15 @@
                       <span class="tag" [class.good]="lead.email">📧 Email</span>
                     </ng-template>
 
-                    <span class="tag" [class.good]="lead.adsExp">📈 Ads Exp</span>
                   </div>
+                  
+                  <!-- Survey Answers -->
+                  <app-survey-answers
+                    [answers]="lead.survey_answers ?? null"
+                    [progress]="lead.survey_progress"
+                    [startedAt]="lead.survey_started_at ?? null"
+                    [completedAt]="lead.survey_completed_at ?? null"
+                  ></app-survey-answers>
                 </div>
 
                 <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
@@ -220,15 +235,9 @@
       </ng-template>
     </section>
 
-    <!-- TAB 3: Sales Flow -->
-    <section *ngIf="activeTab==='flow'">
-      <h2>📊 Sales Flow & Heatmaps</h2>
-
-      <!-- ✅ NEW: Flow Designer UI (no backend calls; saves to localStorage) -->
-      <ace-flow-designer
-        [initialFlow]="flowData"
-        (flowChange)="onFlowChange($event)">
-      </ace-flow-designer>
+    <!-- TAB 3: Survey Builder -->
+    <section *ngIf="activeTab==='flow'" style="height: calc(100vh - 200px);">
+      <app-simple-survey-builder></app-simple-survey-builder>
 
       <!-- Existing analytics below -->
       <div *ngIf="loadingFunnel" class="spinner">⏳ Nalagam funnel...</div>

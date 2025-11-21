@@ -1,0 +1,789 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { HttpClient } from '@angular/common/http';
+
+interface Question {
+  id: string;
+  type: 'choice' | 'text' | 'email' | 'phone' | 'contact';
+  question: string;
+  choices?: string[];
+}
+
+@Component({
+  selector: 'app-simple-survey-builder',
+  standalone: true,
+  imports: [CommonModule, FormsModule, DragDropModule],
+  template: `
+    <div class="builder-container">
+      <div class="builder-header">
+        <h2>📋 Survey Builder</h2>
+        <div class="actions">
+          <button class="btn-secondary" (click)="loadSurvey()">📂 Load</button>
+          <button class="btn-primary" (click)="saveSurvey()">💾 Save Survey</button>
+        </div>
+      </div>
+
+      <div class="builder-main">
+        <!-- Question Types Palette -->
+        <aside class="palette">
+          <h3>Add Questions</h3>
+          <div class="question-types">
+            <button class="type-btn" (click)="addQuestion('contact')">
+              <span class="icon">📧</span>
+              Contact Info
+            </button>
+            <button class="type-btn" (click)="addQuestion('choice')">
+              <span class="icon">☑️</span>
+              Multiple Choice
+            </button>
+            <button class="type-btn" (click)="addQuestion('text')">
+              <span class="icon">📝</span>
+              Text Answer
+            </button>
+            <button class="type-btn" (click)="addQuestion('email')">
+              <span class="icon">✉️</span>
+              Email Only
+            </button>
+            <button class="type-btn" (click)="addQuestion('phone')">
+              <span class="icon">📱</span>
+              Phone Only
+            </button>
+          </div>
+        </aside>
+
+        <!-- Questions List (Drag & Drop) -->
+        <main class="questions-area">
+          <div class="empty-state" *ngIf="questions.length === 0">
+            <p>👈 Click a question type to start building your survey</p>
+          </div>
+
+          <div 
+            cdkDropList 
+            (cdkDropListDropped)="drop($event)"
+            class="questions-list">
+            
+            <div 
+              *ngFor="let q of questions; let i = index" 
+              cdkDrag
+              class="question-card">
+              
+              <div class="question-header">
+                <span class="drag-handle" cdkDragHandle>⋮⋮</span>
+                <span class="question-number">Question {{ i + 1 }}</span>
+                <span class="question-type-badge">{{ getTypeLabel(q.type) }}</span>
+                <button class="btn-delete" (click)="deleteQuestion(i)">🗑️</button>
+              </div>
+
+              <div class="question-body">
+                <!-- Question Text -->
+                <div class="form-group">
+                  <label>Question:</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="q.question"
+                    placeholder="Enter your question here..."
+                    class="input-large">
+                </div>
+
+                <!-- Choices (for choice type) -->
+                <div *ngIf="q.type === 'choice'" class="choices-editor">
+                  <label>Answer Choices:</label>
+                  <div class="choice-list">
+                    <div *ngFor="let choice of q.choices; let ci = index; trackBy: trackByIndex" class="choice-item">
+                      <input 
+                        type="text" 
+                        [(ngModel)]="q.choices![ci]"
+                        placeholder="Choice {{ ci + 1 }}"
+                        class="input-medium">
+                      <button class="btn-small" (click)="removeChoice(i, ci)">✕</button>
+                    </div>
+                  </div>
+                  <button class="btn-add-choice" (click)="addChoice(i)">+ Add Choice</button>
+                </div>
+
+                <!-- Info for special types -->
+                <div *ngIf="q.type === 'contact'" class="info-box">
+                  ℹ️ This will ask for both email and phone (at least one required)
+                </div>
+                <div *ngIf="q.type === 'email'" class="info-box">
+                  ℹ️ This will validate email format
+                </div>
+                <div *ngIf="q.type === 'phone'" class="info-box">
+                  ℹ️ This will ask for phone number
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      <!-- Preview Button -->
+      <div class="builder-footer">
+        <button class="btn-preview" (click)="togglePreview()">
+          {{ showPreview ? '✏️ Edit Mode' : '👁️ Preview Survey' }}
+        </button>
+      </div>
+
+      <!-- Preview Modal -->
+      <div class="preview-modal" *ngIf="showPreview" (click)="togglePreview()">
+        <div class="preview-content" (click)="$event.stopPropagation()">
+          <div class="preview-header">
+            <h3>Survey Preview</h3>
+            <button class="btn-close" (click)="togglePreview()">✕</button>
+          </div>
+          <div class="preview-body">
+            <div *ngFor="let q of questions; let i = index" class="preview-question">
+              <p class="preview-question-text">{{ i + 1 }}. {{ q.question }}</p>
+              
+              <div *ngIf="q.type === 'choice'" class="preview-choices">
+                <button *ngFor="let choice of q.choices" class="preview-choice-btn">
+                  {{ choice }}
+                </button>
+              </div>
+              
+              <div *ngIf="q.type === 'text'" class="preview-input">
+                <textarea placeholder="Your answer..." disabled></textarea>
+              </div>
+              
+              <div *ngIf="q.type === 'email'" class="preview-input">
+                <input type="email" placeholder="your@email.com" disabled>
+              </div>
+              
+              <div *ngIf="q.type === 'phone'" class="preview-input">
+                <input type="tel" placeholder="+386..." disabled>
+              </div>
+              
+              <div *ngIf="q.type === 'contact'" class="preview-contact">
+                <input type="email" placeholder="Email" disabled>
+                <input type="tel" placeholder="Phone" disabled>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Message -->
+      <div class="toast" *ngIf="showToast">
+        {{ toastMessage }}
+      </div>
+    </div>
+  `,
+  styles: [`
+    .builder-container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #f5f5f5;
+    }
+
+    .builder-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 30px;
+      background: white;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .builder-header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary, .btn-secondary {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+    }
+
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+
+    .builder-main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .palette {
+      width: 250px;
+      background: white;
+      padding: 20px;
+      border-right: 2px solid #e0e0e0;
+      overflow-y: auto;
+    }
+
+    .palette h3 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .question-types {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .type-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .type-btn:hover {
+      background: #e3f2fd;
+      border-color: #2196F3;
+      transform: translateY(-2px);
+    }
+
+    .type-btn .icon {
+      font-size: 20px;
+    }
+
+    .questions-area {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #999;
+      font-size: 18px;
+    }
+
+    .questions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .question-card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: box-shadow 0.2s;
+    }
+
+    .question-card:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+
+    .question-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+      border-radius: 12px 12px 0 0;
+    }
+
+    .drag-handle {
+      cursor: grab;
+      font-size: 18px;
+      color: #999;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .question-number {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .question-type-badge {
+      padding: 4px 12px;
+      background: #e3f2fd;
+      color: #1976D2;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .btn-delete {
+      margin-left: auto;
+      padding: 6px 12px;
+      background: #ffebee;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-delete:hover {
+      background: #ef5350;
+    }
+
+    .question-body {
+      padding: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #555;
+      font-size: 14px;
+    }
+
+    .input-large, .input-medium {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    .input-large:focus, .input-medium:focus {
+      outline: none;
+      border-color: #2196F3;
+    }
+
+    .choices-editor label {
+      display: block;
+      margin-bottom: 12px;
+      font-weight: 600;
+      color: #555;
+      font-size: 14px;
+    }
+
+    .choice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .choice-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .btn-small {
+      padding: 8px 12px;
+      background: #ffebee;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-add-choice {
+      padding: 8px 16px;
+      background: #e3f2fd;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1976D2;
+    }
+
+    .btn-add-choice:hover {
+      background: #bbdefb;
+    }
+
+    .info-box {
+      margin-top: 12px;
+      padding: 12px;
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #856404;
+    }
+
+    .builder-footer {
+      padding: 20px 30px;
+      background: white;
+      border-top: 2px solid #e0e0e0;
+      text-align: center;
+    }
+
+    .btn-preview {
+      padding: 12px 32px;
+      background: #9C27B0;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-preview:hover {
+      background: #7B1FA2;
+    }
+
+    .preview-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .preview-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .preview-header h3 {
+      margin: 0;
+    }
+
+    .btn-close {
+      padding: 8px 12px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 18px;
+    }
+
+    .preview-body {
+      flex: 1;
+      padding: 30px;
+      overflow-y: auto;
+    }
+
+    .preview-question {
+      margin-bottom: 30px;
+    }
+
+    .preview-question-text {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #333;
+    }
+
+    .preview-choices {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .preview-choice-btn {
+      padding: 14px 18px;
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      text-align: left;
+      cursor: not-allowed;
+    }
+
+    .preview-input input, .preview-input textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .preview-input textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .preview-contact {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .preview-contact input {
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      background: #4CAF50;
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 2000;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .cdk-drag-preview {
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      opacity: 0.9;
+    }
+
+    .cdk-drag-animating {
+      transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    }
+  `]
+})
+export class SimpleSurveyBuilderComponent implements OnInit {
+  questions: Question[] = [];
+  showPreview = false;
+  showToast = false;
+  toastMessage = '';
+
+  constructor(private http: HttpClient) {}
+
+  ngOnInit() {
+    // Load existing survey if available
+    this.loadSurvey();
+  }
+
+  addQuestion(type: Question['type']) {
+    const id = `q${Date.now()}`;
+    const question: Question = {
+      id,
+      type,
+      question: '',
+      choices: type === 'choice' ? ['', '', ''] : undefined
+    };
+    this.questions.push(question);
+  }
+
+  deleteQuestion(index: number) {
+    if (confirm('Delete this question?')) {
+      this.questions.splice(index, 1);
+    }
+  }
+
+  addChoice(questionIndex: number) {
+    if (!this.questions[questionIndex].choices) {
+      this.questions[questionIndex].choices = [];
+    }
+    this.questions[questionIndex].choices!.push('');
+  }
+
+  removeChoice(questionIndex: number, choiceIndex: number) {
+    this.questions[questionIndex].choices!.splice(choiceIndex, 1);
+  }
+
+  trackByIndex(index: number): number {
+    return index;
+  }
+
+  drop(event: CdkDragDrop<Question[]>) {
+    moveItemInArray(this.questions, event.previousIndex, event.currentIndex);
+  }
+
+  getTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      'contact': 'Contact',
+      'choice': 'Multiple Choice',
+      'text': 'Text',
+      'email': 'Email',
+      'phone': 'Phone'
+    };
+    return labels[type] || type;
+  }
+
+  togglePreview() {
+    this.showPreview = !this.showPreview;
+  }
+
+  saveSurvey() {
+    // Validate questions
+    const validQuestions = this.questions.filter(q => q.question && q.question.trim());
+    if (validQuestions.length === 0) {
+      this.showToastMessage('⚠️ Please add at least one question!');
+      return;
+    }
+    
+    // Warn about empty questions
+    const emptyQuestions = this.questions.filter(q => !q.question || !q.question.trim());
+    if (emptyQuestions.length > 0) {
+      if (!confirm(`${emptyQuestions.length} empty questions will be skipped. Continue?`)) {
+        return;
+      }
+    }
+    
+    // Convert to flow format
+    const flow = this.convertToFlow();
+    
+    // Save to backend
+    this.http.post('http://localhost:8000/api/survey/flow', flow).subscribe({
+      next: () => {
+        // Also save to localStorage as backup
+        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
+        this.showToastMessage('✅ Survey saved! Live now for all customers.');
+      },
+      error: (err) => {
+        console.error('Save error:', err);
+        // Save to localStorage as fallback
+        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
+        this.showToastMessage('⚠️ Saved locally (backend unavailable)');
+      }
+    });
+  }
+
+  loadSurvey() {
+    // Load from backend first
+    this.http.get<any>('http://localhost:8000/api/survey/flow').subscribe({
+      next: (flow) => {
+        this.questions = this.convertFromFlow(flow);
+        // Also save to localStorage
+        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
+      },
+      error: (err) => {
+        console.error('Load error from backend:', err);
+        // Fallback to localStorage
+        const saved = localStorage.getItem('ace_survey_flow');
+        if (saved) {
+          try {
+            const flow = JSON.parse(saved);
+            this.questions = this.convertFromFlow(flow);
+          } catch (e) {
+            console.error('Load error from localStorage:', e);
+          }
+        }
+      }
+    });
+  }
+
+  private convertToFlow() {
+    // Filter out empty questions
+    const validQuestions = this.questions.filter(q => q.question && q.question.trim());
+    
+    if (validQuestions.length === 0) {
+      console.warn('No valid questions to save');
+      return {
+        version: '1.0.0',
+        start: 'default',
+        nodes: [
+          {
+            id: 'default',
+            texts: ['Hvala za obisk! Prosimo izpolnite kontakt.'],
+            openInput: true,
+            inputType: 'dual-contact'
+          }
+        ]
+      };
+    }
+    
+    const nodes = validQuestions.map((q, i) => {
+      const node: any = {
+        id: q.id,
+        texts: [q.question]
+      };
+
+      if (q.type === 'choice') {
+        const validChoices = q.choices?.filter(c => c && c.trim()) || [];
+        node.choices = validChoices.map(c => ({
+          title: c,
+          next: i < validQuestions.length - 1 ? validQuestions[i + 1].id : undefined
+        }));
+      } else {
+        node.openInput = true;
+        node.inputType = q.type === 'contact' ? 'dual-contact' : q.type;
+        node.next = i < validQuestions.length - 1 ? validQuestions[i + 1].id : undefined;
+      }
+
+      return node;
+    });
+
+    return {
+      version: '1.0.0',
+      start: validQuestions[0]?.id,
+      nodes
+    };
+  }
+
+  private convertFromFlow(flow: any): Question[] {
+    if (!flow.nodes) return [];
+    
+    return flow.nodes.map((node: any) => ({
+      id: node.id,
+      type: node.choices ? 'choice' : (node.inputType === 'dual-contact' ? 'contact' : node.inputType || 'text'),
+      question: node.texts?.[0] || '',
+      choices: node.choices?.map((c: any) => c.title)
+    }));
+  }
+
+  private showToastMessage(message: string) {
+    this.toastMessage = message;
+    this.showToast = true;
+    setTimeout(() => this.showToast = false, 3000);
+  }
+}

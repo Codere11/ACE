@@ -292,30 +292,55 @@ html, body {
 .kpi-line { color: #6B7280; display:flex; align-items:center; gap:8px; margin-top:.4rem; }
 .kpi-line .dot { color: #C1A46C; }
 
-/* ------------------------------- TAGS Card --------------------------------- */
-.tags-card .add-tag {
-  display: grid; grid-template-columns: 1fr 42px; gap: 8px; margin-bottom: 8px;
+/* ------------------------------- Stats Card -------------------------------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
 }
-.tags-card input {
-  background: #fff; color: #22252A; border: 1px solid #E6E2D6;
-  border-radius: 8px; padding: 8px 10px; width: 100%;
-  transition: border-color .15s ease, box-shadow .15s ease;
-}
-.tags-card input:focus { outline: none; border-color: #C1A46C; box-shadow: 0 0 0 3px rgba(193,164,108,.22); }
-.tags-card .plus {
-  background: #1A1D22; color: #FAFAF7; border: 2px solid #2A2E34;
-  border-radius: 8px; font-weight: 900; cursor: pointer;
-  box-shadow: 0 6px 14px rgba(0,0,0,.28);
-}
-.chip-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip {
-  background: #F6F4EF; color: #22252A;
+
+.stat-item {
+  text-align: center;
+  padding: 12px;
+  background: #FBF7EE;
   border: 1px solid #E6E2D6;
-  border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 700;
-  transition: .15s ease;
+  border-radius: 10px;
+  transition: transform .15s ease, box-shadow .15s ease;
 }
-.chip:hover { background: #FBF7EE; border-color: #C1A46C; }
-.chip .x { margin-left: 6px; opacity: .7; }
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(193,164,108,.18);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: #7E663B;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-note {
+  padding: 10px;
+  background: #F6F4EF;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.info-note small {
+  color: #6B7280;
+  font-weight: 500;
+}
 
 /* ------------------------------- Notes Table ------------------------------- */
 .notes-table {
