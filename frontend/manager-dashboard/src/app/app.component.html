@@ -25,9 +25,15 @@
   <div class="right">
     <div class="user-menu" (click)="agentMenuOpen=!agentMenuOpen" tabindex="0" (blur)="agentMenuOpen=false">
       <img class="agent-logo" [src]="agentLogoUrl" alt="Agent" (error)="onAgentLogoError($event)" />
+      <span class="username" *ngIf="currentUser">{{ currentUser.username }}</span>
       <div class="dropdown" *ngIf="agentMenuOpen">
-        <button (click)="onChangeAccount()">Change account</button>
-        <button (click)="onLogout()">Log out</button>
+        <div class="user-info" *ngIf="currentUser">
+          <strong>{{ currentUser.username }}</strong>
+          <small>{{ currentUser.email }}</small>
+          <small>{{ currentUser.organization_slug }}</small>
+        </div>
+        <button (mousedown)="onChangeAccount(); $event.stopPropagation()">Change account</button>
+        <button (mousedown)="onLogout(); $event.stopPropagation()">Log out</button>
       </div>
     </div>
   </div>

@@ -61,14 +61,42 @@ html, body {
 .tabs .disabled[disabled] .soon { color: #B9BDC6; opacity: .9; font-weight: 600; }
 
 /* User menu */
-.user-menu { position: relative; cursor: pointer; }
+.user-menu {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.user-menu .username {
+  color: #EDEBE6;
+  font-size: 14px;
+  font-weight: 600;
+}
 .user-menu .dropdown {
-  position: absolute; right: 0; top: 56px; min-width: 200px;
+  position: absolute; right: 0; top: 56px; min-width: 220px;
   background: #111317;
   border: 1px solid #2A2E34;
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 18px 36px rgba(0,0,0,.45);
+  z-index: 1000;
+}
+.user-menu .dropdown .user-info {
+  padding: 14px;
+  border-bottom: 1px solid #2A2E34;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.user-menu .dropdown .user-info strong {
+  color: #EDEBE6;
+  font-size: 14px;
+  font-weight: 700;
+}
+.user-menu .dropdown .user-info small {
+  color: #A7ABB3;
+  font-size: 12px;
 }
 .user-menu .dropdown button {
   width: 100%; text-align: left; padding: 12px 14px;

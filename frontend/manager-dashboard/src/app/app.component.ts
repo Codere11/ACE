@@ -84,6 +84,8 @@ export class AppComponent implements OnInit, OnDestroy {
   flowData: any = null;
   private readonly LS_FLOW = 'ace_flow_designer_json';
 
+  currentUser: any = null;
+
   constructor(
     private dashboardService: DashboardService,
     private live: LiveEventsService,
@@ -102,6 +104,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    // Subscribe to current user
+    this.authService.currentUser$.subscribe(user => {
+      this.currentUser = user;
+    });
 
     // Initial fetches (canonical state on load)
     this.fetchLeads();
@@ -486,7 +493,10 @@ export class AppComponent implements OnInit, OnDestroy {
       encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44"><rect width="44" height="44" rx="22" fill="#161b22"/><text x="50%" y="54%" text-anchor="middle" font-family="Arial" font-size="14" fill="#8b949e">Me</text></svg>');
   }
   onChangeAccount() { this.log('Change Account clicked'); }
-  onLogout() { this.log('Logout clicked'); }
+  onLogout() {
+    this.log('Logging out');
+    this.authService.logout();
+  }
 
   // ✅ Flow Designer change hook (for future backend integration)
   onFlowChange(newFlow: any) {

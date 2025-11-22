@@ -28,9 +28,36 @@ export class AuthService {
     if (isPlatformBrowser(this.platformId)) {
       const token = this.getToken();
       if (token) {
-        this.loadCurrentUser();
+        // Validate token with backend
+        this.validateToken();
       }
     }
+  }
+
+  private validateToken(): void {
+    this.http.get<any>('/api/auth/me').subscribe({
+      next: (response) => {
+        if (response && response.user) {
+          if (isPlatformBrowser(this.platformId)) {
+            localStorage.setItem('user', JSON.stringify(response.user));
+          }
+          this.currentUserSubject.next(response.user);
+        } else {
+          this.clearAuth();
+        }
+      },
+      error: () => {
+        this.clearAuth();
+      }
+    });
+  }
+
+  private clearAuth(): void {
+    if (isPlatformBrowser(this.platformId)) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
+    this.currentUserSubject.next(null);
   }
 
   login(username: string, password: string): Observable<any> {
