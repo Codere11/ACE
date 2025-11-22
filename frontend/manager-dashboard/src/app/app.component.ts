@@ -4,10 +4,10 @@ import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 
 import { DashboardService, Lead, KPIs, Funnel, ChatLog } from './services/dashboard.service';
+import { AuthService } from './services/auth.service';
 import { NotesTableComponent } from './notes-table/notes-table.component';
 import { LiveEventsService, ChatEvent } from './services/live-events.service';
 import { Subscription } from 'rxjs';
-
 // ✅ Flow Designer
 import { SimpleSurveyBuilderComponent } from './simple-survey-builder/simple-survey-builder.component';
 import { SurveyAnswersComponent } from './survey-answers/survey-answers.component';
@@ -87,6 +87,7 @@ export class AppComponent implements OnInit, OnDestroy {
   constructor(
     private dashboardService: DashboardService,
     private live: LiveEventsService,
+    private authService: AuthService,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     if (isPlatformBrowser(this.platformId)) {

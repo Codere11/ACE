@@ -1,38 +1,36 @@
 import os
 import time
-import json
 import jwt
 import logging
 from typing import Optional
-from pathlib import Path
+import bcrypt
 
 # Do NOT import/modify your config.py for secrets; keep it self-contained
 SECRET_KEY = os.getenv("ACE_SECRET", "dev-secret-change-me")  # override in prod
 JWT_EXPIRE_MIN = int(os.getenv("ACE_JWT_EXPIRE_MIN", "1440"))  # 1 day
 ALGO = "HS256"
 
-# Resolve repo root (ACE-Campaign/) and users seed path
-HERE = Path(__file__).resolve()
-APP_DIR = HERE.parents[1]          # .../ACE-Campaign/app
-ROOT_DIR = APP_DIR.parent          # .../ACE-Campaign
-USERS_FILE = ROOT_DIR / "app" / "auth" / "users_seed.json"
-
 logger = logging.getLogger("ace.auth")
 
 
-def load_users() -> dict:
+def hash_password(password: str) -> str:
     """
-    Load test users from users_seed.json.
-    Returns a dict keyed by username: { username: {...} }
+    Hash a password using bcrypt.
     """
-    if not USERS_FILE.exists():
-        logger.error("Users seed file not found at %s", USERS_FILE)
-        return {}
-    with open(USERS_FILE, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    users = {u["username"]: u for u in data.get("users", [])}
-    logger.debug("Loaded %d users from seed", len(users))
-    return users
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Verify a password against its hash.
+    """
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception as e:
+        logger.warning("Password verification failed: %s", e)
+        return False
 
 
 def create_token(payload: dict) -> str:

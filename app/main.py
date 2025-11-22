@@ -10,6 +10,10 @@ from app.api import health
 from app.api import survey_flow
 from app.services.bootstrap_db import create_all
 
+# New multi-tenant API endpoints
+from app.api import organizations, users, surveys, public_survey
+from app.auth import routes as auth_routes
+
 # 👉 NEW: portal imports (adds login/admin/manager + public flow + static mounting)
 # These do NOT affect your existing endpoints; they only add new ones.
 from app.portal.routes import (
@@ -40,6 +44,8 @@ app.add_middleware(
         "http://127.0.0.1:4200",
         "http://localhost:4400",
         "http://127.0.0.1:4400",
+        "http://localhost:4500",
+        "http://127.0.0.1:4500",
         # add more origins here if you serve the portal on a different port
     ],
     allow_credentials=True,
@@ -66,12 +72,19 @@ app.include_router(health.router,      prefix="/health",      tags=["Health"])
 app.include_router(survey_flow.router, tags=["Survey"])
 
 # ---- Routers (NEW – additive only) -----------------------------------------
-# Auth for portal (login + me)
-app.include_router(portal_auth_router)        # /api/auth/*
+# Auth for portal (login + me) - DISABLED: Using new auth system
+# app.include_router(portal_auth_router)        # /api/auth/*
+app.include_router(auth_routes.router)        # /api/auth/* (new auth system)
 # Admin + Manager endpoints (file-based instances)
 app.include_router(portal_router)             # /api/admin/* and /api/manager/*
 # Public per-instance flow (for static chatbot UIs)
 app.include_router(portal_public_router)      # /api/instances/{slug}/conversation_flow
+
+# Multi-tenant SaaS API endpoints
+app.include_router(organizations.router)      # /api/organizations
+app.include_router(users.router)              # /api/organizations/{org_id}/users
+app.include_router(surveys.router)            # /api/organizations/{org_id}/surveys
+app.include_router(public_survey.router)      # /s/{survey_slug}
 
 logger.info("Routers registered.")
 
