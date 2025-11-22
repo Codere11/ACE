@@ -9,6 +9,8 @@ interface Question {
   type: 'choice' | 'text' | 'email' | 'phone' | 'contact';
   question: string;
   choices?: string[];
+  scores?: number[];  // Score for each choice (parallel array)
+  baseScore?: number;  // Score for open-ended/contact questions
 }
 
 @Component({
@@ -89,7 +91,7 @@ interface Question {
 
                 <!-- Choices (for choice type) -->
                 <div *ngIf="q.type === 'choice'" class="choices-editor">
-                  <label>Answer Choices:</label>
+                  <label>Answer Choices (with Score):</label>
                   <div class="choice-list">
                     <div *ngFor="let choice of q.choices; let ci = index; trackBy: trackByIndex" class="choice-item">
                       <input 
@@ -97,12 +99,33 @@ interface Question {
                         [(ngModel)]="q.choices![ci]"
                         placeholder="Choice {{ ci + 1 }}"
                         class="input-medium">
+                      <input 
+                        type="number" 
+                        [(ngModel)]="q.scores![ci]"
+                        placeholder="Score"
+                        class="input-score"
+                        title="Positive = good lead, Negative = bad lead">
                       <button class="btn-small" (click)="removeChoice(i, ci)">✕</button>
                     </div>
                   </div>
                   <button class="btn-add-choice" (click)="addChoice(i)">+ Add Choice</button>
+                  <div class="score-info">
+                    💡 <strong>Score Guide:</strong> Positive numbers (1-100) = good/interested lead, Negative numbers (-100 to 0) = bad/uninterested lead
+                  </div>
                 </div>
 
+                <!-- Score for non-choice questions -->
+                <div *ngIf="q.type !== 'choice'" class="form-group score-group">
+                  <label>Score for providing this info:</label>
+                  <input 
+                    type="number" 
+                    [(ngModel)]="q.baseScore"
+                    placeholder="0"
+                    class="input-score-large"
+                    title="Points awarded for completing this question">
+                  <small class="score-help">💡 Award points for providing contact info (e.g., +10 for email, +20 for phone)</small>
+                </div>
+                
                 <!-- Info for special types -->
                 <div *ngIf="q.type === 'contact'" class="info-box">
                   ℹ️ This will ask for both email and phone (at least one required)
@@ -407,6 +430,74 @@ interface Question {
       align-items: center;
     }
 
+    .input-medium {
+      flex: 1;
+    }
+
+    .input-score {
+      width: 80px;
+      padding: 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 600;
+      transition: border-color 0.2s;
+    }
+
+    .input-score:focus {
+      outline: none;
+      border-color: #4CAF50;
+    }
+
+    .input-score[value^="-"] {
+      color: #f44336;
+    }
+
+    .score-info {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: #e8f5e9;
+      border-left: 4px solid #4CAF50;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #2e7d32;
+      line-height: 1.5;
+    }
+
+    .score-group {
+      margin-top: 16px;
+      padding: 12px;
+      background: #f0f8ff;
+      border-radius: 8px;
+      border: 2px solid #2196F3;
+    }
+
+    .input-score-large {
+      width: 120px;
+      padding: 10px;
+      border: 2px solid #2196F3;
+      border-radius: 6px;
+      font-size: 16px;
+      text-align: center;
+      font-weight: 700;
+      transition: border-color 0.2s;
+    }
+
+    .input-score-large:focus {
+      outline: none;
+      border-color: #1976D2;
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.2);
+    }
+
+    .score-help {
+      display: block;
+      margin-top: 8px;
+      color: #1565C0;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
     .btn-small {
       padding: 8px 12px;
       background: #ffebee;
@@ -618,7 +709,9 @@ export class SimpleSurveyBuilderComponent implements OnInit {
       id,
       type,
       question: '',
-      choices: type === 'choice' ? ['', '', ''] : undefined
+      choices: type === 'choice' ? ['', '', ''] : undefined,
+      scores: type === 'choice' ? [0, 0, 0] : undefined,  // Initialize scores with 0
+      baseScore: type !== 'choice' ? 0 : undefined  // Base score for non-choice questions
     };
     this.questions.push(question);
   }
@@ -633,11 +726,16 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     if (!this.questions[questionIndex].choices) {
       this.questions[questionIndex].choices = [];
     }
+    if (!this.questions[questionIndex].scores) {
+      this.questions[questionIndex].scores = [];
+    }
     this.questions[questionIndex].choices!.push('');
+    this.questions[questionIndex].scores!.push(0);  // Default score is 0
   }
 
   removeChoice(questionIndex: number, choiceIndex: number) {
     this.questions[questionIndex].choices!.splice(choiceIndex, 1);
+    this.questions[questionIndex].scores!.splice(choiceIndex, 1);  // Remove corresponding score
   }
 
   trackByIndex(index: number): number {
@@ -750,13 +848,19 @@ export class SimpleSurveyBuilderComponent implements OnInit {
 
       if (q.type === 'choice') {
         const validChoices = q.choices?.filter(c => c && c.trim()) || [];
-        node.choices = validChoices.map(c => ({
-          title: c,
-          next: i < validQuestions.length - 1 ? validQuestions[i + 1].id : undefined
-        }));
+        // Map choices with their scores
+        node.choices = validChoices.map((c, idx) => {
+          const originalIdx = q.choices!.indexOf(c);
+          return {
+            title: c,
+            score: q.scores?.[originalIdx] ?? 0,  // Include score in flow
+            next: i < validQuestions.length - 1 ? validQuestions[i + 1].id : undefined
+          };
+        });
       } else {
         node.openInput = true;
         node.inputType = q.type === 'contact' ? 'dual-contact' : q.type;
+        node.score = q.baseScore ?? 0;  // Include base score for open questions
         node.next = i < validQuestions.length - 1 ? validQuestions[i + 1].id : undefined;
       }
 
@@ -777,7 +881,9 @@ export class SimpleSurveyBuilderComponent implements OnInit {
       id: node.id,
       type: node.choices ? 'choice' : (node.inputType === 'dual-contact' ? 'contact' : node.inputType || 'text'),
       question: node.texts?.[0] || '',
-      choices: node.choices?.map((c: any) => c.title)
+      choices: node.choices?.map((c: any) => c.title),
+      scores: node.choices?.map((c: any) => c.score ?? 0),  // Load scores from flow
+      baseScore: node.score ?? 0  // Load base score for non-choice questions
     }));
   }
 

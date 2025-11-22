@@ -109,11 +109,11 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fetchObjections();
     this.fetchChats();
 
-    // Periodic refresh (kept for safety / reconciliation)
+    // Periodic refresh (kept for safety / reconciliation) - reduced to 3s for faster updates
     this.pollTimer = setInterval(() => {
       this.fetchLeads();
       this.fetchKPIs();
-    }, 10000);
+    }, 3000);
 
     // Live long-poll: cross-SID lead + message events
     this.live.startAll();
@@ -183,6 +183,14 @@ export class AppComponent implements OnInit, OnDestroy {
           this.log('live:', type, 'for unknown sid -> refetch leads', sid);
           this.fetchLeads();
         }
+      }
+
+      // Survey progress updates
+      if (type === 'survey.progress' || type === 'survey.completed') {
+        this.log('live: survey event', type, sid);
+        // Immediately refetch the specific lead to get updated score/answers
+        this.fetchLeads();
+        return;
       }
 
       // B) Message bubbles + update lead.lastMessage

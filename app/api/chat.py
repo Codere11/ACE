@@ -646,12 +646,48 @@ async def _survey_submit_impl(body: SurveySubmitRequest):
     # Ensure lead exists
     _ensure_lead(sid)
     
-    # Store the answer
+    # Store the answer with score calculation
     lead_service.update_survey_answer(sid, node_id, answer)
     
-    # Update progress
+    # Calculate score from answer
+    answer_score = 0
+    try:
+        flow_node = get_node_by_id(node_id)
+        if flow_node:
+            if isinstance(answer, str) and flow_node.get('choices'):
+                # Multiple choice - find the matching choice and get its score
+                for choice in flow_node['choices']:
+                    if choice.get('title') == answer:
+                        answer_score = choice.get('score', 0)
+                        logger.info("Choice answer score for '%s': %d", answer, answer_score)
+                        break
+            elif flow_node.get('openInput'):
+                # Open-ended question - use base score
+                answer_score = flow_node.get('score', 0)
+                logger.info("Open input base score: %d", answer_score)
+    except Exception as e:
+        logger.warning("Failed to get score for answer: %s", e)
+    
+    # Update progress and cumulative score
     all_answers = body.all_answers if body.all_answers else {node_id: answer}
     lead = lead_service.update_survey_progress(sid, progress, all_answers)
+    
+    # Update lead score based on cumulative survey scores
+    if answer_score != 0:
+        lead = _ensure_lead(sid)
+        # Add the answer score to the lead's total score
+        new_score = max(0, min(100, lead.score + answer_score))  # Clamp between 0-100
+        lead.score = new_score
+        
+        # Update interest level based on score
+        if new_score >= 70:
+            lead.interest = 'High'
+        elif new_score >= 40:
+            lead.interest = 'Medium'
+        else:
+            lead.interest = 'Low'
+        
+        logger.info("Updated lead score: %d, interest: %s", new_score, lead.interest)
     
     # Store answer in notes for audit trail
     answer_str = json.dumps(answer) if not isinstance(answer, str) else answer

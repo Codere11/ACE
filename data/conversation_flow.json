@@ -10,14 +10,17 @@
       "choices": [
         {
           "title": "Stanovanje",
+          "score": 20,
           "next": "q2"
         },
         {
           "title": "Hiša",
+          "score": 0,
           "next": "q2"
         },
         {
           "title": "Poslovni prostor",
+          "score": 0,
           "next": "q2"
         }
       ]
@@ -29,6 +32,7 @@
       ],
       "openInput": true,
       "inputType": "dual-contact",
+      "score": 30,
       "next": "thanks"
     },
     {
@@ -37,7 +41,8 @@
         "Hvala! Kmalu se oglasimo."
       ],
       "openInput": true,
-      "inputType": "text"
+      "inputType": "text",
+      "score": 0
     }
   ]
 }
