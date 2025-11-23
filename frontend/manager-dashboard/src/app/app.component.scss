@@ -105,6 +105,37 @@ html, body {
 }
 .user-menu .dropdown button:hover { background: rgba(193,164,108,.12); }
 
+.avatar-upload {
+  padding: 8px 12px;
+  border-bottom: 1px solid #2A2E34;
+}
+
+.upload-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: #C1A46C;
+  color: #121417;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  pointer-events: auto;
+}
+
+.upload-btn:hover {
+  background: #D4B883;
+  transform: translateY(-1px);
+}
+
+.upload-btn.uploading {
+  opacity: 0.6;
+  cursor: wait;
+}
+
 /* -------------------------- Page Background & Shell ------------------------ */
 .dashboard-background {
   background: #0E1014;

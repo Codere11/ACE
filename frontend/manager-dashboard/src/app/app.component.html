@@ -23,8 +23,11 @@
 
 
   <div class="right">
-    <div class="user-menu" (click)="agentMenuOpen=!agentMenuOpen" tabindex="0" (blur)="agentMenuOpen=false">
-      <img class="agent-logo" [src]="agentLogoUrl" alt="Agent" (error)="onAgentLogoError($event)" />
+    <div class="user-menu" (click)="agentMenuOpen=!agentMenuOpen" tabindex="0">
+      <img class="agent-logo" 
+           [src]="currentUser?.avatar_url ? ('http://localhost:8000' + currentUser.avatar_url) : agentLogoUrl" 
+           alt="Agent" 
+           (error)="onAgentLogoError($event)" />
       <span class="username" *ngIf="currentUser">{{ currentUser.username }}</span>
       <div class="dropdown" *ngIf="agentMenuOpen">
         <div class="user-info" *ngIf="currentUser">
@@ -241,30 +244,9 @@
       </ng-template>
     </section>
 
-    <!-- TAB 3: Survey Builder -->
-    <section *ngIf="activeTab==='flow'" style="height: calc(100vh - 200px);">
-      <app-simple-survey-builder></app-simple-survey-builder>
-
-      <!-- Existing analytics below -->
-      <div *ngIf="loadingFunnel" class="spinner">⏳ Nalagam funnel...</div>
-      <section *ngIf="!loadingFunnel && funnel">
-        <div class="funnel">
-          <div class="funnel-step">Awareness → <span class="bar awareness">{{ funnel.awareness }}%</span></div>
-          <div class="funnel-step">Interest → <span class="bar interest">{{ funnel.interest }}%</span></div>
-          <div class="funnel-step">Meeting → <span class="bar meeting">{{ funnel.meeting }}%</span></div>
-          <div class="funnel-step">Close → <span class="bar close">{{ funnel.close }}%</span></div>
-        </div>
-      </section>
-      <div *ngIf="!loadingFunnel && !funnel" class="empty">🚀 Funnel še nima podatkov</div>
-
-      <h3>Objections (Ranked)</h3>
-      <div *ngIf="loadingObjections" class="spinner">⏳ Nalagam objections...</div>
-      <ol *ngIf="!loadingObjections && objections.length > 0">
-        <li *ngFor="let obj of objections">{{ obj }}</li>
-      </ol>
-      <div *ngIf="!loadingObjections && objections.length === 0" class="empty">
-        🚀 Ni še nobenih objections
-      </div>
+    <!-- TAB 3: Surveys -->
+    <section *ngIf="activeTab==='flow'">
+      <app-survey-list></app-survey-list>
     </section>
   </div>
 </div>

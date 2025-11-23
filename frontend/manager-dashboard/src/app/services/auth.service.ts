@@ -11,6 +11,7 @@ interface User {
   role: string;
   organization_id: number;
   organization_slug: string;
+  avatar_url?: string;
 }
 
 @Injectable({
@@ -34,7 +35,7 @@ export class AuthService {
     }
   }
 
-  private validateToken(): void {
+  validateToken(): void {
     this.http.get<any>('/api/auth/me').subscribe({
       next: (response) => {
         if (response && response.user) {
@@ -110,5 +111,11 @@ export class AuthService {
   isAdmin(): boolean {
     const user = this.getCurrentUser();
     return user?.role === 'org_admin';
+  }
+
+  uploadAvatar(file: File): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<any>('/api/users/me/avatar', formData);
   }
 }

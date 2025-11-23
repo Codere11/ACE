@@ -17,6 +17,31 @@ from app.models.schemas import SurveyResponseCreate, SurveyResponseUpdate, Surve
 router = APIRouter(prefix="/s", tags=["public-surveys"])
 
 
+@router.get("/", include_in_schema=False)
+def list_public_surveys(db: Session = Depends(get_db)):
+    """
+    List all live surveys (for dev/testing only).
+    Returns basic info without the flow.
+    Ordered by most recently published first.
+    """
+    surveys = db.query(Survey).filter(
+        Survey.status == "live"
+    ).order_by(
+        Survey.published_at.desc()
+    ).all()
+    
+    return [
+        {
+            "id": s.id,
+            "name": s.name,
+            "slug": s.slug,
+            "survey_type": s.survey_type,
+            "published_at": s.published_at.isoformat() if s.published_at else None
+        }
+        for s in surveys
+    ]
+
+
 @router.get("/{survey_slug}")
 def get_survey_by_slug(
     survey_slug: str,

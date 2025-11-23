@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+
+# Tests
+tests/
+*.db
+ace_dev.db
+
+# Logs
+*.log
+chat_logs.jsonl
+
+# Frontend
+frontend/
+portal/
+ace-mobile-app/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Nginx
+nginx/
+
+# Misc
+.env
+.env.*

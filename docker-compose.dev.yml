@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ace-postgres-dev
+    environment:
+      POSTGRES_DB: ace_production
+      POSTGRES_USER: ace_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ace_dev_password}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ace_user -d ace_production"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ace-network
+
+  # Backend API (FastAPI)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ace-backend-dev
+    environment:
+      DATABASE_URL: postgresql://ace_user:${POSTGRES_PASSWORD:-ace_dev_password}@postgres:5432/ace_production
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-sk-test-key}
+      ACE_SECRET: ${ACE_SECRET:-dev-secret-key-not-for-production}
+      ACE_LOG_LEVEL: ${ACE_LOG_LEVEL:-DEBUG}
+      ACE_ENFORCE_DUAL_CONTACT: ${ACE_ENFORCE_DUAL_CONTACT:-0}
+    volumes:
+      - ./static:/app/static
+      - ./instances:/app/instances
+      - ./app:/app/app  # Mount source code for hot reload (optional)
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+  # Frontend: ACE Chatbot
+  chatbot:
+    build:
+      context: ./frontend/ACE-Chatbot
+      dockerfile: Dockerfile
+    container_name: ace-chatbot-dev
+    ports:
+      - "4200:80"
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+  # Frontend: Manager Dashboard
+  dashboard:
+    build:
+      context: ./frontend/manager-dashboard
+      dockerfile: Dockerfile
+    container_name: ace-dashboard-dev
+    ports:
+      - "4400:80"
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+  # Frontend: Portal (Admin)
+  portal:
+    build:
+      context: ./portal/portal
+      dockerfile: Dockerfile
+    container_name: ace-portal-dev
+    ports:
+      - "4500:80"
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+volumes:
+  postgres_dev_data:
+    driver: local
+
+networks:
+  ace-network:
+    driver: bridge

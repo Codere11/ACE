@@ -8,13 +8,16 @@
 
 <!-- Survey Mode -->
 <div class="agent-page" *ngIf="appMode === 'survey'">
-  <app-survey-form
-    [flow]="surveyFlow"
-    [sid]="sid"
-    [backendUrl]="backendUrl"
-    (completed)="onSurveyCompleted()"
-    (paused)="onSurveyPaused()"
-  ></app-survey-form>
+  <ng-container *ngIf="surveyFlowKey">
+    <app-survey-form
+      *ngIf="surveyFlow"
+      [flow]="surveyFlow"
+      [sid]="sid"
+      [backendUrl]="backendUrl"
+      (completed)="onSurveyCompleted()"
+      (paused)="onSurveyPaused()"
+    ></app-survey-form>
+  </ng-container>
 </div>
 
 <!-- Chat Mode -->

@@ -4,3 +4,24 @@ venv/
 __pycache__/
 *.pt
 *.safetensors
+
+# Environment
+.env
+*.db
+
+# Docker
+nginx/ssl/
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Frontend
+node_modules/
+dist/
+.angular/
+
+# Backups
+*.sql
+*.tar.gz

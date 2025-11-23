@@ -1,17 +1,20 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { SurveysService } from '../services/surveys.service';
 import { Survey } from '../models/survey.model';
+import { SurveyFormComponent } from './survey-form.component';
+import { SimpleSurveyBuilderComponent } from '../simple-survey-builder/simple-survey-builder.component';
 
 @Component({
   selector: 'app-survey-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, SurveyFormComponent, SimpleSurveyBuilderComponent],
   template: `
-    <div class="survey-list">
+    <div class="survey-list" *ngIf="!showingForm && !showingBuilder">
       <div class="header">
         <h1>Surveys</h1>
-        <button class="btn-primary">+ Create Survey</button>
+        <button class="btn-primary" (click)="createSurvey()">+ Create Survey</button>
       </div>
       
       @if (loading) {
@@ -32,7 +35,10 @@ import { Survey } from '../models/survey.model';
           <tbody>
             @for (survey of surveys; track survey.id) {
               <tr>
-                <td>{{survey.name}}</td>
+                <td>
+                  <a class="survey-link" (click)="editSurvey(survey.id)">{{survey.name}}</a>
+                  <div class="survey-url">{{getPublicUrl(survey.slug)}}</div>
+                </td>
                 <td>{{survey.survey_type}}</td>
                 <td>
                   <span class="status-badge" [class]="survey.status">
@@ -40,14 +46,15 @@ import { Survey } from '../models/survey.model';
                   </span>
                 </td>
                 <td>{{survey.created_at | date}}</td>
-                <td>
-                  <button (click)="viewStats(survey.id)">Stats</button>
+                <td class="actions">
+                  <button class="btn-edit" (click)="editSurvey(survey.id)">Edit Flow</button>
                   @if (survey.status === 'draft') {
-                    <button (click)="publish(survey.id)">Publish</button>
+                    <button class="btn-publish" (click)="publish(survey.id)">Publish</button>
                   }
                   @if (survey.status === 'live') {
-                    <button (click)="archive(survey.id)">Archive</button>
+                    <button class="btn-archive" (click)="archive(survey.id)">Archive</button>
                   }
+                  <button class="btn-delete" (click)="deleteSurvey(survey.id, survey.name)">Delete</button>
                 </td>
               </tr>
             }
@@ -55,6 +62,22 @@ import { Survey } from '../models/survey.model';
         </table>
       }
     </div>
+
+    <!-- Inline Survey Form -->
+    <app-survey-form 
+      *ngIf="showingForm" 
+      [inlineMode]="true"
+      (created)="onSurveyCreated($event)"
+      (cancelled)="onFormCancel()"
+    ></app-survey-form>
+
+    <!-- Inline Survey Builder -->
+    <app-simple-survey-builder
+      *ngIf="showingBuilder && editingSurveyId"
+      [surveyId]="editingSurveyId"
+      [inlineMode]="true"
+      (closed)="onBuilderClose()"
+    ></app-simple-survey-builder>
   `,
   styles: [`
     .survey-list {
@@ -89,6 +112,80 @@ import { Survey } from '../models/survey.model';
       text-align: left;
       border-bottom: 1px solid #ddd;
     }
+
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+      color: #555;
+    }
+
+    .survey-link {
+      color: #3498db;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .survey-link:hover {
+      text-decoration: underline;
+    }
+
+    .survey-url {
+      font-size: 11px;
+      color: #999;
+      margin-top: 4px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .actions button {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-edit {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #2980b9;
+    }
+
+    .btn-publish {
+      background: #27ae60;
+      color: white;
+    }
+
+    .btn-publish:hover {
+      background: #229954;
+    }
+
+    .btn-archive {
+      background: #95a5a6;
+      color: white;
+    }
+
+    .btn-archive:hover {
+      background: #7f8c8d;
+    }
+
+    .btn-delete {
+      background: #e74c3c;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #c0392b;
+    }
     
     .status-badge {
       padding: 4px 12px;
@@ -116,7 +213,10 @@ export class SurveyListComponent implements OnInit {
   surveys: Survey[] = [];
   loading = true;
 
-  constructor(private surveysService: SurveysService) {}
+  constructor(
+    private surveysService: SurveysService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
     this.loadSurveys();
@@ -147,7 +247,57 @@ export class SurveyListComponent implements OnInit {
     });
   }
 
+  showingForm = false;
+  showingBuilder = false;
+  editingSurveyId: number | null = null;
+
+  createSurvey() {
+    this.editingSurveyId = null;
+    this.showingForm = true;
+  }
+
+  editSurvey(surveyId: number) {
+    this.editingSurveyId = surveyId;
+    this.showingBuilder = true;
+  }
+
+  onSurveyCreated(surveyId: number) {
+    this.showingForm = false;
+    this.editingSurveyId = surveyId;
+    this.showingBuilder = true;
+  }
+
+  onFormCancel() {
+    this.showingForm = false;
+    this.editingSurveyId = null;
+  }
+
+  onBuilderClose() {
+    this.showingBuilder = false;
+    this.editingSurveyId = null;
+    this.loadSurveys();
+  }
+
+  deleteSurvey(surveyId: number, surveyName: string) {
+    if (confirm(`Are you sure you want to delete "${surveyName}"? This cannot be undone.`)) {
+      this.surveysService.deleteSurvey(surveyId).subscribe({
+        next: () => {
+          this.loadSurveys();
+        },
+        error: (err) => {
+          console.error('Error deleting survey:', err);
+          alert('Failed to delete survey');
+        }
+      });
+    }
+  }
+
+  getPublicUrl(slug: string): string {
+    return `${window.location.origin}/s/${slug}`;
+  }
+
   viewStats(surveyId: number) {
     console.log('View stats for survey:', surveyId);
+    // TODO: Navigate to stats page
   }
 }

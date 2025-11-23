@@ -39,6 +39,7 @@ class UserBase(BaseModel):
     email: str = Field(..., regex=r"^[\w\.-]+@[\w\.-]+\.\w+$")  # Basic email validation
     role: Literal["org_admin", "org_user"] = "org_user"
     is_active: bool = True
+    avatar_url: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -52,6 +53,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = Field(None, min_length=6)
     role: Optional[Literal["org_admin", "org_user"]] = None
     is_active: Optional[bool] = None
+    avatar_url: Optional[str] = None
 
 
 class UserResponse(UserBase):

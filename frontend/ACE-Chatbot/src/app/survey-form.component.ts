@@ -375,7 +375,15 @@ export class SurveyFormComponent implements OnInit, OnDestroy, OnChanges {
     console.log('=== SURVEY FORM CHANGES ==>', changes);
     if (changes['flow'] && changes['flow'].currentValue) {
       console.log('Flow changed! New value:', changes['flow'].currentValue);
-      this.initializeFlow();
+      // Only reinitialize if survey hasn't started yet (no answers)
+      if (this.answers.size === 0) {
+        console.log('Survey not started yet, reinitializing with new flow');
+        this.initializeFlow();
+      } else {
+        console.log('Survey in progress, keeping current state (user has', this.answers.size, 'answers)');
+        // Update flow but don't reset progress
+        // The user will see new flow on next survey start
+      }
     }
   }
   

@@ -54,8 +54,9 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   };
 
   // ====== Agent identity ======
-  agentName = 'Matic';
-  agentPhotoUrl = '/agents/matic.png';
+  agentName = 'Agent';
+  agentPhotoUrl = '/agents/default.png';
+  organizationSlug: string | null = null;
 
   // ====== Chat state ======
   messages: Message[] = [];
@@ -81,6 +82,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   // Survey mode (NEW)
   appMode: 'survey' | 'chat' = 'survey';  // Default to survey mode
   surveyFlow: any = null;
+  surveyFlowKey: string | null = 'flow_' + Date.now();  // Key to force component remount
   surveyCompleted = false;
 
   contactPending = false;
@@ -121,6 +123,12 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     if (!this.isBrowser) return;
+
+    // Detect organization from URL or subdomain
+    this.detectOrganization();
+    
+    // Load organization avatar
+    this.loadOrganizationAvatar();
 
     this.d('ngOnInit → starting LiveEvents for SID', this.sid);
     this.live.start(this.sid);
@@ -189,11 +197,16 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     // Survey mode loads its own flow from loadSurveyFlow()
   }
 
+  private surveyPollInterval: any;
+
   ngOnDestroy() {
     if (!this.isBrowser) return;
     this.d('ngOnDestroy → stopping LiveEvents');
     this.liveSub?.unsubscribe();
     this.live.stop();
+    if (this.surveyPollInterval) {
+      clearInterval(this.surveyPollInterval);
+    }
   }
 
   // ---------- Dual contact sender ----------
@@ -731,37 +744,59 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   private loadSurveyFlow() {
     this.i('=== LOADING SURVEY FLOW FROM BACKEND ==>');
     
-    // Load from backend (same endpoint as manager dashboard)
-    this.http.get<any>(`${this.backendUrl}/api/survey/flow`).subscribe({
-      next: (flow) => {
-        console.log('=== SURVEY FLOW LOADED SUCCESSFULLY ==>');
-        console.log('Full flow object:', JSON.stringify(flow, null, 2));
-        console.log('Flow.version:', flow.version);
-        console.log('Flow.start:', flow.start);
-        console.log('Flow.nodes:', flow.nodes);
-        console.log('Flow.nodes.length:', flow.nodes?.length);
-        if (flow.nodes) {
-          flow.nodes.forEach((node: any, i: number) => {
-            console.log(`Node ${i}:`, node);
-          });
+    // Detect survey slug from URL or use default
+    const surveySlug = this.detectSurveySlug();
+    this.i('Loading survey with slug:', surveySlug);
+    
+    // Load from public survey API or get list of surveys
+    let endpoint: string;
+    
+    if (surveySlug) {
+      endpoint = `${this.backendUrl}/s/${surveySlug}`;
+    } else {
+      // No slug - try to get first available survey
+      this.i('No slug provided - loading first available survey');
+      this.loadFirstAvailableSurvey();
+      return;
+    }
+    
+    // Start polling
+    this.startSurveyPolling(endpoint);
+  }
+
+  private startSurveyPolling(endpoint: string) {
+    // Load immediately
+    this.fetchSurveyFlow(endpoint);
+    
+    // Poll every 3 seconds for updates
+    if (this.surveyPollInterval) clearInterval(this.surveyPollInterval);
+    this.surveyPollInterval = setInterval(() => {
+      this.fetchSurveyFlow(endpoint);
+    }, 3000);
+  }
+
+  private fetchSurveyFlow(endpoint: string) {
+    const cacheBuster = `?_t=${Date.now()}`;
+    this.http.get<any>(`${endpoint}${cacheBuster}`).subscribe({
+      next: (response) => {
+        const flow = response.flow || response;
+        const newFlowJson = JSON.stringify(flow);
+        const currentFlowJson = JSON.stringify(this.surveyFlow);
+        
+        if (newFlowJson !== currentFlowJson) {
+          console.log('📡 Survey updated! Reloading flow...');
+          this.surveyFlow = flow;
+          // Force remount by nulling then resetting key
+          this.surveyFlowKey = null;
+          setTimeout(() => {
+            this.surveyFlowKey = 'flow_' + Date.now();
+          }, 0);
+          console.log('Flow loaded:', flow.nodes?.length || 0, 'questions');
         }
-        this.surveyFlow = flow;
-        console.log('this.surveyFlow is now:', this.surveyFlow);
       },
       error: (err) => {
         this.e('Failed to load survey flow from backend', err);
-        // Fallback to localStorage
-        const saved = localStorage.getItem('ace_survey_flow');
-        if (saved) {
-          try {
-            this.surveyFlow = JSON.parse(saved);
-            this.i('Survey flow loaded from localStorage');
-            return;
-          } catch (e) {
-            this.w('Failed to parse localStorage flow', e);
-          }
-        }
-        // Last resort: use default
+        // Use default if backend fails
         this.surveyFlow = this.getDefaultSurvey();
         this.i('Using default survey flow');
       }
@@ -810,5 +845,139 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
       _id: this.rid('MSG')
     });
     this.scrollToBottomSoon();
+  }
+
+  // ===== Organization Detection & Avatar Loading =====
+  private detectOrganization() {
+    if (!this.isBrowser) return;
+    
+    try {
+      // Method 1: Check URL path (e.g., /organizations/acme-realty/chatbot)
+      const path = window.location.pathname;
+      const orgMatch = path.match(/\/organizations\/([^\/]+)/);
+      if (orgMatch) {
+        this.organizationSlug = orgMatch[1];
+        this.d('Organization detected from path:', this.organizationSlug);
+        return;
+      }
+      
+      // Method 2: Check subdomain (e.g., acme.yourdomain.com)
+      const hostname = window.location.hostname;
+      const parts = hostname.split('.');
+      if (parts.length >= 3) {
+        // Subdomain exists (assuming format: subdomain.domain.tld)
+        this.organizationSlug = parts[0];
+        this.d('Organization detected from subdomain:', this.organizationSlug);
+        return;
+      }
+      
+      // Method 3: Check query parameter (e.g., ?org=acme-realty)
+      const params = new URLSearchParams(window.location.search);
+      const orgParam = params.get('org');
+      if (orgParam) {
+        this.organizationSlug = orgParam;
+        this.d('Organization detected from query param:', this.organizationSlug);
+        return;
+      }
+      
+      // Method 4: Check localStorage (fallback for development)
+      const storedOrg = localStorage.getItem('ace_organization_slug');
+      if (storedOrg) {
+        this.organizationSlug = storedOrg;
+        this.d('Organization detected from localStorage:', this.organizationSlug);
+        return;
+      }
+      
+      this.w('No organization detected - using default avatar');
+    } catch (err) {
+      this.e('Error detecting organization:', err);
+    }
+  }
+
+  private loadFirstAvailableSurvey() {
+    // Get list of published surveys and load the most recently published one
+    this.http.get<any[]>(`${this.backendUrl}/s/`).subscribe({
+      next: (surveys) => {
+        if (surveys && surveys.length > 0) {
+          const mostRecentSurvey = surveys[0]; // Already sorted by published_at DESC
+          this.i('Loading most recently published survey:', mostRecentSurvey.slug, 'published at:', mostRecentSurvey.published_at);
+          this.loadSurveyBySlug(mostRecentSurvey.slug);
+        } else {
+          this.w('No published surveys found - using default');
+          this.surveyFlow = this.getDefaultSurvey();
+        }
+      },
+      error: (err) => {
+        this.w('Failed to load surveys list - using default', err);
+        this.surveyFlow = this.getDefaultSurvey();
+      }
+    });
+  }
+
+  private loadSurveyBySlug(slug: string) {
+    const endpoint = `${this.backendUrl}/s/${slug}`;
+    this.startSurveyPolling(endpoint);
+  }
+
+  private detectSurveySlug(): string | null {
+    if (!this.isBrowser) return null;
+    try {
+      // Method 1: /s/{slug} path pattern
+      const path = window.location.pathname;
+      const match = path.match(/\/s\/([^\/]+)/);
+      if (match) {
+        this.i('Survey slug from path:', match[1]);
+        return match[1];
+      }
+      
+      // Method 2: Query parameter ?survey=slug
+      const params = new URLSearchParams(window.location.search);
+      const qp = params.get('survey');
+      if (qp) {
+        this.i('Survey slug from query:', qp);
+        return qp;
+      }
+      
+      // Always load from backend - don't use stale localStorage
+      this.i('No explicit survey slug - will load most recent published survey from backend');
+    } catch (e) {
+      this.w('Error detecting survey slug', e);
+    }
+    return null;
+  }
+
+  private loadOrganizationAvatar() {
+    if (!this.organizationSlug) {
+      this.i('No organization slug - keeping default avatar');
+      return;
+    }
+    
+    this.i('Loading avatar for organization:', this.organizationSlug);
+    
+    this.http.get<any>(`${this.backendUrl}/api/organizations/${this.organizationSlug}/avatar`).subscribe({
+      next: (response) => {
+        this.i('Organization avatar response:', response);
+        
+        if (response.avatar_url) {
+          // Prepend backend URL if it's a relative path
+          this.agentPhotoUrl = response.avatar_url.startsWith('http') 
+            ? response.avatar_url 
+            : `${this.backendUrl}${response.avatar_url}`;
+          this.i('Agent photo URL set to:', this.agentPhotoUrl);
+        } else {
+          this.i('No avatar_url in response - using default');
+        }
+        
+        // Optionally update agent name from organization
+        if (response.organization_name) {
+          this.agentName = response.organization_name;
+          this.i('Agent name set to:', this.agentName);
+        }
+      },
+      error: (err) => {
+        this.w('Failed to load organization avatar:', err);
+        this.w('Using default avatar');
+      }
+    });
   }
 }

@@ -1,16 +1,19 @@
-import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { HttpClientModule } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
 
 import { DashboardService, Lead, KPIs, Funnel, ChatLog } from './services/dashboard.service';
 import { AuthService } from './services/auth.service';
 import { NotesTableComponent } from './notes-table/notes-table.component';
 import { LiveEventsService, ChatEvent } from './services/live-events.service';
 import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
 // ✅ Flow Designer
 import { SimpleSurveyBuilderComponent } from './simple-survey-builder/simple-survey-builder.component';
 import { SurveyAnswersComponent } from './survey-answers/survey-answers.component';
+import { SurveyListComponent } from './surveys/survey-list.component';
 
 const SELECT_KEY = 'ace_notes_selected_lead_sid';
 
@@ -21,9 +24,10 @@ const SELECT_KEY = 'ace_notes_selected_lead_sid';
     CommonModule,
     HttpClientModule,
     FormsModule,
+    RouterModule,
     NotesTableComponent,
-    SimpleSurveyBuilderComponent,
-    SurveyAnswersComponent
+    SurveyAnswersComponent,
+    SurveyListComponent
   ],
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
@@ -85,11 +89,15 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly LS_FLOW = 'ace_flow_designer_json';
 
   currentUser: any = null;
+  uploadingAvatar = false;
+  
+  @ViewChild('avatarInput') avatarInput?: ElementRef<HTMLInputElement>;
 
   constructor(
     private dashboardService: DashboardService,
     private live: LiveEventsService,
     private authService: AuthService,
+    private router: Router,
     @Inject(PLATFORM_ID) private platformId: Object
   ) {
     if (isPlatformBrowser(this.platformId)) {
@@ -104,6 +112,16 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
+
+    // GLOBAL CLICK TEST
+    if (isPlatformBrowser(this.platformId)) {
+      window.addEventListener('click', (e: any) => {
+        console.log('GLOBAL CLICK DETECTED:', e.target);
+        if (e.target.classList?.contains('upload-btn')) {
+          console.log('!!!!! UPLOAD BUTTON WAS CLICKED !!!!!');
+        }
+      });
+    }
 
     // Subscribe to current user
     this.authService.currentUser$.subscribe(user => {
@@ -498,8 +516,70 @@ export class AppComponent implements OnInit, OnDestroy {
     this.authService.logout();
   }
 
+  onClickChangeAvatar(event: Event): void {
+    event.stopPropagation();
+    event.preventDefault();
+    this.log('Change Avatar button clicked');
+    
+    // Use ViewChild reference to trigger file input
+    if (this.avatarInput?.nativeElement) {
+      this.log('Opening file dialog via ViewChild...');
+      this.avatarInput.nativeElement.click();
+    } else {
+      console.error('ERROR: avatarInput ViewChild not available!');
+      alert('ERROR: Could not access file input element');
+    }
+  }
+
+  onAvatarUpload(event: Event): void {
+    this.log('onAvatarUpload triggered');
+    const input = event.target as HTMLInputElement;
+    
+    if (!input.files || input.files.length === 0) {
+      this.log('No files selected');
+      return;
+    }
+
+    const file = input.files[0];
+    this.log('File selected:', file.name, file.type, file.size);
+    
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    this.uploadingAvatar = true;
+    this.authService.uploadAvatar(file).subscribe({
+      next: (response) => {
+        this.log('Avatar uploaded successfully:', response);
+        // Refresh current user to get new avatar_url
+        this.authService.validateToken();
+        this.uploadingAvatar = false;
+        // Keep menu open after upload
+        setTimeout(() => this.agentMenuOpen = true, 100);
+      },
+      error: (err) => {
+        console.error('[ACE-DASH] Avatar upload failed:', err);
+        alert('Failed to upload avatar: ' + (err.error?.detail || err.message));
+        this.uploadingAvatar = false;
+      }
+    });
+
+    // Reset input so the same file can be selected again
+    input.value = '';
+  }
+
   // ✅ Flow Designer change hook (for future backend integration)
   onFlowChange(newFlow: any) {
     try { localStorage.setItem(this.LS_FLOW, JSON.stringify(newFlow)); } catch {}
+  }
+
+  onFlowTabClick() {
+    this.activeTab = 'flow';
+    this.router.navigate(['/surveys']);
+  }
+
+  goToSurveys() {
+    this.router.navigate(['/surveys']);
   }
 }

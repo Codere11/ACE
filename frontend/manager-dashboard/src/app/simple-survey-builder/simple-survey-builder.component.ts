@@ -1,8 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { HttpClient } from '@angular/common/http';
+import { ActivatedRoute, Router } from '@angular/router';
+import { SurveysService } from '../services/surveys.service';
+import { Survey } from '../models/survey.model';
 
 interface Question {
   id: string;
@@ -20,10 +23,16 @@ interface Question {
   template: `
     <div class="builder-container">
       <div class="builder-header">
-        <h2>📋 Survey Builder</h2>
+        <div class="header-left">
+          <button class="btn-back" (click)="goBack()">← Back to Surveys</button>
+          <div class="survey-info" *ngIf="survey">
+            <h2>📋 {{ survey.name }}</h2>
+            <span class="survey-status" [class]="survey.status">{{ survey.status }}</span>
+          </div>
+        </div>
         <div class="actions">
-          <button class="btn-secondary" (click)="loadSurvey()">📂 Load</button>
-          <button class="btn-primary" (click)="saveSurvey()">💾 Save Survey</button>
+          <button class="btn-secondary" (click)="openPreview()" *ngIf="survey" [disabled]="loading">🚀 Test Live</button>
+          <button class="btn-primary" (click)="saveSurvey()" [disabled]="loading">💾 Save Flow</button>
         </div>
       </div>
 
@@ -210,10 +219,53 @@ interface Question {
       border-bottom: 2px solid #e0e0e0;
     }
 
-    .builder-header h2 {
-      margin: 0;
-      font-size: 24px;
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .btn-back {
+      padding: 8px 16px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
       color: #333;
+    }
+
+    .btn-back:hover {
+      background: #e0e0e0;
+    }
+
+    .survey-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .survey-info h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #333;
+    }
+
+    .survey-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .survey-status.draft {
+      background: #f39c12;
+      color: white;
+    }
+
+    .survey-status.live {
+      background: #27ae60;
+      color: white;
     }
 
     .actions {
@@ -691,16 +743,38 @@ interface Question {
   `]
 })
 export class SimpleSurveyBuilderComponent implements OnInit {
+  @Input() surveyId?: number;
+  @Input() inlineMode = false;
+  @Output() closed = new EventEmitter<void>();
+
   questions: Question[] = [];
   showPreview = false;
   showToast = false;
   toastMessage = '';
+  survey?: Survey;
+  loading = false;
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    private route: ActivatedRoute,
+    private router: Router,
+    private surveysService: SurveysService
+  ) {}
 
   ngOnInit() {
-    // Load existing survey if available
-    this.loadSurvey();
+    // Get survey ID from route params or input
+    if (!this.surveyId) {
+      const id = this.route.snapshot.paramMap.get('id');
+      if (id) {
+        this.surveyId = parseInt(id);
+      }
+    }
+    
+    if (this.surveyId) {
+      this.loadSurvey();
+    } else {
+      console.warn('No survey ID provided');
+    }
   }
 
   addQuestion(type: Question['type']) {
@@ -762,6 +836,11 @@ export class SimpleSurveyBuilderComponent implements OnInit {
   }
 
   saveSurvey() {
+    if (!this.surveyId) {
+      this.showToastMessage('⚠️ No survey selected');
+      return;
+    }
+
     // Validate questions
     const validQuestions = this.questions.filter(q => q.question && q.question.trim());
     if (validQuestions.length === 0) {
@@ -780,42 +859,45 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     // Convert to flow format
     const flow = this.convertToFlow();
     
-    // Save to backend
-    this.http.post('http://localhost:8000/api/survey/flow', flow).subscribe({
+    // Save to backend via surveys API
+    this.loading = true;
+    this.surveysService.updateSurvey(this.surveyId, {
+      flow_json: flow
+    }).subscribe({
       next: () => {
-        // Also save to localStorage as backup
-        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
-        this.showToastMessage('✅ Survey saved! Live now for all customers.');
+        this.loading = false;
+        const url = this.survey?.slug ? `http://localhost:4200?survey=${this.survey.slug}&t=${Date.now()}` : '';
+        this.showToastMessage(`✅ Saved! Test at: ${url}`);
       },
       error: (err) => {
         console.error('Save error:', err);
-        // Save to localStorage as fallback
-        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
-        this.showToastMessage('⚠️ Saved locally (backend unavailable)');
+        this.loading = false;
+        this.showToastMessage('⚠️ Failed to save: ' + (err.error?.detail || 'Unknown error'));
       }
     });
   }
 
   loadSurvey() {
-    // Load from backend first
-    this.http.get<any>('http://localhost:8000/api/survey/flow').subscribe({
-      next: (flow) => {
-        this.questions = this.convertFromFlow(flow);
-        // Also save to localStorage
-        localStorage.setItem('ace_survey_flow', JSON.stringify(flow));
+    if (!this.surveyId) return;
+
+    this.loading = true;
+    this.surveysService.getSurvey(this.surveyId).subscribe({
+      next: (survey) => {
+        this.survey = survey;
+        this.loading = false;
+        
+        // Load flow if it exists
+        if (survey.flow_json) {
+          this.questions = this.convertFromFlow(survey.flow_json);
+        } else {
+          // Empty survey - start fresh
+          this.questions = [];
+        }
       },
       error: (err) => {
-        console.error('Load error from backend:', err);
-        // Fallback to localStorage
-        const saved = localStorage.getItem('ace_survey_flow');
-        if (saved) {
-          try {
-            const flow = JSON.parse(saved);
-            this.questions = this.convertFromFlow(flow);
-          } catch (e) {
-            console.error('Load error from localStorage:', e);
-          }
-        }
+        console.error('Load error:', err);
+        this.loading = false;
+        this.showToastMessage('⚠️ Failed to load survey');
       }
     });
   }
@@ -891,5 +973,20 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     this.toastMessage = message;
     this.showToast = true;
     setTimeout(() => this.showToast = false, 3000);
+  }
+
+  openPreview() {
+    if (!this.survey) return;
+    const url = `http://localhost:4200?survey=${this.survey.slug}&t=${Date.now()}`;
+    window.open(url, 'ace_chatbot_preview');
+    this.showToastMessage('👀 Opening chatbot preview...');
+  }
+
+  goBack() {
+    if (this.inlineMode) {
+      this.closed.emit();
+    } else {
+      this.router.navigate(['/surveys']);
+    }
   }
 }

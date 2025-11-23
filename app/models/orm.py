@@ -33,6 +33,9 @@ class User(Base):
     # Role: 'org_admin' (manage org users + surveys) or 'org_user' (view only)
     role: Mapped[str] = mapped_column(String(20), default="org_user")
     
+    # Profile picture URL
+    avatar_url: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    
     # Required: link to organization (no system admins in DB)
     organization_id: Mapped[int] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), index=True

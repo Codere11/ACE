@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import logging
 import os
 
@@ -11,7 +12,7 @@ from app.api import survey_flow
 from app.services.bootstrap_db import create_all
 
 # New multi-tenant API endpoints
-from app.api import organizations, users, surveys, public_survey
+from app.api import organizations, users, surveys, public_survey, avatar, org_avatar
 from app.auth import routes as auth_routes
 
 # 👉 NEW: portal imports (adds login/admin/manager + public flow + static mounting)
@@ -85,8 +86,14 @@ app.include_router(organizations.router)      # /api/organizations
 app.include_router(users.router)              # /api/organizations/{org_id}/users
 app.include_router(surveys.router)            # /api/organizations/{org_id}/surveys
 app.include_router(public_survey.router)      # /s/{survey_slug}
+app.include_router(avatar.router)             # /api/users/me/avatar
+app.include_router(org_avatar.router)         # /api/organizations/{slug}/avatar
 
 logger.info("Routers registered.")
+
+# ---- Static Files -----------------------------------------------------------
+# Mount static directory for avatars and other files
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ---- Startup ----------------------------------------------------------------
 @app.on_event("startup")

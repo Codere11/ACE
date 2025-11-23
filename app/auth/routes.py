@@ -63,6 +63,7 @@ def login(payload: LoginIn, db: Session = Depends(get_db)):
             "role": user.role,
             "organization_id": user.organization_id,
             "organization_slug": org_slug,
+            "avatar_url": user.avatar_url,
             # Backward compatibility
             "tenant_id": user.organization_id,
             "tenant_slug": org_slug,
@@ -93,6 +94,7 @@ def me(authorization: str | None = Header(default=None), db: Session = Depends(g
                     "role": user.role,
                     "organization_id": user.organization_id,
                     "organization_slug": org_slug,
+                    "avatar_url": user.avatar_url,
                 }
             }
     

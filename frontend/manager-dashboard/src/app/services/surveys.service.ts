@@ -21,8 +21,8 @@ export class SurveysService {
   }
 
   listSurveys(status?: string): Observable<Survey[]> {
-    const params = status ? { status } : {};
-    return this.http.get<Survey[]>(`${this.apiUrl}/${this.getOrgId()}/surveys`, { params });
+    const options = status ? { params: { status } } : {};
+    return this.http.get<Survey[]>(`${this.apiUrl}/${this.getOrgId()}/surveys`, options);
   }
 
   getSurvey(surveyId: number): Observable<Survey> {
