@@ -1,4 +1,4 @@
-from app.services.db import Base, engine
+from app.core.db import Base, engine
 # Ensure models are imported so SQLAlchemy knows about them
 from app import models  # noqa: F401
 

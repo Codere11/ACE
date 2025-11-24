@@ -1,0 +1,9 @@
+# Deployment Configuration
+# Fill this in after you get your server
+
+SERVER_IP=your-server-ip-here
+SERVER_USER=root
+SERVER_PATH=/root/ACE-RealEstate
+
+# Then deploy with:
+# ./deploy.sh $(cat .deploy-config | grep SERVER_IP | cut -d'=' -f2)

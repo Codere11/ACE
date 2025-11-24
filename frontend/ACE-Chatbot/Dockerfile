@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (peer deps for Angular 19)
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .

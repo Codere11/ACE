@@ -1,5 +1,5 @@
 classifiers
-modelsmodels/
+models/
 venv/
 __pycache__/
 *.pt
@@ -7,7 +7,13 @@ __pycache__/
 
 # Environment
 .env
+.env.*
+
+# Database files
 *.db
+*.sqlite
+*.sqlite3
+*.jsonl
 
 # Docker
 nginx/ssl/

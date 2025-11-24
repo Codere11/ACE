@@ -1,5 +1,8 @@
 version: '3.8'
 
+# Simple Docker Compose for Local Testing
+# No nginx, direct port access to each service
+
 services:
   # PostgreSQL Database
   postgres:
@@ -8,11 +11,11 @@ services:
     environment:
       POSTGRES_DB: ace_production
       POSTGRES_USER: ace_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ace_dev_password_change_in_production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-test_password_123}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ace_user -d ace_production"]
       interval: 10s
@@ -28,11 +31,11 @@ services:
       dockerfile: Dockerfile
     container_name: ace-backend
     environment:
-      DATABASE_URL: postgresql://ace_user:${POSTGRES_PASSWORD:-ace_dev_password_change_in_production}@postgres:5432/ace_production
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      ACE_SECRET: ${ACE_SECRET:-your-secret-key-change-in-production}
+      DATABASE_URL: postgresql://ace_user:${POSTGRES_PASSWORD:-test_password_123}@postgres:5432/ace_production
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-sk-test-key}
+      ACE_SECRET: ${ACE_SECRET:-test_secret_key_for_local_testing_minimum_32_characters}
       ACE_LOG_LEVEL: ${ACE_LOG_LEVEL:-INFO}
-      ACE_ENFORCE_DUAL_CONTACT: ${ACE_ENFORCE_DUAL_CONTACT:-1}
+      ACE_ENFORCE_DUAL_CONTACT: ${ACE_ENFORCE_DUAL_CONTACT:-0}
     volumes:
       - ./static:/app/static
       - ./instances:/app/instances
@@ -80,7 +83,6 @@ services:
     networks:
       - ace-network
     restart: unless-stopped
-
 
 volumes:
   postgres_data:

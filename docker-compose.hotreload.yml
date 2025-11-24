@@ -1,0 +1,109 @@
+version: '3.8'
+
+# Hot Reload Development Mode
+# Use this on your server for instant code updates without rebuilding
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: ace-postgres
+    environment:
+      POSTGRES_DB: ace_production
+      POSTGRES_USER: ace_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ace_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - ace-network
+
+  # Backend with hot reload - code changes apply immediately!
+  backend:
+    image: python:3.11-slim
+    container_name: ace-backend-hotreload
+    working_dir: /app
+    command: >
+      bash -c "
+        apt-get update && apt-get install -y gcc postgresql-client libpq-dev &&
+        pip install --no-cache-dir -r requirements.txt &&
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      "
+    environment:
+      DATABASE_URL: postgresql://ace_user:${POSTGRES_PASSWORD:-ace_dev_password}@postgres:5432/ace_production
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      ACE_SECRET: ${ACE_SECRET:-dev-secret-key}
+      ACE_LOG_LEVEL: ${ACE_LOG_LEVEL:-DEBUG}
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount code directly for hot reload
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./scripts:/app/scripts
+      - ./requirements.txt:/app/requirements.txt
+      - ./static:/app/static
+      - ./instances:/app/instances
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+  # Frontend builds are still needed, but you can rebuild just one at a time
+  chatbot:
+    build:
+      context: ./frontend/ACE-Chatbot
+      dockerfile: Dockerfile
+    container_name: ace-chatbot
+    ports:
+      - "4200:80"
+    networks:
+      - ace-network
+
+  dashboard:
+    build:
+      context: ./frontend/manager-dashboard
+      dockerfile: Dockerfile
+    container_name: ace-dashboard
+    ports:
+      - "4400:80"
+    networks:
+      - ace-network
+
+  portal:
+    build:
+      context: ./portal/portal
+      dockerfile: Dockerfile
+    container_name: ace-portal
+    ports:
+      - "4500:80"
+    networks:
+      - ace-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: ace-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - chatbot
+      - dashboard
+      - portal
+    networks:
+      - ace-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  ace-network:
+    driver: bridge

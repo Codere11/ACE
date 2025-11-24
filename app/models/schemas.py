@@ -36,7 +36,7 @@ class OrganizationResponse(OrganizationBase):
 # ---------- User Schemas ----------
 class UserBase(BaseModel):
     username: str = Field(..., min_length=3, max_length=80)
-    email: str = Field(..., regex=r"^[\w\.-]+@[\w\.-]+\.\w+$")  # Basic email validation
+    email: str = Field(..., pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")  # Basic email validation
     role: Literal["org_admin", "org_user"] = "org_user"
     is_active: bool = True
     avatar_url: Optional[str] = None
@@ -49,7 +49,7 @@ class UserCreate(UserBase):
 
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=80)
-    email: Optional[str] = Field(None, regex=r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    email: Optional[str] = Field(None, pattern=r"^[\w\.-]+@[\w\.-]+\.\w+$")
     password: Optional[str] = Field(None, min_length=6)
     role: Optional[Literal["org_admin", "org_user"]] = None
     is_active: Optional[bool] = None

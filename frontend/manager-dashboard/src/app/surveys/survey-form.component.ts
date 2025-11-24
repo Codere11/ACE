@@ -42,17 +42,6 @@ import { Survey, SurveyCreate } from '../models/survey.model';
           <small>Public URL: <strong>{{ getPublicUrl() }}</strong></small>
         </div>
 
-        <div class="form-group">
-          <label for="type">Survey Type *</label>
-          <select id="type" [(ngModel)]="surveyType" [disabled]="loading || isEditing">
-            <option value="regular">Regular Survey</option>
-            <option value="ab_test">A/B Test (2 Variants)</option>
-          </select>
-          <small *ngIf="surveyType === 'ab_test'">
-            💡 A/B testing allows you to create two versions of your survey to compare performance
-          </small>
-        </div>
-
         <div class="form-actions">
           <button class="btn-secondary" (click)="goBack()" [disabled]="loading">
             Cancel

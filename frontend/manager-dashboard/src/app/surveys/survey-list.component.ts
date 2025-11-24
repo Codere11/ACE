@@ -26,7 +26,6 @@ import { SimpleSurveyBuilderComponent } from '../simple-survey-builder/simple-su
           <thead>
             <tr>
               <th>Name</th>
-              <th>Type</th>
               <th>Status</th>
               <th>Created</th>
               <th>Actions</th>
@@ -39,7 +38,6 @@ import { SimpleSurveyBuilderComponent } from '../simple-survey-builder/simple-su
                   <a class="survey-link" (click)="editSurvey(survey.id)">{{survey.name}}</a>
                   <div class="survey-url">{{getPublicUrl(survey.slug)}}</div>
                 </td>
-                <td>{{survey.survey_type}}</td>
                 <td>
                   <span class="status-badge" [class]="survey.status">
                     {{survey.status}}

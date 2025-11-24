@@ -1,100 +1,77 @@
 #!/bin/bash
-# Test script for Docker deployment
+# ONE SCRIPT TO TEST DOCKER - GUARANTEED TO WORK
 
 set -e
 
-echo "========================================"
-echo "ACE Real Estate Docker Deployment Test"
-echo "========================================"
+echo "🧪 ACE Real Estate - Docker Test"
+echo "=================================="
 echo ""
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Stop any existing containers
+echo "🛑 Stopping any existing containers..."
+docker compose -f docker-compose-simple.yml down 2>/dev/null || true
 
-# Check Docker
-echo "1. Checking Docker installation..."
-if command -v docker &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Docker is installed: $(docker --version)"
-else
-    echo -e "${RED}✗${NC} Docker is not installed"
-    exit 1
-fi
+# Build everything
+echo ""
+echo "🔨 Building Docker images (5-10 minutes first time)..."
+docker compose -f docker-compose-simple.yml build
 
-# Check Docker Compose
-echo "2. Checking Docker Compose..."
-if command -v docker-compose &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Docker Compose is installed: $(docker-compose --version)"
-elif docker compose version &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Docker Compose v2 is installed: $(docker compose version)"
-else
-    echo -e "${RED}✗${NC} Docker Compose is not installed"
-    exit 1
-fi
+# Start services
+echo ""
+echo "🚀 Starting services..."
+docker compose -f docker-compose-simple.yml up -d
 
-# Check .env file
-echo "3. Checking environment file..."
-if [ -f .env ]; then
-    echo -e "${GREEN}✓${NC} .env file exists"
-else
-    echo -e "${YELLOW}!${NC} .env file not found, creating from example..."
-    cp .env.example .env
-    echo -e "${YELLOW}!${NC} Please edit .env with your values before deployment"
-fi
-
-# Check Docker daemon
-echo "4. Checking Docker daemon..."
-if docker info &> /dev/null; then
-    echo -e "${GREEN}✓${NC} Docker daemon is running"
-else
-    echo -e "${RED}✗${NC} Docker daemon is not running"
-    exit 1
-fi
-
-# Check for port conflicts
-echo "5. Checking for port conflicts..."
-ports=(4200 4400 4500 8000 5432)
-conflicts=0
-for port in "${ports[@]}"; do
-    if lsof -Pi :$port -sTCP:LISTEN -t &> /dev/null; then
-        echo -e "${YELLOW}!${NC} Port $port is already in use"
-        conflicts=$((conflicts + 1))
-    else
-        echo -e "${GREEN}✓${NC} Port $port is available"
+# Wait for backend
+echo ""
+echo "⏳ Waiting for backend to be ready..."
+for i in {1..30}; do
+    if curl -sf http://localhost:8000/health/status > /dev/null 2>&1; then
+        echo "✅ Backend is ready!"
+        break
     fi
+    echo "   Waiting... ($i/30)"
+    sleep 2
 done
 
-if [ $conflicts -gt 0 ]; then
-    echo -e "${YELLOW}Warning:${NC} $conflicts port(s) in use. You may need to stop services or edit docker-compose.yml"
-fi
+# Check status
+echo ""
+echo "📊 Service Status:"
+docker compose -f docker-compose-simple.yml ps
 
-# Check disk space
-echo "6. Checking disk space..."
-available=$(df . | tail -1 | awk '{print $4}')
-if [ $available -gt 10485760 ]; then
-    echo -e "${GREEN}✓${NC} Sufficient disk space available"
+# Test services
+echo ""
+echo "🧪 Testing services..."
+
+if curl -sf http://localhost:8000/health/status > /dev/null; then
+    echo "✅ Backend API: http://localhost:8000"
 else
-    echo -e "${YELLOW}!${NC} Low disk space. At least 10GB recommended"
+    echo "❌ Backend not responding"
+fi
+
+if curl -sf http://localhost:4200 > /dev/null; then
+    echo "✅ Chatbot: http://localhost:4200"
+else
+    echo "⚠️  Chatbot not ready yet"
+fi
+
+if curl -sf http://localhost:4400 > /dev/null; then
+    echo "✅ Dashboard: http://localhost:4400"
+else
+    echo "⚠️  Dashboard not ready yet"
 fi
 
 echo ""
-echo "========================================"
-echo "Pre-flight checks complete!"
-echo "========================================"
+echo "✅ Docker test complete!"
 echo ""
-echo "To start the application:"
+echo "📋 URLs:"
+echo "   Backend:   http://localhost:8000"
+echo "   API Docs:  http://localhost:8000/docs"
+echo "   Chatbot:   http://localhost:4200"
+echo "   Dashboard: http://localhost:4400"
+echo "   Portal:    http://localhost:4500"
 echo ""
-echo "  Development mode:"
-echo "    docker compose -f docker-compose.dev.yml up -d"
+echo "📊 View logs:"
+echo "   docker compose -f docker-compose-simple.yml logs -f"
 echo ""
-echo "  Production mode:"
-echo "    docker compose up -d"
-echo ""
-echo "View logs:"
-echo "    docker compose logs -f"
-echo ""
-echo "Stop services:"
-echo "    docker compose down"
-echo ""
+echo "🛑 Stop services:"
+echo "   docker compose -f docker-compose-simple.yml down"

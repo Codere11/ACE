@@ -4,16 +4,16 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build the Angular app
-RUN npm run build -- --configuration production
+# Build the Angular app (disable SSR for Docker)
+RUN npm run build -- --configuration production --no-ssr
 
 # Production stage
 FROM nginx:alpine

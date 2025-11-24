@@ -14,6 +14,12 @@ logger = logging.getLogger("ace.api.health")
 router = APIRouter()
 
 
+@router.get("/status")
+def status():
+    """Simple health check endpoint"""
+    return {"status": "ok", "service": "ace-backend"}
+
+
 @router.get("/ping")
 def ping():
     logger.info("GET /health/ping")
