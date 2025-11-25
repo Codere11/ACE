@@ -31,3 +31,4 @@ dist/
 # Backups
 *.sql
 *.tar.gz
+ace-mobile/

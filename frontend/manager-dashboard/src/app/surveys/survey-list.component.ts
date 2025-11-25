@@ -5,6 +5,7 @@ import { SurveysService } from '../services/surveys.service';
 import { Survey } from '../models/survey.model';
 import { SurveyFormComponent } from './survey-form.component';
 import { SimpleSurveyBuilderComponent } from '../simple-survey-builder/simple-survey-builder.component';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-survey-list',
@@ -213,7 +214,8 @@ export class SurveyListComponent implements OnInit {
 
   constructor(
     private surveysService: SurveysService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -291,7 +293,9 @@ export class SurveyListComponent implements OnInit {
   }
 
   getPublicUrl(slug: string): string {
-    return `${window.location.origin}/s/${slug}`;
+    const user = this.authService.getCurrentUser();
+    const orgSlug = user?.organization_slug || 'default';
+    return `http://localhost:4200/${orgSlug}/${slug}`;
   }
 
   viewStats(surveyId: number) {

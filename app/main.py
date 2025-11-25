@@ -43,10 +43,15 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:4200",
         "http://127.0.0.1:4200",
+        "http://localhost:4300",  # Mobile app
+        "http://127.0.0.1:4300",
+        "http://10.127.138.51:4300",  # Mobile app on network
         "http://localhost:4400",
         "http://127.0.0.1:4400",
         "http://localhost:4500",
         "http://127.0.0.1:4500",
+        "capacitor://localhost",  # Capacitor app
+        "http://localhost",  # Capacitor app
         # add more origins here if you serve the portal on a different port
     ],
     allow_credentials=True,

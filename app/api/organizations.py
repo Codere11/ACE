@@ -75,6 +75,26 @@ def create_organization(
     return org
 
 
+@router.get("/slug/{org_slug}", response_model=OrganizationResponse)
+def get_organization_by_slug(
+    org_slug: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Get organization by slug (public endpoint for login page).
+    No auth required - used for validating org before login.
+    """
+    org = db.query(Organization).filter(
+        Organization.slug == org_slug,
+        Organization.active == True
+    ).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    return org
+
+
 @router.get("/{org_id}", response_model=OrganizationResponse)
 def get_organization(
     org_id: int,

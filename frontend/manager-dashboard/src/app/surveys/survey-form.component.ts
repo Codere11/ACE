@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { SurveysService } from '../services/surveys.service';
-import { Survey, SurveyCreate } from '../models/survey.model';
+import { Survey, SurveyCreate, SurveyUpdate } from '../models/survey.model';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-survey-form',
@@ -220,7 +221,8 @@ export class SurveyFormComponent implements OnInit {
   constructor(
     private surveysService: SurveysService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -265,7 +267,9 @@ export class SurveyFormComponent implements OnInit {
 
   getPublicUrl(): string {
     if (!this.surveySlug) return 'Enter a slug to see URL';
-    return `${window.location.origin}/s/${this.surveySlug}`;
+    const user = this.authService.getCurrentUser();
+    const orgSlug = user?.organization_slug || 'demo-agency';
+    return `http://localhost:4200/${orgSlug}/${this.surveySlug}`;
   }
 
   isValid(): boolean {
@@ -288,7 +292,9 @@ export class SurveyFormComponent implements OnInit {
         next: (survey) => {
           this.loading = false;
           // Navigate to builder
-          this.router.navigate(['/surveys', survey.id, 'edit']);
+          const user = this.authService.getCurrentUser();
+          const orgSlug = user?.organization_slug || 'demo-agency';
+          this.router.navigate([`/${orgSlug}/surveys`, survey.id, 'edit']);
         },
         error: (err) => {
           console.error('Error updating survey:', err);
@@ -312,7 +318,9 @@ export class SurveyFormComponent implements OnInit {
           if (this.inlineMode) {
             this.created.emit(survey.id);
           } else {
-            this.router.navigate(['/surveys', survey.id, 'edit']);
+            const user = this.authService.getCurrentUser();
+            const orgSlug = user?.organization_slug || 'demo-agency';
+            this.router.navigate([`/${orgSlug}/surveys`, survey.id, 'edit']);
           }
         },
         error: (err) => {
@@ -328,7 +336,9 @@ export class SurveyFormComponent implements OnInit {
     if (this.inlineMode) {
       this.cancelled.emit();
     } else {
-      this.router.navigate(['/surveys']);
+      const user = this.authService.getCurrentUser();
+      const orgSlug = user?.organization_slug || 'demo-agency';
+      this.router.navigate([`/${orgSlug}/surveys`]);
     }
   }
 }

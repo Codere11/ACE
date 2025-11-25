@@ -6,35 +6,51 @@ import { SurveyFormComponent } from './surveys/survey-form.component';
 import { SimpleSurveyBuilderComponent } from './simple-survey-builder/simple-survey-builder.component';
 
 export const routes: Routes = [
+  // Universal login route (no org slug required)
   {
     path: 'login',
     component: LoginComponent
   },
+  // Org-specific login (backward compatibility)
   {
-    path: '',
-    canActivate: [authGuard],
-    loadComponent: () => import('./dashboard-wrapper.component').then(m => m.DashboardWrapperComponent)
+    path: ':org_slug/login',
+    component: LoginComponent
   },
   {
-    path: 'surveys',
+    path: ':org_slug',
     canActivate: [authGuard],
     children: [
       {
         path: '',
-        component: SurveyListComponent
+        loadComponent: () => import('./dashboard-wrapper.component').then(m => m.DashboardWrapperComponent)
       },
       {
-        path: 'new',
-        component: SurveyFormComponent
-      },
-      {
-        path: ':id/edit',
-        component: SimpleSurveyBuilderComponent
-      },
-      {
-        path: ':id/metadata',
-        component: SurveyFormComponent
+        path: 'surveys',
+        children: [
+          {
+            path: '',
+            component: SurveyListComponent
+          },
+          {
+            path: 'new',
+            component: SurveyFormComponent
+          },
+          {
+            path: ':id/edit',
+            component: SimpleSurveyBuilderComponent
+          },
+          {
+            path: ':id/metadata',
+            component: SurveyFormComponent
+          }
+        ]
       }
     ]
+  },
+  // Fallback redirect
+  {
+    path: '',
+    redirectTo: '/login',
+    pathMatch: 'full'
   }
 ];

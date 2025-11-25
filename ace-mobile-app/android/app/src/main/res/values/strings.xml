@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<resources>
-    <string name="app_name">ace-mobile-app</string>
-    <string name="title_activity_main">ace-mobile-app</string>
-    <string name="package_name">com.ace.realestate</string>
-    <string name="custom_url_scheme">com.ace.realestate</string>
-</resources>

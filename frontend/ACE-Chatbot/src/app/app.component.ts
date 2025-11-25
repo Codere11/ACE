@@ -747,12 +747,19 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     // Detect survey slug from URL or use default
     const surveySlug = this.detectSurveySlug();
     this.i('Loading survey with slug:', surveySlug);
+    this.i('Organization slug:', this.organizationSlug);
     
     // Load from public survey API or get list of surveys
     let endpoint: string;
     
-    if (surveySlug) {
+    if (surveySlug && this.organizationSlug) {
+      // New format: /s/{org_slug}/{survey_slug}
+      endpoint = `${this.backendUrl}/s/${this.organizationSlug}/${surveySlug}`;
+      this.i('Using org-specific survey endpoint:', endpoint);
+    } else if (surveySlug) {
+      // Backward compatibility: /s/{survey_slug} (will fail with new backend)
       endpoint = `${this.backendUrl}/s/${surveySlug}`;
+      this.i('Using legacy survey endpoint:', endpoint);
     } else {
       // No slug - try to get first available survey
       this.i('No slug provided - loading first available survey');
@@ -852,26 +859,36 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.isBrowser) return;
     
     try {
-      // Method 1: Check URL path (e.g., /organizations/acme-realty/chatbot)
+      // Method 1: Check URL path with pattern /{org_slug}/{survey_slug}
       const path = window.location.pathname;
-      const orgMatch = path.match(/\/organizations\/([^\/]+)/);
-      if (orgMatch) {
-        this.organizationSlug = orgMatch[1];
-        this.d('Organization detected from path:', this.organizationSlug);
+      const parts = path.split('/').filter(p => p.length > 0);
+      
+      if (parts.length >= 1) {
+        // First path segment is org slug
+        this.organizationSlug = parts[0];
+        this.d('Organization detected from URL path:', this.organizationSlug);
         return;
       }
       
-      // Method 2: Check subdomain (e.g., acme.yourdomain.com)
+      // Method 2: Check URL path (e.g., /organizations/acme-realty/chatbot)
+      const orgMatch = path.match(/\/organizations\/([^\/]+)/);
+      if (orgMatch) {
+        this.organizationSlug = orgMatch[1];
+        this.d('Organization detected from organizations path:', this.organizationSlug);
+        return;
+      }
+      
+      // Method 3: Check subdomain (e.g., acme.yourdomain.com)
       const hostname = window.location.hostname;
-      const parts = hostname.split('.');
-      if (parts.length >= 3) {
+      const hostParts = hostname.split('.');
+      if (hostParts.length >= 3) {
         // Subdomain exists (assuming format: subdomain.domain.tld)
-        this.organizationSlug = parts[0];
+        this.organizationSlug = hostParts[0];
         this.d('Organization detected from subdomain:', this.organizationSlug);
         return;
       }
       
-      // Method 3: Check query parameter (e.g., ?org=acme-realty)
+      // Method 4: Check query parameter (e.g., ?org=acme-realty)
       const params = new URLSearchParams(window.location.search);
       const orgParam = params.get('org');
       if (orgParam) {
@@ -880,7 +897,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
       
-      // Method 4: Check localStorage (fallback for development)
+      // Method 5: Check localStorage (fallback for development)
       const storedOrg = localStorage.getItem('ace_organization_slug');
       if (storedOrg) {
         this.organizationSlug = storedOrg;
@@ -901,7 +918,8 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         if (surveys && surveys.length > 0) {
           const mostRecentSurvey = surveys[0]; // Already sorted by published_at DESC
           this.i('Loading most recently published survey:', mostRecentSurvey.slug, 'published at:', mostRecentSurvey.published_at);
-          this.loadSurveyBySlug(mostRecentSurvey.slug);
+          // Load with org slug from survey response
+          this.loadSurveyBySlug(mostRecentSurvey.slug, mostRecentSurvey.org_slug);
         } else {
           this.w('No published surveys found - using default');
           this.surveyFlow = this.getDefaultSurvey();
@@ -914,23 +932,35 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  private loadSurveyBySlug(slug: string) {
-    const endpoint = `${this.backendUrl}/s/${slug}`;
+  private loadSurveyBySlug(slug: string, orgSlug?: string) {
+    const org = orgSlug || this.organizationSlug || 'default';
+    const endpoint = `${this.backendUrl}/s/${org}/${slug}`;
+    this.i('Loading survey by slug:', slug, 'for org:', org);
     this.startSurveyPolling(endpoint);
   }
 
   private detectSurveySlug(): string | null {
     if (!this.isBrowser) return null;
     try {
-      // Method 1: /s/{slug} path pattern
+      // Method 1: /{org_slug}/{survey_slug} path pattern
       const path = window.location.pathname;
+      const pathParts = path.split('/').filter(p => p.length > 0);
+      
+      if (pathParts.length >= 2) {
+        // Second path segment is survey slug
+        const surveySlug = pathParts[1];
+        this.i('Survey slug from URL path:', surveySlug);
+        return surveySlug;
+      }
+      
+      // Method 2: /s/{slug} path pattern (backward compatibility)
       const match = path.match(/\/s\/([^\/]+)/);
       if (match) {
-        this.i('Survey slug from path:', match[1]);
+        this.i('Survey slug from /s/ path:', match[1]);
         return match[1];
       }
       
-      // Method 2: Query parameter ?survey=slug
+      // Method 3: Query parameter ?survey=slug
       const params = new URLSearchParams(window.location.search);
       const qp = params.get('survey');
       if (qp) {
@@ -966,12 +996,6 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
           this.i('Agent photo URL set to:', this.agentPhotoUrl);
         } else {
           this.i('No avatar_url in response - using default');
-        }
-        
-        // Optionally update agent name from organization
-        if (response.organization_name) {
-          this.agentName = response.organization_name;
-          this.i('Agent name set to:', this.agentName);
         }
       },
       error: (err) => {

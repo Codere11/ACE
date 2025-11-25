@@ -1,7 +1,0 @@
-{
-  "name": "ace-mobile-app",
-  "integrations": {
-    "capacitor": {}
-  },
-  "type": "angular-standalone"
-}

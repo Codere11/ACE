@@ -576,10 +576,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   onFlowTabClick() {
     this.activeTab = 'flow';
-    this.router.navigate(['/surveys']);
+    const orgSlug = this.currentUser?.organization_slug || 'demo-agency';
+    this.router.navigate([`/${orgSlug}/surveys`]);
   }
 
   goToSurveys() {
-    this.router.navigate(['/surveys']);
+    const orgSlug = this.currentUser?.organization_slug || 'demo-agency';
+    this.router.navigate([`/${orgSlug}/surveys`]);
   }
 }

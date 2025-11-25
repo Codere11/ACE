@@ -14,6 +14,8 @@ from app.core.db import get_db
 from app.models.orm import Survey, SurveyResponse as SurveyResponseModel
 from app.models.schemas import SurveyResponseCreate, SurveyResponseUpdate, SurveyResponseDetail
 
+from app.models.orm import Organization
+
 router = APIRouter(prefix="/s", tags=["public-surveys"])
 
 
@@ -24,8 +26,9 @@ def list_public_surveys(db: Session = Depends(get_db)):
     Returns basic info without the flow.
     Ordered by most recently published first.
     """
-    surveys = db.query(Survey).filter(
-        Survey.status == "live"
+    surveys = db.query(Survey).join(Organization).filter(
+        Survey.status == "live",
+        Organization.active == True
     ).order_by(
         Survey.published_at.desc()
     ).all()
@@ -35,6 +38,7 @@ def list_public_surveys(db: Session = Depends(get_db)):
             "id": s.id,
             "name": s.name,
             "slug": s.slug,
+            "org_slug": s.organization.slug,
             "survey_type": s.survey_type,
             "published_at": s.published_at.isoformat() if s.published_at else None
         }
@@ -42,18 +46,29 @@ def list_public_surveys(db: Session = Depends(get_db)):
     ]
 
 
-@router.get("/{survey_slug}")
+@router.get("/{org_slug}/{survey_slug}")
 def get_survey_by_slug(
+    org_slug: str,
     survey_slug: str,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
-    Get survey flow by slug (for regular surveys).
+    Get survey flow by organization slug and survey slug.
     Returns the survey flow JSON for the customer to fill out.
     """
-    # Find survey by slug (must be live)
+    # Find organization by slug
+    org = db.query(Organization).filter(
+        Organization.slug == org_slug,
+        Organization.active == True
+    ).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    # Find survey by slug (must be live and belong to org)
     survey = db.query(Survey).filter(
         Survey.slug == survey_slug,
+        Survey.organization_id == org.id,
         Survey.status == "live"
     ).first()
     
@@ -69,6 +84,7 @@ def get_survey_by_slug(
             "survey_id": survey.id,
             "name": survey.name,
             "slug": survey.slug,
+            "org_slug": org.slug,
             "survey_type": survey.survey_type,
             "variant": variant,
             "flow": flow
@@ -79,22 +95,34 @@ def get_survey_by_slug(
         "survey_id": survey.id,
         "name": survey.name,
         "slug": survey.slug,
+        "org_slug": org.slug,
         "survey_type": survey.survey_type,
         "variant": None,
         "flow": survey.flow_json
     }
 
 
-@router.get("/{survey_slug}/a")
+@router.get("/{org_slug}/{survey_slug}/a")
 def get_survey_variant_a(
+    org_slug: str,
     survey_slug: str,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get A/B test variant A explicitly.
     """
+    # Find organization
+    org = db.query(Organization).filter(
+        Organization.slug == org_slug,
+        Organization.active == True
+    ).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
     survey = db.query(Survey).filter(
         Survey.slug == survey_slug,
+        Survey.organization_id == org.id,
         Survey.status == "live",
         Survey.survey_type == "ab_test"
     ).first()
@@ -109,22 +137,34 @@ def get_survey_variant_a(
         "survey_id": survey.id,
         "name": survey.name,
         "slug": survey.slug,
+        "org_slug": org.slug,
         "survey_type": survey.survey_type,
         "variant": "a",
         "flow": survey.variant_a_flow
     }
 
 
-@router.get("/{survey_slug}/b")
+@router.get("/{org_slug}/{survey_slug}/b")
 def get_survey_variant_b(
+    org_slug: str,
     survey_slug: str,
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
     """
     Get A/B test variant B explicitly.
     """
+    # Find organization
+    org = db.query(Organization).filter(
+        Organization.slug == org_slug,
+        Organization.active == True
+    ).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
     survey = db.query(Survey).filter(
         Survey.slug == survey_slug,
+        Survey.organization_id == org.id,
         Survey.status == "live",
         Survey.survey_type == "ab_test"
     ).first()
@@ -139,14 +179,16 @@ def get_survey_variant_b(
         "survey_id": survey.id,
         "name": survey.name,
         "slug": survey.slug,
+        "org_slug": org.slug,
         "survey_type": survey.survey_type,
         "variant": "b",
         "flow": survey.variant_b_flow
     }
 
 
-@router.post("/{survey_slug}/submit", response_model=SurveyResponseDetail, status_code=201)
+@router.post("/{org_slug}/{survey_slug}/submit", response_model=SurveyResponseDetail, status_code=201)
 def submit_survey_response(
+    org_slug: str,
     survey_slug: str,
     payload: SurveyResponseCreate,
     db: Session = Depends(get_db)
@@ -155,9 +197,19 @@ def submit_survey_response(
     Submit a survey response.
     Creates a new response or updates existing one based on SID.
     """
+    # Find organization
+    org = db.query(Organization).filter(
+        Organization.slug == org_slug,
+        Organization.active == True
+    ).first()
+    
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
     # Find survey by slug
     survey = db.query(Survey).filter(
         Survey.slug == survey_slug,
+        Survey.organization_id == org.id,
         Survey.status == "live"
     ).first()
     

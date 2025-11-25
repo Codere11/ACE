@@ -13,7 +13,7 @@ RUN npm ci --legacy-peer-deps
 COPY . .
 
 # Build the Angular app
-RUN npm run build -- --configuration production
+RUN npm run build -- --configuration production --no-ssr
 
 # Production stage
 FROM nginx:alpine

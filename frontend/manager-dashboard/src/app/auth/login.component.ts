@@ -1,8 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { HttpClient } from '@angular/common/http';
 
 @Component({
   selector: 'app-login',
@@ -11,7 +12,7 @@ import { AuthService } from '../services/auth.service';
   template: `
     <div class="login-container">
       <div class="login-box">
-        <h1>ACE Manager Login</h1>
+        <h1>{{orgName || 'ACE'}} Login</h1>
         
         @if (error) {
           <div class="error">{{error}}</div>
@@ -115,27 +116,63 @@ import { AuthService } from '../services/auth.service';
     }
   `]
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   username = '';
   password = '';
   loading = false;
   error = '';
+  orgSlug = '';
+  orgName = '';
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private http: HttpClient
   ) {}
+
+  ngOnInit() {
+    // Extract org slug from URL (if present)
+    this.route.params.subscribe(params => {
+      this.orgSlug = params['org_slug'] || '';
+      // Load organization info only if org slug is in URL
+      if (this.orgSlug) {
+        this.loadOrgInfo();
+      }
+    });
+  }
+
+  loadOrgInfo() {
+    this.http.get<any>(`/api/organizations/slug/${this.orgSlug}`).subscribe({
+      next: (org) => {
+        this.orgName = org.name;
+      },
+      error: () => {
+        this.error = 'Organization not found';
+      }
+    });
+  }
 
   onSubmit() {
     this.error = '';
     this.loading = true;
 
     this.authService.login(this.username, this.password).subscribe({
-      next: () => {
-        this.router.navigate(['/']);
+      next: (response) => {
+        // If org slug was in URL, verify user belongs to it
+        if (this.orgSlug && response.user.organization_slug !== this.orgSlug) {
+          this.error = 'You do not belong to this organization';
+          this.authService.logout();
+          this.loading = false;
+          return;
+        }
+        
+        // Navigate to user's org dashboard (from their credentials)
+        const userOrgSlug = response.user.organization_slug;
+        this.router.navigate([`/${userOrgSlug}`]);
       },
       error: (err) => {
-        this.error = 'Login failed';
+        this.error = 'Login failed. Please check your credentials.';
         this.loading = false;
       }
     });

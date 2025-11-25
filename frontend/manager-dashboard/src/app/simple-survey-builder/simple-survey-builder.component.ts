@@ -6,6 +6,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { SurveysService } from '../services/surveys.service';
 import { Survey } from '../models/survey.model';
+import { AuthService } from '../services/auth.service';
 
 interface Question {
   id: string;
@@ -758,7 +759,8 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
-    private surveysService: SurveysService
+    private surveysService: SurveysService,
+    private authService: AuthService
   ) {}
 
   ngOnInit() {
@@ -866,7 +868,9 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     }).subscribe({
       next: () => {
         this.loading = false;
-        const url = this.survey?.slug ? `http://localhost:4200?survey=${this.survey.slug}&t=${Date.now()}` : '';
+        const user = this.authService.getCurrentUser();
+        const orgSlug = user?.organization_slug || 'demo-agency';
+        const url = this.survey?.slug ? `http://localhost:4200/${orgSlug}/${this.survey.slug}?t=${Date.now()}` : '';
         this.showToastMessage(`✅ Saved! Test at: ${url}`);
       },
       error: (err) => {
@@ -977,7 +981,9 @@ export class SimpleSurveyBuilderComponent implements OnInit {
 
   openPreview() {
     if (!this.survey) return;
-    const url = `http://localhost:4200?survey=${this.survey.slug}&t=${Date.now()}`;
+    const user = this.authService.getCurrentUser();
+    const orgSlug = user?.organization_slug || 'demo-agency';
+    const url = `http://localhost:4200/${orgSlug}/${this.survey.slug}?t=${Date.now()}`;
     window.open(url, 'ace_chatbot_preview');
     this.showToastMessage('👀 Opening chatbot preview...');
   }
@@ -986,7 +992,9 @@ export class SimpleSurveyBuilderComponent implements OnInit {
     if (this.inlineMode) {
       this.closed.emit();
     } else {
-      this.router.navigate(['/surveys']);
+      const user = this.authService.getCurrentUser();
+      const orgSlug = user?.organization_slug || 'demo-agency';
+      this.router.navigate([`/${orgSlug}/surveys`]);
     }
   }
 }
