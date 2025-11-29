@@ -655,6 +655,31 @@ async def _survey_submit_impl(body: SurveySubmitRequest, db: Session = None):
     # Store the answer
     lead_service.update_survey_answer(sid, node_id, answer)
     
+    # Extract contact info from answer if present
+    lead = _ensure_lead(sid)
+    if isinstance(answer, dict):
+        if 'email' in answer and answer['email']:
+            lead.emailText = answer['email']
+            lead.email = True
+            logger.info("Extracted email from answer: %s", answer['email'])
+        if 'phone' in answer and answer['phone']:
+            lead.phoneText = answer['phone']
+            lead.phone = True
+            logger.info("Extracted phone from answer: %s", answer['phone'])
+        # Also check text field for email/phone-type questions
+        if 'text' in answer and answer['text']:
+            text = str(answer['text']).strip()
+            # Simple detection: if contains @, treat as email
+            if '@' in text and '.' in text:
+                lead.emailText = text
+                lead.email = True
+                logger.info("Extracted email from text field: %s", text)
+            # If looks like phone (mostly digits/spaces/dashes)
+            elif text and len([c for c in text if c.isdigit()]) >= 8:
+                lead.phoneText = text
+                lead.phone = True
+                logger.info("Extracted phone from text field: %s", text)
+    
     # Extract score directly from answer (chatbot includes it)
     answer_score = 0
     try:
