@@ -67,16 +67,14 @@
           </label>
 
           <!-- Score FROM–TO -->
-          <div class="row rangeblock">
-            <div class="range-head">
-              <span>Score</span>
-              <span class="mono">{{ minScore }} – {{ maxScore }}</span>
+          <div class="row scorerow">
+            <div>
+              <span class="lbl">Score od</span>
+              <input type="number" min="0" max="100" [(ngModel)]="minScore" />
             </div>
-            <div class="range-wrap">
-              <input type="range" min="0" max="100" [(ngModel)]="minScore"
-                     (ngModelChange)="onMinScoreChange($event)" />
-              <input type="range" min="0" max="100" [(ngModel)]="maxScore"
-                     (ngModelChange)="onMaxScoreChange($event)" />
+            <div>
+              <span class="lbl">do</span>
+              <input type="number" min="0" max="100" [(ngModel)]="maxScore" />
             </div>
           </div>
 
@@ -178,30 +176,30 @@
 
                   </div>
                   
-                  <!-- Survey Answers -->
+                  <!-- Survey Answers - only last answer until takeover -->
                   <app-survey-answers
                     [answers]="lead.survey_answers ?? null"
                     [progress]="lead.survey_progress"
                     [startedAt]="lead.survey_started_at ?? null"
                     [completedAt]="lead.survey_completed_at ?? null"
+                    [showOnlyLast]="!(takeoverOpen && takeoverLead?.id === lead.id)"
                   ></app-survey-answers>
                 </div>
 
-                <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id]">
-                  <div *ngFor="let c of leadChats[lead.id]">
-                    <div [ngClass]="{
-                          'user': c.role==='user',
-                          'assistant': c.role==='assistant',
-                          'staff': c.role==='staff'
-                        }">
-                      <strong>{{ c.role }}</strong>: {{ c.text }}
-                    </div>
+                <div class="chat-preview" *ngIf="hoveredLead === lead.id && leadChats[lead.id] && leadChats[lead.id].length > 0">
+                  <div [ngClass]="{
+                        'user': leadChats[lead.id][leadChats[lead.id].length - 1].role==='user',
+                        'assistant': leadChats[lead.id][leadChats[lead.id].length - 1].role==='assistant',
+                        'staff': leadChats[lead.id][leadChats[lead.id].length - 1].role==='staff'
+                      }">
+                    <strong>{{ leadChats[lead.id][leadChats[lead.id].length - 1].role }}</strong>: {{ leadChats[lead.id][leadChats[lead.id].length - 1].text }}
                   </div>
                 </div>
               </div>
 
               <div class="lead-actions">
                 <button class="chat-btn" (click)="openTakeover(lead)">Prevzemi pogovor</button>
+                <button class="delete-btn" (click)="deleteLead(lead, $event)" title="Delete lead">🗑️</button>
               </div>
             </div>
           </div>

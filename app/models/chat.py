@@ -67,6 +67,8 @@ class SurveySubmitRequest(_FlexibleModel):
     progress: int = 0  # 0-100 percentage
     all_answers: Optional[Dict[str, Any]] = None  # Complete answers so far
     tenant_slug: Optional[str] = None
+    org_slug: Optional[str] = None  # Organization slug for multi-tenant surveys
+    survey_slug: Optional[str] = None  # Survey slug to identify which survey flow to use
 
 class StaffMessage(_FlexibleModel):
     sid: str

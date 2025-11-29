@@ -8,12 +8,13 @@ interface FlowNode {
   id: string;
   texts?: string[];
   text?: string;
-  choices?: { title: string; next?: string; action?: string; payload?: any }[];
+  choices?: { title: string; score?: number; next?: string; action?: string; payload?: any }[];
   openInput?: boolean;
-  inputType?: 'single' | 'dual-contact' | 'contact' | 'email' | 'phone';
+  inputType?: 'single' | 'text' | 'dual-contact' | 'contact' | 'email' | 'phone';
   action?: string;
   next?: string;
   terminal?: boolean;
+  score?: number;  // For open-ended questions
 }
 
 interface SurveyFlow {
@@ -77,7 +78,7 @@ interface SurveyFlow {
           </div>
 
           <!-- Single Text Input -->
-          <div *ngIf="currentNode.inputType === 'single'" class="single-input-form">
+          <div *ngIf="currentNode.inputType === 'single' || currentNode.inputType === 'text'" class="single-input-form">
             <textarea 
               [(ngModel)]="textAnswer" 
               placeholder="Vnesite vaš odgovor..."
@@ -345,6 +346,8 @@ export class SurveyFormComponent implements OnInit, OnDestroy, OnChanges {
   @Input() flow: SurveyFlow | null = null;
   @Input() sid: string = '';
   @Input() backendUrl: string = 'http://localhost:8000';
+  @Input() orgSlug: string | null = null;
+  @Input() surveySlug: string | null = null;
   @Output() completed = new EventEmitter<void>();
   @Output() paused = new EventEmitter<void>();
 
@@ -456,22 +459,66 @@ export class SurveyFormComponent implements OnInit, OnDestroy, OnChanges {
 
     if (this.currentNode.openInput) {
       if (this.currentNode.inputType === 'dual-contact') {
-        return !!(this.contactEmail.trim() || this.contactPhone.trim());
+        const email = this.contactEmail.trim();
+        const phone = this.contactPhone.trim();
+        if (!email && !phone) return false;
+        return this.isValidContact(email, phone);
+      }
+      if (this.currentNode.inputType === 'email') {
+        const email = this.textAnswer.trim();
+        return !!email && this.isValidEmail(email);
+      }
+      if (this.currentNode.inputType === 'phone') {
+        const phone = this.textAnswer.trim();
+        return !!phone && this.isValidPhone(phone);
       }
       return !!this.textAnswer.trim();
     }
 
     return true;
   }
+  
+  private isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }
+  
+  private isValidPhone(phone: string): boolean {
+    // Accept various formats: +386..., 0..., with spaces/dashes
+    const phoneRegex = /^[+]?[0-9\s\-()]{8,}$/;
+    return phoneRegex.test(phone);
+  }
+  
+  private isValidContact(email: string, phone: string): boolean {
+    // At least one must be valid
+    const emailValid = !email || this.isValidEmail(email);
+    const phoneValid = !phone || this.isValidPhone(phone);
+    return emailValid && phoneValid && (!!email || !!phone);
+  }
 
   async goNext() {
-    if (!this.canProceed() || !this.currentNode) return;
+    if (!this.currentNode) return;
+    
+    // Validate input before proceeding
+    if (!this.canProceed()) {
+      this.errorMessage = 'Prosim vnesite veljavne podatke';
+      return;
+    }
+    
+    this.errorMessage = '';
 
-    // Collect answer
+    // Collect answer WITH score
     let answer: any;
+    let answerScore = 0;
+    
     if (this.currentNode.choices && this.selectedChoice >= 0) {
       const choice = this.currentNode.choices[this.selectedChoice];
-      answer = choice.title;
+      // Store answer WITH its score
+      answer = {
+        text: choice.title,
+        score: choice.score || 0
+      };
+      answerScore = choice.score || 0;
       
       // Store any payload from choice
       if (choice.payload) {
@@ -481,10 +528,16 @@ export class SurveyFormComponent implements OnInit, OnDestroy, OnChanges {
       if (this.currentNode.inputType === 'dual-contact') {
         answer = {
           email: this.contactEmail.trim(),
-          phone: this.contactPhone.trim()
+          phone: this.contactPhone.trim(),
+          score: (this.currentNode as any).score || 0
         };
+        answerScore = (this.currentNode as any).score || 0;
       } else {
-        answer = this.textAnswer.trim();
+        answer = {
+          text: this.textAnswer.trim(),
+          score: (this.currentNode as any).score || 0
+        };
+        answerScore = (this.currentNode as any).score || 0;
       }
     }
 
@@ -576,7 +629,9 @@ export class SurveyFormComponent implements OnInit, OnDestroy, OnChanges {
       node_id: nodeId,
       answer: answer,
       progress: progress,
-      all_answers: Object.fromEntries(this.answers)
+      all_answers: Object.fromEntries(this.answers),
+      org_slug: this.orgSlug,
+      survey_slug: this.surveySlug
     };
 
     const response = await this.http.post<any>(

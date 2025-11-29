@@ -55,7 +55,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ====== Agent identity ======
   agentName = 'Agent';
-  agentPhotoUrl = '/agents/default.png';
+  agentPhotoUrl = '/images/trainer.png';
   organizationSlug: string | null = null;
 
   // ====== Chat state ======
@@ -84,6 +84,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
   surveyFlow: any = null;
   surveyFlowKey: string | null = 'flow_' + Date.now();  // Key to force component remount
   surveyCompleted = false;
+  surveySlug: string | null = null;  // Track current survey slug
 
   contactPending = false;
 
@@ -746,6 +747,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Detect survey slug from URL or use default
     const surveySlug = this.detectSurveySlug();
+    this.surveySlug = surveySlug;  // Store for later use
     this.i('Loading survey with slug:', surveySlug);
     this.i('Organization slug:', this.organizationSlug);
     
@@ -905,9 +907,13 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
         return;
       }
       
-      this.w('No organization detected - using default avatar');
+      this.w('No organization detected - using default');
+      // Fallback to demo-agency for development
+      this.organizationSlug = 'demo-agency';
     } catch (err) {
       this.e('Error detecting organization:', err);
+      // Fallback to demo-agency for development
+      this.organizationSlug = 'demo-agency';
     }
   }
 
@@ -934,6 +940,7 @@ export class AppComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private loadSurveyBySlug(slug: string, orgSlug?: string) {
     const org = orgSlug || this.organizationSlug || 'default';
+    this.surveySlug = slug;  // Store for later use
     const endpoint = `${this.backendUrl}/s/${org}/${slug}`;
     this.i('Loading survey by slug:', slug, 'for org:', org);
     this.startSurveyPolling(endpoint);

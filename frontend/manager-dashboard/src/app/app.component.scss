@@ -251,6 +251,22 @@ html, body {
 .filter-card .daterow > div { flex: 1; }
 .filter-card .daterow .lbl { display:block; font-size:.8rem; color: #6B7280; margin-bottom:4px; }
 
+.filter-card .scorerow { justify-content: space-between; width: 100%; display: flex; gap: 8px; }
+.filter-card .scorerow > div { flex: 1; }
+.filter-card .scorerow .lbl { display:block; font-size:.8rem; color: #6B7280; margin-bottom:4px; }
+.filter-card input[type="number"] {
+  background: #fff; color: #22252A;
+  border: 1px solid #E6E2D6;
+  border-radius: 8px; padding: 8px 10px; width: 100%;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.04);
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.filter-card input[type="number"]:focus {
+  outline: none;
+  border-color: #C1A46C;
+  box-shadow: 0 0 0 3px rgba(193,164,108,.22);
+}
+
 .filter-card .apply-btn {
   width: 100%; background: #12B981; color: #fff;
   border: 2px solid #0E9F6E;
@@ -362,12 +378,27 @@ html, body {
 .chat-preview .staff { color: #5B4AB3; margin-bottom: 4px; }
 
 /* Lead actions */
+.lead-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
 .chat-btn {
   background: #C1A46C; color: #1E2126; border: 2px solid #C1A46C;
   padding: 0.55rem 0.9rem; border-radius: 10px; font-weight: 800; cursor: pointer; transition: .15s ease;
   box-shadow: 0 8px 18px rgba(193,164,108,.25);
 }
 .chat-btn:hover { background: #A98C58; border-color: #A98C58; }
+
+.delete-btn {
+  background: #FFFFFF; color: #22252A; border: 1px solid #E6E2D6;
+  padding: 0.4rem 0.5rem; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: .15s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  width: auto;
+}
+.delete-btn:hover { background: #F9FAFB; border-color: #D1D5DB; }
 
 /* KPI line */
 .kpi-line { color: #6B7280; display:flex; align-items:center; gap:8px; margin-top:.4rem; }

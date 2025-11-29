@@ -1,8 +1,8 @@
 <section class="agent-hero">
   <img class="agent-hero__photo" [src]="agentPhotoUrl" alt="{{agentName}}" />
-  <h1 class="agent-hero__title">{{ appMode === 'survey' && !surveyCompleted ? 'Izpolnite kratek vprašalnik' : 'Govoriš z AI asistentom agenta ' + agentName }}</h1>
+  <h1 class="agent-hero__title">{{ appMode === 'survey' && !surveyCompleted ? 'Complete a short questionnaire' : 'You are chatting with ' + agentName }}</h1>
   <p class="agent-hero__subtitle">
-    {{ appMode === 'survey' && !surveyCompleted ? 'Pomagajte nam razumeti vaše želje in preferenc in vam predlagati nepremičnine, ki vam res ustrezajo.' : 'Ta pogovor nam pomaga razumeti vaše želje in vam predlagati nepremičnine, ki vam res ustrezajo.' }}
+    {{ appMode === 'survey' && !surveyCompleted ? 'Help us understand your fitness goals and preferences so we can create the perfect training plan for you.' : 'This conversation helps us understand your fitness goals and recommend the best training approach for you.' }}
   </p>
 </section>
 
@@ -14,6 +14,8 @@
       [flow]="surveyFlow"
       [sid]="sid"
       [backendUrl]="backendUrl"
+      [orgSlug]="organizationSlug"
+      [surveySlug]="surveySlug"
       (completed)="onSurveyCompleted()"
       (paused)="onSurveyPaused()"
     ></app-survey-form>

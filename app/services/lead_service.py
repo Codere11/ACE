@@ -127,6 +127,14 @@ def get_all_leads() -> List[Lead]:
     return sorted(_leads, key=lambda l: l.score, reverse=True)
 
 
+def delete_lead(sid: str) -> bool:
+    """Delete a lead by ID. Returns True if deleted, False if not found."""
+    global _leads
+    initial_count = len(_leads)
+    _leads = [l for l in _leads if l.id != sid]
+    return len(_leads) < initial_count
+
+
 # -------------------
 # KPI calculations
 # -------------------

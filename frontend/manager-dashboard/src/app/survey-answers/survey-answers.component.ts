@@ -168,6 +168,7 @@ export class SurveyAnswersComponent {
   @Input() progress: number | undefined;
   @Input() startedAt: string | null = null;
   @Input() completedAt: string | null = null;
+  @Input() showOnlyLast: boolean = true;
 
   hasAnswers(): boolean {
     return !!(this.answers && Object.keys(this.answers).length > 0);
@@ -175,7 +176,11 @@ export class SurveyAnswersComponent {
 
   getAnswersList(): { key: string; value: any }[] {
     if (!this.answers) return [];
-    return Object.entries(this.answers).map(([key, value]) => ({ key, value }));
+    const allAnswers = Object.entries(this.answers).map(([key, value]) => ({ key, value }));
+    if (this.showOnlyLast && allAnswers.length > 0) {
+      return [allAnswers[allAnswers.length - 1]];
+    }
+    return allAnswers;
   }
 
   formatQuestionId(id: string): string {
@@ -198,11 +203,17 @@ export class SurveyAnswersComponent {
     if (value === null || value === undefined) return '-';
     
     if (typeof value === 'object') {
+      // Extract text from {text, score} objects
+      if (value.text !== undefined) {
+        return String(value.text);
+      }
+      // Handle contact objects
       if (value.email && value.phone) {
         return `${value.email} | ${value.phone}`;
       }
       if (value.email) return value.email;
       if (value.phone) return value.phone;
+      // Fallback for other objects
       return JSON.stringify(value, null, 2);
     }
     

@@ -87,6 +87,7 @@ export class AppComponent implements OnInit, OnDestroy {
   // ✅ NEW: local flow state for designer (no backend yet)
   flowData: any = null;
   private readonly LS_FLOW = 'ace_flow_designer_json';
+  
 
   currentUser: any = null;
   uploadingAvatar = false;
@@ -135,11 +136,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fetchObjections();
     this.fetchChats();
 
-    // Periodic refresh (kept for safety / reconciliation) - reduced to 3s for faster updates
-    this.pollTimer = setInterval(() => {
-      this.fetchLeads();
-      this.fetchKPIs();
-    }, 3000);
+    // NO periodic polling - rely entirely on live events for updates
 
     // Live long-poll: cross-SID lead + message events
     this.live.startAll();
@@ -211,11 +208,35 @@ export class AppComponent implements OnInit, OnDestroy {
         }
       }
 
-      // Survey progress updates
+      // Survey progress updates - calculate score in real-time
       if (type === 'survey.progress' || type === 'survey.completed') {
-        this.log('live: survey event', type, sid);
-        // Immediately refetch the specific lead to get updated score/answers
-        this.fetchLeads();
+        this.log('live: survey event', type, sid, payload);
+        const idx = this.rankedLeads.findIndex(l => l.id === sid);
+        if (idx >= 0) {
+          const lead = { ...this.rankedLeads[idx] };
+          // Update score from event payload
+          if (payload?.score != null) {
+            lead.score = payload.score;
+          }
+          if (payload?.interest != null) {
+            lead.interest = payload.interest;
+          }
+          if (payload?.progress != null) {
+            lead.survey_progress = payload.progress;
+          }
+          this.rankedLeads = [
+            ...this.rankedLeads.slice(0, idx),
+            lead,
+            ...this.rankedLeads.slice(idx + 1),
+          ];
+          // Re-sort by score
+          this.rankedLeads.sort((a, b) => b.score - a.score);
+          this.applyFilters();
+          this.log('live: survey score updated', sid, lead.score);
+        } else {
+          this.log('live: survey event for unknown sid -> refetch leads', sid);
+          this.fetchLeads();
+        }
         return;
       }
 
@@ -271,6 +292,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+
   // -------- Data fetchers --------
   fetchLeads() {
     this.loadingLeads = true;
@@ -278,6 +300,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.dashboardService.getLeads().subscribe({
       next: data => {
         const prevSel = this.selectedLeadSid;
+        
+        // Just use scores from backend directly
         this.rankedLeads = data.sort((a, b) => b.score - a.score);
         this.log('fetchLeads ok ->', this.rankedLeads.length);
 
@@ -583,5 +607,30 @@ export class AppComponent implements OnInit, OnDestroy {
   goToSurveys() {
     const orgSlug = this.currentUser?.organization_slug || 'demo-agency';
     this.router.navigate([`/${orgSlug}/surveys`]);
+  }
+
+  deleteLead(lead: Lead, event: Event) {
+    event.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to delete lead "${lead.name}"?`)) {
+      return;
+    }
+
+    this.log('Deleting lead:', lead.id);
+    this.dashboardService.deleteLead(lead.id).subscribe({
+      next: (response) => {
+        this.log('Lead deleted successfully:', response);
+        // Remove from local arrays
+        this.rankedLeads = this.rankedLeads.filter(l => l.id !== lead.id);
+        this.applyFilters();
+        // Refresh data
+        this.fetchLeads();
+        this.fetchKPIs();
+      },
+      error: (err) => {
+        console.error('Failed to delete lead:', err);
+        alert('Failed to delete lead: ' + (err.error?.message || err.message));
+      }
+    });
   }
 }

@@ -7,13 +7,16 @@ import time
 import json
 from typing import Any, Dict, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
 from app.core.config import FLOW
 from app.core import sessions  # legacy memory store
+from app.core.db import get_db
 from app.models import chat as chat_models
 from app.models.chat import ChatRequest, SurveyRequest, SurveySubmitRequest, StaffMessage
+from app.models.orm import Survey, Organization
 from app.services import lead_service, chat_store, event_bus, takeover
 from app.services import scoring_service
 
@@ -617,7 +620,7 @@ async def staff_message_slash(body: StaffMessage):
     return await _staff_impl(body)
 
 # ---- survey/submit (NEW structured survey system) ----
-async def _survey_submit_impl(body: SurveySubmitRequest):
+async def _survey_submit_impl(body: SurveySubmitRequest, db: Session = None):
     """
     Submit survey answer for a specific node.
     Stores answer, updates progress, and returns next node or completion status.
@@ -626,8 +629,11 @@ async def _survey_submit_impl(body: SurveySubmitRequest):
     node_id = body.node_id
     answer = body.answer
     progress = body.progress
+    org_slug = body.org_slug
+    survey_slug = body.survey_slug
     
-    logger.info("POST /survey/submit sid=%s node=%s progress=%d", sid, node_id, progress)
+    logger.info("POST /survey/submit sid=%s node=%s progress=%d org=%s survey=%s", 
+                sid, node_id, progress, org_slug, survey_slug)
     
     # Check takeover - if human mode, pause survey
     if takeover.is_active(sid):
@@ -646,13 +652,42 @@ async def _survey_submit_impl(body: SurveySubmitRequest):
     # Ensure lead exists
     _ensure_lead(sid)
     
-    # Store the answer with score calculation
+    # Store the answer
     lead_service.update_survey_answer(sid, node_id, answer)
     
-    # Calculate score from answer
+    # Extract score directly from answer (chatbot includes it)
     answer_score = 0
     try:
-        flow_node = get_node_by_id(node_id)
+        if isinstance(answer, dict) and 'score' in answer:
+            answer_score = answer['score']
+            logger.info("Extracted score from answer: %d", answer_score)
+        # Fallback: try to load from flow if score not in answer
+        elif db and org_slug and survey_slug:
+            # Fetch survey from database
+            org = db.query(Organization).filter(
+                Organization.slug == org_slug,
+                Organization.active == True
+            ).first()
+            
+            if org:
+                survey = db.query(Survey).filter(
+                    Survey.slug == survey_slug,
+                    Survey.organization_id == org.id,
+                    Survey.status == "live"
+                ).first()
+                
+                if survey and survey.flow_json:
+                    # Get node from survey flow
+                    survey_flow = survey.flow_json
+                    flow_nodes = survey_flow.get('nodes', [])
+                    flow_node = next((n for n in flow_nodes if n.get('id') == node_id), None)
+                    logger.info("Loaded flow node from survey database: %s", node_id)
+        
+        # Fallback to global FLOW if survey-specific flow not found
+        if not flow_node:
+            flow_node = get_node_by_id(node_id)
+            logger.info("Using global FLOW for node: %s", node_id)
+        
         if flow_node:
             if isinstance(answer, str) and flow_node.get('choices'):
                 # Multiple choice - find the matching choice and get its score
@@ -672,34 +707,88 @@ async def _survey_submit_impl(body: SurveySubmitRequest):
     all_answers = body.all_answers if body.all_answers else {node_id: answer}
     lead = lead_service.update_survey_progress(sid, progress, all_answers)
     
-    # Update lead score based on cumulative survey scores
-    if answer_score != 0:
+    # Recalculate TOTAL score from ALL answers using survey-specific flow
+    # This ensures score is calculated properly even if user goes back/forth
+    try:
         lead = _ensure_lead(sid)
-        # Add the answer score to the lead's total score
-        new_score = max(0, min(100, lead.score + answer_score))  # Clamp between 0-100
-        lead.score = new_score
+        total_score = 50  # Start at base 50
+        answer_count = 0
+        
+        # Load survey flow to get all node scores
+        survey_flow_nodes = []
+        if db and org_slug and survey_slug:
+            org = db.query(Organization).filter(
+                Organization.slug == org_slug,
+                Organization.active == True
+            ).first()
+            if org:
+                survey = db.query(Survey).filter(
+                    Survey.slug == survey_slug,
+                    Survey.organization_id == org.id,
+                    Survey.status == "live"
+                ).first()
+                if survey and survey.flow_json:
+                    survey_flow_nodes = survey.flow_json.get('nodes', [])
+        
+        # Fallback to global FLOW
+        if not survey_flow_nodes:
+            survey_flow_nodes = FLOW.get('nodes', [])
+        
+        # Calculate total score from all survey answers
+        for ans_node_id, ans_value in (lead.survey_answers or {}).items():
+            # Extract score from answer object if available
+            if isinstance(ans_value, dict) and 'score' in ans_value:
+                total_score += ans_value['score']
+                answer_count += 1
+                continue
+            
+            # Fallback: Find the node definition and match answer text
+            node_def = next((n for n in survey_flow_nodes if n.get('id') == ans_node_id), None)
+            if not node_def:
+                continue
+            
+            # Get score for this answer
+            if isinstance(ans_value, str) and node_def.get('choices'):
+                # Multiple choice - find matching choice score
+                for choice in node_def['choices']:
+                    if choice.get('title') == ans_value:
+                        total_score += choice.get('score', 0)
+                        answer_count += 1
+                        break
+            elif node_def.get('openInput'):
+                # Open-ended or contact question - use base score
+                total_score += node_def.get('score', 0)
+                answer_count += 1
+        
+        # Just use the total score directly
+        lead.score = total_score
         
         # Update interest level based on score
-        if new_score >= 70:
+        if lead.score >= 20:
             lead.interest = 'High'
-        elif new_score >= 40:
+        elif lead.score >= 0:
             lead.interest = 'Medium'
         else:
             lead.interest = 'Low'
         
-        logger.info("Updated lead score: %d, interest: %s", new_score, lead.interest)
+        logger.info("Recalculated lead score from %d answers: total=%d, interest=%s", 
+                   answer_count, total_score, lead.interest)
+    except Exception as e:
+        logger.exception("Failed to recalculate lead score: %s", e)
     
     # Store answer in notes for audit trail
     answer_str = json.dumps(answer) if not isinstance(answer, str) else answer
     _append_lead_notes(sid, f"Survey [{node_id}]: {answer_str}")
     
-    # Publish event for real-time dashboard updates
+    # Publish event for real-time dashboard updates with score
     try:
         await event_bus.publish(sid, "survey.progress", {
             "sid": sid,
             "node_id": node_id,
             "progress": progress,
-            "completed": progress >= 100
+            "completed": progress >= 100,
+            "score": lead.score,
+            "interest": lead.interest
         })
     except Exception:
         logger.exception("survey.progress event failed sid=%s", sid)
@@ -737,10 +826,10 @@ async def _survey_submit_impl(body: SurveySubmitRequest):
     }
 
 @router.post("/survey/submit", name="survey_submit")
-async def survey_submit(body: SurveySubmitRequest):
+async def survey_submit(body: SurveySubmitRequest, db: Session = Depends(get_db)):
     """Submit survey answer and track progress"""
-    return await _survey_submit_impl(body)
+    return await _survey_submit_impl(body, db)
 
 @router.post("/survey/submit/", include_in_schema=False, name="survey_submit_slash")
-async def survey_submit_slash(body: SurveySubmitRequest):
-    return await _survey_submit_impl(body)
+async def survey_submit_slash(body: SurveySubmitRequest, db: Session = Depends(get_db)):
+    return await _survey_submit_impl(body, db)

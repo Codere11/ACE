@@ -98,4 +98,14 @@ export class DashboardService {
   sendStaffMessage(sid: string, text: string): Observable<{ ok: boolean; message?: ChatLog }> {
     return this.http.post<{ ok: boolean; message?: ChatLog }>(`${this.baseUrl}/chat/staff`, { sid, text });
   }
+
+  /** Delete a lead by ID */
+  deleteLead(leadId: string): Observable<{ success: boolean; message: string }> {
+    return this.http.delete<{ success: boolean; message: string }>(`${this.baseUrl}/leads/${leadId}`);
+  }
+
+  /** Get survey flow for score calculation */
+  getSurveyFlow(orgSlug: string, surveySlug: string): Observable<any> {
+    return this.http.get<any>(`${this.baseUrl}/s/${orgSlug}/${surveySlug}`);
+  }
 }
