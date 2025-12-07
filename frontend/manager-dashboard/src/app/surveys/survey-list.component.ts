@@ -14,22 +14,22 @@ import { AuthService } from '../services/auth.service';
   template: `
     <div class="survey-list" *ngIf="!showingForm && !showingBuilder">
       <div class="header">
-        <h1>Surveys</h1>
-        <button class="btn-primary" (click)="createSurvey()">+ Create Survey</button>
+        <h1>Ankete</h1>
+        <button class="btn-primary" (click)="createSurvey()">+ Ustvari anketo</button>
       </div>
       
       @if (loading) {
-        <p>Loading surveys...</p>
+        <p>Nalagam ankete...</p>
       } @else if (surveys.length === 0) {
-        <p>No surveys yet. Create your first survey!</p>
+        <p>Še ni anket. Ustvarite svojo prvo anketo!</p>
       } @else {
         <table>
           <thead>
             <tr>
-              <th>Name</th>
+              <th>Ime</th>
               <th>Status</th>
-              <th>Created</th>
-              <th>Actions</th>
+              <th>Ustvarjeno</th>
+              <th>Akcije</th>
             </tr>
           </thead>
           <tbody>
@@ -41,19 +41,19 @@ import { AuthService } from '../services/auth.service';
                 </td>
                 <td>
                   <span class="status-badge" [class]="survey.status">
-                    {{survey.status}}
+                    {{translateStatus(survey.status)}}
                   </span>
                 </td>
                 <td>{{survey.created_at | date}}</td>
                 <td class="actions">
-                  <button class="btn-edit" (click)="editSurvey(survey.id)">Edit Flow</button>
+                  <button class="btn-edit" (click)="editSurvey(survey.id)">Uredi tok</button>
                   @if (survey.status === 'draft') {
-                    <button class="btn-publish" (click)="publish(survey.id)">Publish</button>
+                    <button class="btn-publish" (click)="publish(survey.id)">Objavi</button>
                   }
                   @if (survey.status === 'live') {
-                    <button class="btn-archive" (click)="archive(survey.id)">Archive</button>
+                    <button class="btn-archive" (click)="archive(survey.id)">Arhiviraj</button>
                   }
-                  <button class="btn-delete" (click)="deleteSurvey(survey.id, survey.name)">Delete</button>
+                  <button class="btn-delete" (click)="deleteSurvey(survey.id, survey.name)">Izbriši</button>
                 </td>
               </tr>
             }
@@ -279,14 +279,14 @@ export class SurveyListComponent implements OnInit {
   }
 
   deleteSurvey(surveyId: number, surveyName: string) {
-    if (confirm(`Are you sure you want to delete "${surveyName}"? This cannot be undone.`)) {
+    if (confirm(`Ali ste prepričani, da želite izbrisati "${surveyName}"? Tega ne morete razveljaviti.`)) {
       this.surveysService.deleteSurvey(surveyId).subscribe({
         next: () => {
           this.loadSurveys();
         },
         error: (err) => {
           console.error('Error deleting survey:', err);
-          alert('Failed to delete survey');
+          alert('Napaka pri brisanju ankete');
         }
       });
     }
@@ -301,5 +301,14 @@ export class SurveyListComponent implements OnInit {
   viewStats(surveyId: number) {
     console.log('View stats for survey:', surveyId);
     // TODO: Navigate to stats page
+  }
+  
+  translateStatus(status: string): string {
+    const translations: Record<string, string> = {
+      'draft': 'Osnutek',
+      'live': 'Objavljeno',
+      'archived': 'Arhivirano'
+    };
+    return translations[status] || status;
   }
 }

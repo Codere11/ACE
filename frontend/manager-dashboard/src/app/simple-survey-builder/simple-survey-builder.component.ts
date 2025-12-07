@@ -25,42 +25,42 @@ interface Question {
     <div class="builder-container">
       <div class="builder-header">
         <div class="header-left">
-          <button class="btn-back" (click)="goBack()">← Back to Surveys</button>
+          <button class="btn-back" (click)="goBack()">← Nazaj na ankete</button>
           <div class="survey-info" *ngIf="survey">
             <h2>📋 {{ survey.name }}</h2>
             <span class="survey-status" [class]="survey.status">{{ survey.status }}</span>
           </div>
         </div>
         <div class="actions">
-          <button class="btn-secondary" (click)="openPreview()" *ngIf="survey" [disabled]="loading">🚀 Test Live</button>
-          <button class="btn-primary" (click)="saveSurvey()" [disabled]="loading">💾 Save Flow</button>
+          <button class="btn-secondary" (click)="openPreview()" *ngIf="survey" [disabled]="loading">🚀 Testiraj v živo</button>
+          <button class="btn-primary" (click)="saveSurvey()" [disabled]="loading">💾 Shrani tok</button>
         </div>
       </div>
 
       <div class="builder-main">
         <!-- Question Types Palette -->
         <aside class="palette">
-          <h3>Add Questions</h3>
+          <h3>Dodaj vprašanja</h3>
           <div class="question-types">
             <button class="type-btn" (click)="addQuestion('contact')">
               <span class="icon">📧</span>
-              Contact Info
+              Kontaktni podatki
             </button>
             <button class="type-btn" (click)="addQuestion('choice')">
               <span class="icon">☑️</span>
-              Multiple Choice
+              Izbira odgovora
             </button>
             <button class="type-btn" (click)="addQuestion('text')">
               <span class="icon">📝</span>
-              Text Answer
+              Besedilni odgovor
             </button>
             <button class="type-btn" (click)="addQuestion('email')">
               <span class="icon">✉️</span>
-              Email Only
+              Samo e-pošta
             </button>
             <button class="type-btn" (click)="addQuestion('phone')">
               <span class="icon">📱</span>
-              Phone Only
+              Samo telefon
             </button>
           </div>
         </aside>
@@ -68,7 +68,7 @@ interface Question {
         <!-- Questions List (Drag & Drop) -->
         <main class="questions-area">
           <div class="empty-state" *ngIf="questions.length === 0">
-            <p>👈 Click a question type to start building your survey</p>
+            <p>👈 Kliknite tip vprašanja za začetek gradnje ankete</p>
           </div>
 
           <div 
@@ -83,7 +83,7 @@ interface Question {
               
               <div class="question-header">
                 <span class="drag-handle" cdkDragHandle>⋮⋮</span>
-                <span class="question-number">Question {{ i + 1 }}</span>
+                <span class="question-number">Vprašanje {{ i + 1 }}</span>
                 <span class="question-type-badge">{{ getTypeLabel(q.type) }}</span>
                 <button class="btn-delete" (click)="deleteQuestion(i)">🗑️</button>
               </div>
@@ -91,60 +91,60 @@ interface Question {
               <div class="question-body">
                 <!-- Question Text -->
                 <div class="form-group">
-                  <label>Question:</label>
+                  <label>Vprašanje:</label>
                   <input 
                     type="text" 
                     [(ngModel)]="q.question"
-                    placeholder="Enter your question here..."
+                    placeholder="Vnesite svoje vprašanje tukaj..."
                     class="input-large">
                 </div>
 
                 <!-- Choices (for choice type) -->
                 <div *ngIf="q.type === 'choice'" class="choices-editor">
-                  <label>Answer Choices (with Score):</label>
+                  <label>Možnosti odgovorov (z oceno):</label>
                   <div class="choice-list">
                     <div *ngFor="let choice of q.choices; let ci = index; trackBy: trackByIndex" class="choice-item">
                       <input 
                         type="text" 
                         [(ngModel)]="q.choices![ci]"
-                        placeholder="Choice {{ ci + 1 }}"
+                        placeholder="Možnost {{ ci + 1 }}"
                         class="input-medium">
                       <input 
                         type="number" 
                         [(ngModel)]="q.scores![ci]"
-                        placeholder="Score"
+                        placeholder="Ocena"
                         class="input-score"
-                        title="Positive = good lead, Negative = bad lead">
+                        title="Pozitivno = dober lead, Negativno = slab lead">
                       <button class="btn-small" (click)="removeChoice(i, ci)">✕</button>
                     </div>
                   </div>
-                  <button class="btn-add-choice" (click)="addChoice(i)">+ Add Choice</button>
+                  <button class="btn-add-choice" (click)="addChoice(i)">+ Dodaj možnost</button>
                   <div class="score-info">
-                    💡 <strong>Score Guide:</strong> Positive numbers (1-100) = good/interested lead, Negative numbers (-100 to 0) = bad/uninterested lead
+                    💡 <strong>Vodnik za ocenjevanje:</strong> Pozitivne številke (1-100) = dober/zainteresiran lead, Negativne številke (-100 do 0) = slab/nezainteresiran lead
                   </div>
                 </div>
 
                 <!-- Score for non-choice questions -->
                 <div *ngIf="q.type !== 'choice'" class="form-group score-group">
-                  <label>Score for providing this info:</label>
+                  <label>Ocena za vnos teh podatkov:</label>
                   <input 
                     type="number" 
                     [(ngModel)]="q.baseScore"
                     placeholder="0"
                     class="input-score-large"
-                    title="Points awarded for completing this question">
-                  <small class="score-help">💡 Award points for providing contact info (e.g., +10 for email, +20 for phone)</small>
+                    title="Točke, podeljene za izpolnitev tega vprašanja">
+                  <small class="score-help">💡 Podelite točke za vnos kontaktnih podatkov (npr. +10 za e-pošto, +20 za telefon)</small>
                 </div>
                 
                 <!-- Info for special types -->
                 <div *ngIf="q.type === 'contact'" class="info-box">
-                  ℹ️ This will ask for both email and phone (at least one required)
+                  ℹ️ To bo vprašalo za e-pošto in telefon (vsaj eno obvezno)
                 </div>
                 <div *ngIf="q.type === 'email'" class="info-box">
-                  ℹ️ This will validate email format
+                  ℹ️ To bo preverilo obliko e-pošte
                 </div>
                 <div *ngIf="q.type === 'phone'" class="info-box">
-                  ℹ️ This will ask for phone number
+                  ℹ️ To bo vprašalo za telefonsko številko
                 </div>
               </div>
             </div>
@@ -155,7 +155,7 @@ interface Question {
       <!-- Preview Button -->
       <div class="builder-footer">
         <button class="btn-preview" (click)="togglePreview()">
-          {{ showPreview ? '✏️ Edit Mode' : '👁️ Preview Survey' }}
+          {{ showPreview ? '✏️ Način urejanja' : '👁️ Predogled ankete' }}
         </button>
       </div>
 
@@ -163,7 +163,7 @@ interface Question {
       <div class="preview-modal" *ngIf="showPreview" (click)="togglePreview()">
         <div class="preview-content" (click)="$event.stopPropagation()">
           <div class="preview-header">
-            <h3>Survey Preview</h3>
+            <h3>Predogled ankete</h3>
             <button class="btn-close" (click)="togglePreview()">✕</button>
           </div>
           <div class="preview-body">
@@ -177,11 +177,11 @@ interface Question {
               </div>
               
               <div *ngIf="q.type === 'text'" class="preview-input">
-                <textarea placeholder="Your answer..." disabled></textarea>
+                <textarea placeholder="Vaš odgovor..." disabled></textarea>
               </div>
               
               <div *ngIf="q.type === 'email'" class="preview-input">
-                <input type="email" placeholder="your@email.com" disabled>
+                <input type="email" placeholder="vas@email.com" disabled>
               </div>
               
               <div *ngIf="q.type === 'phone'" class="preview-input">
@@ -189,8 +189,8 @@ interface Question {
               </div>
               
               <div *ngIf="q.type === 'contact'" class="preview-contact">
-                <input type="email" placeholder="Email" disabled>
-                <input type="tel" placeholder="Phone" disabled>
+                <input type="email" placeholder="E-pošta" disabled>
+                <input type="tel" placeholder="Telefon" disabled>
               </div>
             </div>
           </div>
@@ -793,7 +793,7 @@ export class SimpleSurveyBuilderComponent implements OnInit {
   }
 
   deleteQuestion(index: number) {
-    if (confirm('Delete this question?')) {
+    if (confirm('Izbriši to vprašanje?')) {
       this.questions.splice(index, 1);
     }
   }
@@ -824,11 +824,11 @@ export class SimpleSurveyBuilderComponent implements OnInit {
 
   getTypeLabel(type: string): string {
     const labels: Record<string, string> = {
-      'contact': 'Contact',
-      'choice': 'Multiple Choice',
-      'text': 'Text',
-      'email': 'Email',
-      'phone': 'Phone'
+      'contact': 'Kontakt',
+      'choice': 'Izbira',
+      'text': 'Besedilo',
+      'email': 'E-pošta',
+      'phone': 'Telefon'
     };
     return labels[type] || type;
   }
@@ -839,21 +839,21 @@ export class SimpleSurveyBuilderComponent implements OnInit {
 
   saveSurvey() {
     if (!this.surveyId) {
-      this.showToastMessage('⚠️ No survey selected');
+      this.showToastMessage('⚠️ Nobena anketa ni izbrana');
       return;
     }
 
     // Validate questions
     const validQuestions = this.questions.filter(q => q.question && q.question.trim());
     if (validQuestions.length === 0) {
-      this.showToastMessage('⚠️ Please add at least one question!');
+      this.showToastMessage('⚠️ Prosimo dodajte vsaj eno vprašanje!');
       return;
     }
     
     // Warn about empty questions
     const emptyQuestions = this.questions.filter(q => !q.question || !q.question.trim());
     if (emptyQuestions.length > 0) {
-      if (!confirm(`${emptyQuestions.length} empty questions will be skipped. Continue?`)) {
+      if (!confirm(`${emptyQuestions.length} praznih vprašanj bo preskočenih. Nadaljuj?`)) {
         return;
       }
     }
@@ -871,12 +871,12 @@ export class SimpleSurveyBuilderComponent implements OnInit {
         const user = this.authService.getCurrentUser();
         const orgSlug = user?.organization_slug || 'demo-agency';
         const url = this.survey?.slug ? `http://localhost:4200/${orgSlug}/${this.survey.slug}?t=${Date.now()}` : '';
-        this.showToastMessage(`✅ Saved! Test at: ${url}`);
+        this.showToastMessage(`✅ Shranjeno! Testiraj na: ${url}`);
       },
       error: (err) => {
         console.error('Save error:', err);
         this.loading = false;
-        this.showToastMessage('⚠️ Failed to save: ' + (err.error?.detail || 'Unknown error'));
+        this.showToastMessage('⚠️ Napaka pri shranjevanju: ' + (err.error?.detail || 'Neznana napaka'));
       }
     });
   }
@@ -901,7 +901,7 @@ export class SimpleSurveyBuilderComponent implements OnInit {
       error: (err) => {
         console.error('Load error:', err);
         this.loading = false;
-        this.showToastMessage('⚠️ Failed to load survey');
+        this.showToastMessage('⚠️ Napaka pri nalaganju ankete');
       }
     });
   }

@@ -7,16 +7,16 @@
   <!-- Tab Navigation (centered) -->
   <nav class="tabs">
   <button [class.active]="activeTab==='leads'" (click)="activeTab='leads'">
-    <span>LEADS</span>
+    <span>LEADI</span>
   </button>
 
   <button [class.active]="activeTab==='flow'" (click)="activeTab='flow'">
-    <span>FLOW</span>
+    <span>ANKETE</span>
   </button>
 
   <!-- Unclickable tabs with "coming soon" -->
   <button class="disabled" disabled>
-    <span>ANALYSIS</span>
+    <span>ANALIZA</span>
     <small class="soon"> - Prihaja kmalu</small>
   </button>
 </nav>
@@ -35,8 +35,8 @@
           <small>{{ currentUser.email }}</small>
           <small>{{ currentUser.organization_slug }}</small>
         </div>
-        <button (mousedown)="onChangeAccount(); $event.stopPropagation()">Change account</button>
-        <button (mousedown)="onLogout(); $event.stopPropagation()">Log out</button>
+        <button (mousedown)="onChangeAccount(); $event.stopPropagation()">Zamenjaj račun</button>
+        <button (mousedown)="onLogout(); $event.stopPropagation()">Odjava</button>
       </div>
     </div>
   </div>
@@ -57,19 +57,19 @@
           <h3>FILTER</h3>
 
           <label class="row">
-            <span>Interest</span>
+            <span>Interes</span>
             <select [(ngModel)]="interestFilter">
-              <option value="All">All</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
+              <option value="All">Vsi</option>
+              <option value="High">Visok</option>
+              <option value="Medium">Srednji</option>
+              <option value="Low">Nizek</option>
             </select>
           </label>
 
-          <!-- Score FROM–TO -->
+          <!-- Ocena OD–DO -->
           <div class="row scorerow">
             <div>
-              <span class="lbl">Score od</span>
+              <span class="lbl">Ocena od</span>
               <input type="number" min="0" max="100" [(ngModel)]="minScore" />
             </div>
             <div>
@@ -79,64 +79,64 @@
           </div>
 
           <div class="row checkrow">
-            <label><input type="checkbox" [(ngModel)]="mustHavePhone" /> Phone</label>
-            <label><input type="checkbox" [(ngModel)]="mustHaveEmail" /> Email</label>
+            <label><input type="checkbox" [(ngModel)]="mustHavePhone" /> Telefon</label>
+            <label><input type="checkbox" [(ngModel)]="mustHaveEmail" /> E‑pošta</label>
           </div>
 
           <div class="row daterow">
             <div>
-              <span class="lbl">Date from</span>
+              <span class="lbl">Datum od</span>
               <input type="date" [(ngModel)]="dateFrom" />
             </div>
             <div>
-              <span class="lbl">to</span>
+              <span class="lbl">do</span>
               <input type="date" [(ngModel)]="dateTo" />
             </div>
           </div>
 
           <div class="row">
-            <button class="apply-btn" (click)="applyFilters()">APPLY</button>
+            <button class="apply-btn" (click)="applyFilters()">UPORABI</button>
           </div>
 
           <div class="divider"></div>
 
           <label class="row">
-            <span>Search by name</span>
-            <input type="text" [(ngModel)]="searchName" (ngModelChange)="applyFilters()" placeholder="Type name…" />
+            <span>Iskanje po imenu</span>
+            <input type="text" [(ngModel)]="searchName" (ngModelChange)="applyFilters()" placeholder="Vnesite ime…" />
           </label>
         </aside>
 
         <!-- RIGHT: Quick Stats card -->
         <aside class="card tags-card" style="grid-area: tags;">
-          <h3>📊 QUICK STATS</h3>
+          <h3>📊 HITRI PREGLED</h3>
 
           <div class="stats-grid" *ngIf="kpis">
             <div class="stat-item">
               <div class="stat-value">{{ kpis.activeLeads }}</div>
-              <div class="stat-label">Active Leads</div>
+              <div class="stat-label">Aktivni leadi</div>
             </div>
             <div class="stat-item">
               <div class="stat-value">{{ kpis.contacts }}</div>
-              <div class="stat-label">Total Contacts</div>
+              <div class="stat-label">Skupaj kontaktov</div>
             </div>
             <div class="stat-item">
               <div class="stat-value">{{ displayedLeads.length }}</div>
-              <div class="stat-label">Filtered Results</div>
+              <div class="stat-label">Filtrirani rezultati</div>
             </div>
           </div>
           
           <div class="divider" style="margin: 16px 0;"></div>
           
           <div class="info-note">
-            <small>💡 Tip: Use filters to find leads by score, contact info, or date range</small>
+            <small>💡 Namig: Uporabite filtre za iskanje po oceni, kontaktih ali datumu</small>
           </div>
         </aside>
 
         <!-- FULL-WIDTH LEADS under both cards -->
         <main class="leads-span" style="grid-area: leads;">
-          <h2>📋 Survey Responses (Live)</h2>
+          <h2>📋 Odgovori anket (v živo)</h2>
 
-          <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam leads...</div>
+          <div *ngIf="loadingLeads" class="spinner">⏳ Nalagam leade...</div>
           <div *ngIf="!loadingLeads && displayedLeads.length === 0" class="empty">
             🚀 Ni leadov za izbrane filtre.
           </div>
@@ -153,25 +153,27 @@
                     <div class="lead-score">🔥 {{ lead.score }}</div>
                   </div>
                   <div class="lead-summary">
-                    Stage: {{ lead.stage }} <span class="dot">•</span>
+                    {{ lead.stage }} <span class="dot">•</span>
                     {{ formatAgo(lead.lastSeenSec) }}
+                    <span *ngIf="lead.survey_started_at" class="dot">•</span>
+                    <span *ngIf="lead.survey_started_at" class="date-info">📅 {{ formatDate(lead.survey_started_at) }}</span>
                   </div>
                   <div class="lead-lastmsg">„{{ lead.lastMessage }}”</div>
                   <div class="tags">
-                    <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ lead.interest }}</span>
+                    <span class="tag" [class.good]="lead.interest==='High'">⭐ {{ translateInterest(lead.interest) }}</span>
 
                     <ng-container *ngIf="lead.phoneText?.trim(); else phoneBadge">
                       <a class="tag good" [href]="'tel:' + lead.phoneText!.trim()">📞 {{ lead.phoneText }}</a>
                     </ng-container>
                     <ng-template #phoneBadge>
-                      <span class="tag" [class.good]="lead.phone">📞 Phone</span>
+                      <span class="tag" [class.good]="lead.phone">📞 Telefon</span>
                     </ng-template>
 
                     <ng-container *ngIf="lead.emailText?.trim(); else emailBadge">
                       <a class="tag good" [href]="'mailto:' + lead.emailText!.trim()">📧 {{ lead.emailText }}</a>
                     </ng-container>
                     <ng-template #emailBadge>
-                      <span class="tag" [class.good]="lead.email">📧 Email</span>
+                      <span class="tag" [class.good]="lead.email">📧 E-pošta</span>
                     </ng-template>
 
                   </div>
@@ -199,15 +201,15 @@
 
               <div class="lead-actions">
                 <button class="chat-btn" (click)="openTakeover(lead)">Prevzemi pogovor</button>
-                <button class="delete-btn" (click)="deleteLead(lead, $event)" title="Delete lead">🗑️</button>
+                <button class="delete-btn" (click)="deleteLead(lead, $event)" title="Izbriši lead">🗑️</button>
               </div>
             </div>
           </div>
 
           <section class="kpi-line" *ngIf="kpis">
-            <span>Active leads: <strong>{{ kpis.activeLeads }}</strong></span>
+            <span>Aktivni leadi: <strong>{{ kpis.activeLeads }}</strong></span>
             <span class="dot">•</span>
-            <span>Total captured conv. leads: <strong>{{ kpis.contacts }}</strong></span>
+            <span>Skupaj zajetih kontaktov: <strong>{{ kpis.contacts }}</strong></span>
           </section>
         </main>
       </div>

@@ -489,6 +489,25 @@ export class AppComponent implements OnInit, OnDestroy {
     const m = Math.floor(seconds / 60);
     return m === 1 ? 'pred 1 min' : `pred ${m} min`;
   }
+  
+  formatDate(dateStr: string | null): string {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    } catch {
+      return '';
+    }
+  }
+  
+  translateInterest(interest: string): string {
+    const translations: Record<string, string> = {
+      'High': 'Visok',
+      'Medium': 'Srednji',
+      'Low': 'Nizek'
+    };
+    return translations[interest] || interest;
+  }
 
   // -------- FILTERING --------
   applyFilters() {
@@ -612,7 +631,7 @@ export class AppComponent implements OnInit, OnDestroy {
   deleteLead(lead: Lead, event: Event) {
     event.stopPropagation();
     
-    if (!confirm(`Are you sure you want to delete lead "${lead.name}"?`)) {
+    if (!confirm(`Ali ste prepričani, da želite izbrisati lead "${lead.name}"?`)) {
       return;
     }
 
